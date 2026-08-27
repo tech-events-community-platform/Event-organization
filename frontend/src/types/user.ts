@@ -9,4 +9,7 @@ export interface User {
   memberSince: string;
   bio?: string;
   selfReportedSkills?: string[];
+  email?: string;
+  phone?: string;
+  organization?: string;
 }

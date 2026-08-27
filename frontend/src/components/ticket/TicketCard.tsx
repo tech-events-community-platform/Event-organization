@@ -88,14 +88,22 @@ export const TicketCard: React.FC<TicketCardProps> = ({ ticket, onDownload }) =>
           {/* QR Code Section (Prominent) */}
           <div className="text-center space-y-3 pt-2">
             <div className="bg-[#F7F8F5] p-5 rounded-2xl border-2 border-[#D6A84F]/40 inline-block shadow-inner relative group">
-              <QRCodeSVG
-                value={ticket.qrPayload}
-                size={190}
-                bgColor="#F7F8F5"
-                fgColor="#064638"
-                level="H"
-                includeMargin={false}
-              />
+              {ticket.qrCodeDataUrl ? (
+                <img
+                  src={ticket.qrCodeDataUrl}
+                  alt="Official Ticket QR Code"
+                  className="w-[190px] h-[190px] mx-auto object-contain"
+                />
+              ) : (
+                <QRCodeSVG
+                  value={ticket.qrPayload}
+                  size={190}
+                  bgColor="#F7F8F5"
+                  fgColor="#064638"
+                  level="H"
+                  includeMargin={false}
+                />
+              )}
               <div className="mt-2 text-[10px] font-mono text-[#66736E] truncate max-w-[190px]">
                 {ticket.qrPayload}
               </div>

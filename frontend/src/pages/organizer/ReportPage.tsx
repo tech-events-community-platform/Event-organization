@@ -18,41 +18,37 @@ export const ReportPage: React.FC = () => {
   const [report, setReport] = useState<SponsorReportData | null>(null);
   const [loading, setLoading] = useState(true);
   const [exported, setExported] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     const fetchReport = async () => {
       setLoading(true);
       if (id) {
-        const data = await api.getSponsorReport(id);
-        setReport(data);
+        try {
+          const data = await api.reports.getEventReport(id);
+          setReport(data);
+        } catch (e) {
+          console.error(e);
+        }
       }
       setLoading(false);
     };
     fetchReport();
   }, [id]);
 
-  const handleExportCSV = () => {
-    setExported(true);
-
-    if (!report) return;
-    const csvContent =
-      `data:text/csv;charset=utf-8,` +
-      `Metric,Value\n` +
-      `Event,${report.eventTitle}\n` +
-      `Date,${report.eventDate}\n` +
-      `Registered,${report.totalRegistered}\n` +
-      `Attended,${report.totalAttended}\n` +
-      `Attendance Rate,${report.attendanceRate}%\n`;
-
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `Sheba_Sponsor_Report_${report.eventId}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    setTimeout(() => setExported(false), 4000);
+  const handleExportCSV = async () => {
+    if (!id) return;
+    setIsExporting(true);
+    try {
+      await api.reports.exportCsv(id);
+      setExported(true);
+      setTimeout(() => setExported(false), 4000);
+    } catch (e) {
+      console.error('CSV Export error:', e);
+      alert('Failed to download report CSV from backend.');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   if (loading) {
@@ -64,7 +60,7 @@ export const ReportPage: React.FC = () => {
   return (
     <div className="space-y-8 pb-12">
       <Link
-        to={`/organizer/events/${id || 'evt_react_workshop_2026'}`}
+        to={`/organizer/events/${id || ''}`}
         className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#0B5D4B] hover:underline"
       >
         <ArrowLeft className="w-4 h-4" />
@@ -85,6 +81,7 @@ export const ReportPage: React.FC = () => {
 
         <Button
           onClick={handleExportCSV}
+          isLoading={isExporting}
           variant="accent"
           size="lg"
           icon={<FileSpreadsheet className="w-5 h-5" />}
@@ -96,7 +93,7 @@ export const ReportPage: React.FC = () => {
       {exported && (
         <div className="bg-[#238B6E]/10 border border-[#238B6E]/40 p-4 rounded-2xl text-xs text-[#238B6E] font-bold flex items-center gap-2 animate-fade-in">
           <CheckCircle2 className="w-5 h-5" />
-          Sponsor report exported successfully! Download initialized.
+          Sponsor report exported successfully from backend! Download initialized.
         </div>
       )}
 
@@ -105,7 +102,7 @@ export const ReportPage: React.FC = () => {
         <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-2xs space-y-1">
           <span className="text-xs font-semibold text-[#66736E]">Total Registered</span>
           <p className="text-3xl font-extrabold text-[#17211E]">{report.totalRegistered}</p>
-          <p className="text-[10px] text-[#66736E]">Confirmed Telegram RSVP</p>
+          <p className="text-[10px] text-[#66736E]">Confirmed Registrations</p>
         </div>
 
         <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-2xs space-y-1">
@@ -131,20 +128,24 @@ export const ReportPage: React.FC = () => {
           </h3>
 
           <div className="space-y-3 pt-2">
-            {report.hourlyCheckIns.map((slot, idx) => (
-              <div key={idx} className="space-y-1">
-                <div className="flex justify-between text-xs font-semibold text-[#17211E]">
-                  <span>{slot.time}</span>
-                  <span className="text-[#0B5D4B] font-mono">{slot.count} scans</span>
+            {report.hourlyCheckIns.length === 0 ? (
+              <p className="text-xs text-gray-500 py-4 text-center">No hourly check-ins recorded yet.</p>
+            ) : (
+              report.hourlyCheckIns.map((slot, idx) => (
+                <div key={idx} className="space-y-1">
+                  <div className="flex justify-between text-xs font-semibold text-[#17211E]">
+                    <span>{slot.time}</span>
+                    <span className="text-[#0B5D4B] font-mono">{slot.count} scans</span>
+                  </div>
+                  <div className="w-full bg-gray-100 h-3 rounded-full overflow-hidden">
+                    <div
+                      className="bg-[#0B5D4B] h-full rounded-full transition-all"
+                      style={{ width: `${Math.min(100, (slot.count / Math.max(1, report.totalAttended)) * 100)}%` }}
+                    ></div>
+                  </div>
                 </div>
-                <div className="w-full bg-gray-100 h-3 rounded-full overflow-hidden">
-                  <div
-                    className="bg-[#0B5D4B] h-full rounded-full transition-all"
-                    style={{ width: `${(slot.count / 30) * 100}%` }}
-                  ></div>
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
 

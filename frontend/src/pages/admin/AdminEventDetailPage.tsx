@@ -34,16 +34,16 @@ export const AdminEventDetailPage: React.FC = () => {
 
   const handleApprove = async () => {
     if (!event) return;
-    const updated = await api.updateEventStatus(event.id, 'Live');
-    setEvent(updated.find((e) => e.id === event.id) || event);
-    setStatusMessage('Event status updated to LIVE / APPROVED.');
+    const updated = await api.events.update(event.id, { status: 'Upcoming' });
+    setEvent(updated);
+    setStatusMessage('Event status updated to LIVE / UPCOMING.');
     setTimeout(() => setStatusMessage(null), 3000);
   };
 
   const handleCancel = async () => {
     if (!event) return;
-    const updated = await api.updateEventStatus(event.id, 'Draft');
-    setEvent(updated.find((e) => e.id === event.id) || event);
+    const updated = await api.events.update(event.id, { status: 'Draft' });
+    setEvent(updated);
     setStatusMessage('Event status updated to CANCELLED / DRAFT.');
     setTimeout(() => setStatusMessage(null), 3000);
   };

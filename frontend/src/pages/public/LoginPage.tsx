@@ -12,22 +12,68 @@ import {
   CheckCircle2,
   ShieldCheck,
   LogIn,
+  Mail,
+  UserPlus,
+  AlertCircle,
 } from 'lucide-react';
 import type { UserRole } from '../../types/user';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const { loginAsDemoUser } = useAuth();
+  const { login, register, loginAsDemoUser } = useAuth();
+
+  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [role, setRole] = useState<'attendee' | 'organizer'>('attendee');
+
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [organization, setOrganization] = useState('');
+  const [phone, setPhone] = useState('');
+
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const [loadingRole, setLoadingRole] = useState<UserRole | null>(null);
 
-  const handleDemoLogin = (role: UserRole) => {
-    setLoadingRole(role);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+
+    try {
+      if (mode === 'login') {
+        const loggedUser = await login(email, password);
+        if (loggedUser.role === 'ORGANIZER') navigate('/organizer');
+        else if (loggedUser.role === 'ADMIN') navigate('/admin');
+        else navigate('/app');
+      } else {
+        const regUser = await register({
+          email,
+          password,
+          full_name: fullName,
+          role,
+          phone,
+          organization,
+        });
+        if (regUser.role === 'ORGANIZER') navigate('/organizer');
+        else if (regUser.role === 'ADMIN') navigate('/admin');
+        else navigate('/app');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Authentication failed. Please check your credentials.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDemoLogin = (demoRole: UserRole) => {
+    setLoadingRole(demoRole);
     setTimeout(() => {
-      loginAsDemoUser(role);
+      loginAsDemoUser(demoRole);
       setLoadingRole(null);
-      if (role === 'ORGANIZER') {
+      if (demoRole === 'ORGANIZER') {
         navigate('/organizer');
-      } else if (role === 'ADMIN') {
+      } else if (demoRole === 'ADMIN') {
         navigate('/admin');
       } else {
         navigate('/app');
@@ -38,7 +84,7 @@ export const LoginPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#F7F8F5] flex flex-col justify-between overflow-x-hidden">
       <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12 flex items-center justify-center">
-        <div className="w-full bg-white rounded-3xl border border-gray-200 shadow-xl overflow-hidden grid grid-cols-1 lg:grid-cols-12 min-h-[600px]">
+        <div className="w-full bg-white rounded-3xl border border-gray-200 shadow-xl overflow-hidden grid grid-cols-1 lg:grid-cols-12 min-h-[650px]">
           
           {/* LEFT SIDE (Desktop Branding & Visuals) */}
           <div className="lg:col-span-5 bg-[#064638] text-white p-8 sm:p-12 flex flex-col justify-between relative overflow-hidden">
@@ -99,14 +145,14 @@ export const LoginPage: React.FC = () => {
                 <ShieldCheck className="w-3.5 h-3.5 text-[#D6A84F]" />
                 Identity Pass Verified
               </span>
-              <span>v1.0 MVP</span>
+              <span>v1.0 Real API</span>
             </div>
           </div>
 
-          {/* RIGHT SIDE (Clean Direct Login Cards) */}
-          <div className="lg:col-span-7 p-6 sm:p-10 lg:p-12 flex flex-col justify-between space-y-8">
-            {/* Header */}
-            <div className="space-y-2">
+          {/* RIGHT SIDE (Real Auth Form + Quick Demo Accounts) */}
+          <div className="lg:col-span-7 p-6 sm:p-10 lg:p-12 flex flex-col justify-between space-y-6">
+            {/* Header & Tabs */}
+            <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 lg:hidden">
                   <div className="w-8 h-8 rounded-lg bg-[#0B5D4B] flex items-center justify-center text-white">
@@ -119,90 +165,188 @@ export const LoginPage: React.FC = () => {
                 </Link>
               </div>
 
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-[#17211E]">Sign In to Sheba</h1>
-              <p className="text-xs text-[#66736E]">
-                Select your account role to enter the Sheba platform.
-              </p>
-            </div>
-
-            {/* DIRECT 1-CLICK ROLE ACCESSIBLE CARDS */}
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 gap-4">
-                {/* ATTENDEE CARD */}
-                <div className="bg-[#F7F8F5] p-5 rounded-2xl border border-gray-200 hover:border-[#0B5D4B] transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="green" icon={<UserCheck className="w-3 h-3" />}>
-                        ATTENDEE
-                      </Badge>
-                      <span className="text-xs font-bold text-[#17211E]">Abebe Kebede</span>
-                    </div>
-                    <p className="text-xs text-[#66736E]">Discover tech events & access digital QR ticket pass</p>
-                  </div>
-                  <Button
-                    onClick={() => handleDemoLogin('ATTENDEE')}
-                    isLoading={loadingRole === 'ATTENDEE'}
-                    size="md"
-                    variant="primary"
-                    className="w-full sm:w-auto text-xs whitespace-nowrap"
-                    icon={<LogIn className="w-4 h-4" />}
-                  >
-                    Sign In as Attendee
-                  </Button>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-2xl sm:text-3xl font-extrabold text-[#17211E]">
+                    {mode === 'login' ? 'Sign In to Sheba' : 'Create an Account'}
+                  </h1>
+                  <p className="text-xs text-[#66736E]">
+                    {mode === 'login' ? 'Access your tickets, events, and reports' : 'Join the Sheba tech event community'}
+                  </p>
                 </div>
 
-                {/* ORGANIZER CARD */}
-                <div className="bg-[#F7F8F5] p-5 rounded-2xl border border-gray-200 hover:border-[#064638] transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="gold" icon={<Building2 className="w-3 h-3" />}>
-                        ORGANIZER
-                      </Badge>
-                      <span className="text-xs font-bold text-[#17211E]">Sara Tesfaye</span>
-                    </div>
-                    <p className="text-xs text-[#66736E]">Manage events, run door scanner & export sponsor reports</p>
-                  </div>
-                  <Button
-                    onClick={() => handleDemoLogin('ORGANIZER')}
-                    isLoading={loadingRole === 'ORGANIZER'}
-                    size="md"
-                    variant="accent"
-                    className="w-full sm:w-auto text-xs whitespace-nowrap"
-                    icon={<LogIn className="w-4 h-4" />}
+                <div className="bg-gray-100 p-1 rounded-xl flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => { setMode('login'); setError(null); }}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                      mode === 'login' ? 'bg-white text-[#064638] shadow-sm' : 'text-gray-500 hover:text-gray-900'
+                    }`}
                   >
-                    Sign In as Organizer
-                  </Button>
-                </div>
-
-                {/* ADMIN CARD */}
-                <div className="bg-[#F7F8F5] p-5 rounded-2xl border border-gray-200 hover:border-slate-800 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="dark" icon={<Lock className="w-3 h-3" />}>
-                        ADMIN
-                      </Badge>
-                      <span className="text-xs font-bold text-[#17211E]">Hanan Admin</span>
-                    </div>
-                    <p className="text-xs text-[#66736E]">Platform master dashboard, user & organizer management</p>
-                  </div>
-                  <Button
-                    onClick={() => handleDemoLogin('ADMIN')}
-                    isLoading={loadingRole === 'ADMIN'}
-                    size="md"
-                    variant="secondary"
-                    className="w-full sm:w-auto text-xs whitespace-nowrap"
-                    icon={<LogIn className="w-4 h-4" />}
+                    Login
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setMode('register'); setError(null); }}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                      mode === 'register' ? 'bg-white text-[#064638] shadow-sm' : 'text-gray-500 hover:text-gray-900'
+                    }`}
                   >
-                    Sign In as Admin
-                  </Button>
+                    Register
+                  </button>
                 </div>
               </div>
             </div>
 
+            {/* Error Alert */}
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-xl text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            {/* REAL AUTHENTICATION FORM */}
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {mode === 'register' && (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-[#17211E] mb-1">Full Name</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Abebe Bikila"
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs focus:ring-2 focus:ring-[#064638] focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-[#17211E] mb-1">Account Role</label>
+                      <select
+                        value={role}
+                        onChange={(e) => setRole(e.target.value as any)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs focus:ring-2 focus:ring-[#064638] focus:outline-none bg-white"
+                      >
+                        <option value="attendee">Attendee</option>
+                        <option value="organizer">Organizer</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-[#17211E] mb-1">Phone Number (Optional)</label>
+                      <input
+                        type="text"
+                        placeholder="+251911234567"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs focus:ring-2 focus:ring-[#064638] focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-[#17211E] mb-1">Organization / Hub</label>
+                      <input
+                        type="text"
+                        placeholder="Addis Tech Hub"
+                        value={organization}
+                        onChange={(e) => setOrganization(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs focus:ring-2 focus:ring-[#064638] focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              <div>
+                <label className="block text-xs font-semibold text-[#17211E] mb-1">Email Address</label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
+                  <input
+                    type="email"
+                    required
+                    placeholder="user@sheba.et"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-xl text-xs focus:ring-2 focus:ring-[#064638] focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#17211E] mb-1">Password</label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
+                  <input
+                    type="password"
+                    required
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-xl text-xs focus:ring-2 focus:ring-[#064638] focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <Button
+                type="submit"
+                isLoading={loading}
+                variant="primary"
+                className="w-full py-2.5 text-xs font-bold"
+                icon={mode === 'login' ? <LogIn className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
+              >
+                {mode === 'login' ? 'Sign In with Real API' : 'Register Real Account'}
+              </Button>
+            </form>
+
+            {/* QUICK DEMO CARDS FOR TESTING */}
+            <div className="pt-4 border-t border-gray-200 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-gray-400 tracking-wider uppercase">
+                  Quick Demo Access
+                </span>
+                <span className="text-[10px] text-gray-400">Skip email login for instant review</span>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleDemoLogin('ATTENDEE')}
+                  disabled={loadingRole !== null}
+                  className="p-2.5 rounded-xl border border-gray-200 bg-gray-50 hover:bg-emerald-50 hover:border-emerald-300 transition-all flex flex-col items-center gap-1 text-center"
+                >
+                  <UserCheck className="w-4 h-4 text-[#0B5D4B]" />
+                  <span className="text-[11px] font-bold text-[#17211E]">Attendee</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleDemoLogin('ORGANIZER')}
+                  disabled={loadingRole !== null}
+                  className="p-2.5 rounded-xl border border-gray-200 bg-gray-50 hover:bg-amber-50 hover:border-amber-300 transition-all flex flex-col items-center gap-1 text-center"
+                >
+                  <Building2 className="w-4 h-4 text-[#D6A84F]" />
+                  <span className="text-[11px] font-bold text-[#17211E]">Organizer</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleDemoLogin('ADMIN')}
+                  disabled={loadingRole !== null}
+                  className="p-2.5 rounded-xl border border-gray-200 bg-gray-50 hover:bg-slate-100 hover:border-slate-300 transition-all flex flex-col items-center gap-1 text-center"
+                >
+                  <Lock className="w-4 h-4 text-slate-700" />
+                  <span className="text-[11px] font-bold text-[#17211E]">Admin</span>
+                </button>
+              </div>
+            </div>
+
             {/* Bottom Footer Disclaimer */}
-            <div className="text-center pt-4 border-t border-gray-100">
+            <div className="text-center pt-2">
               <span className="text-[11px] text-[#66736E]">
-                Sheba Event Infrastructure Platform • Direct Passwordless Access
+                Sheba Event Infrastructure Platform • Powered by Express & PostgreSQL
               </span>
             </div>
           </div>

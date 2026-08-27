@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api } from '../../services/api';
 import type { Event } from '../../types/event';
 import type { Ticket } from '../../types/ticket';
@@ -19,57 +19,55 @@ import {
 
 export const EventDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const { user, isAuthenticated, loginAsDemoUser } = useAuth();
+  const navigate = useNavigate();
+  const { user, isAuthenticated } = useAuth();
 
   const [event, setEvent] = useState<Event | null>(null);
   const [ticket, setTicket] = useState<Ticket | null>(null);
   const [loading, setLoading] = useState(true);
   const [registering, setRegistering] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const loadEventData = async () => {
       if (!id) return;
       setLoading(true);
-      const evtData = await api.getEventById(id);
-      setEvent(evtData || null);
+      try {
+        const evtData = await api.getEventById(id);
+        setEvent(evtData || null);
 
-      if (evtData && user) {
-        const tkt = await api.getTicketForEvent(evtData.id, user.id);
-        setTicket(tkt || null);
+        if (evtData && isAuthenticated) {
+          const tkt = await api.getTicketForEvent(evtData.id);
+          setTicket(tkt || null);
+        }
+      } catch (err: any) {
+        console.error(err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
     loadEventData();
-  }, [id, user]);
+  }, [id, isAuthenticated]);
 
   const handleRegister = async () => {
     if (!event) return;
 
-    setRegistering(true);
-    try {
-      let currentUser = user;
-      if (!isAuthenticated || !currentUser) {
-        loginAsDemoUser('ATTENDEE');
-        currentUser = {
-          id: 'demo-attendee-001',
-          name: 'Abebe Kebede',
-          telegramHandle: '@abebe_demo',
-          role: 'ATTENDEE',
-          memberSince: 'March 2025',
-        };
-      }
+    if (!isAuthenticated || !user) {
+      navigate('/login');
+      return;
+    }
 
-      const newTicket = await api.registerForEvent(
-        event.id,
-        currentUser.id,
-        currentUser.name,
-        currentUser.telegramHandle
-      );
+    setRegistering(true);
+    setErrorMessage(null);
+
+    try {
+      const newTicket = await api.registerForEvent(event.id);
       setTicket(newTicket);
       const updatedEvent = await api.getEventById(event.id);
       if (updatedEvent) setEvent(updatedEvent);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      setErrorMessage(e.message || 'Failed to register for event.');
     } finally {
       setRegistering(false);
     }
@@ -116,6 +114,17 @@ export const EventDetailPage: React.FC = () => {
         <ArrowLeft className="w-4 h-4" />
         Back to Event Discovery
       </Link>
+
+      {/* Error alert if registration failed */}
+      {errorMessage && (
+        <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-2xl text-xs flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
+            <span>{errorMessage}</span>
+          </div>
+          <button onClick={() => setErrorMessage(null)} className="font-bold hover:underline">Dismiss</button>
+        </div>
+      )}
 
       {/* Main Banner */}
       <div className="relative rounded-3xl overflow-hidden h-64 sm:h-80 bg-gray-900 shadow-lg">
@@ -174,7 +183,7 @@ export const EventDetailPage: React.FC = () => {
             {event.skillsFocus && event.skillsFocus.length > 0 && (
               <div className="pt-4 border-t border-gray-100 space-y-2">
                 <span className="text-xs font-bold uppercase tracking-wider text-[#66736E]">
-                  Self-Reported Tag Topics
+                  Skills Focus
                 </span>
                 <div className="flex flex-wrap gap-2">
                   {event.skillsFocus.map((skill: string) => (

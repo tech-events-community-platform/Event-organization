@@ -23,6 +23,7 @@ export const ScannerPage: React.FC = () => {
   const [scanResult, setScanResult] = useState<{
     message: string;
     ticket?: Ticket;
+    attendee?: any;
     time?: string;
   } | null>(null);
 
@@ -30,12 +31,13 @@ export const ScannerPage: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
 
   const handleScanPayload = async (payload: string) => {
+    if (!payload.trim()) return;
     setIsProcessing(true);
     setScanState('IDLE');
     setScanResult(null);
 
-    setTimeout(async () => {
-      const res = await api.verifyTicketQR(payload);
+    try {
+      const res = await api.verifyTicketQR(payload, id);
       const nowTime = new Date().toLocaleTimeString('en-US', {
         hour: '2-digit',
         minute: '2-digit',
@@ -61,8 +63,14 @@ export const ScannerPage: React.FC = () => {
           message: res.message,
         });
       }
+    } catch (e: any) {
+      setScanState('INVALID');
+      setScanResult({
+        message: e.message || 'Error processing scan.',
+      });
+    } finally {
       setIsProcessing(false);
-    }, 400);
+    }
   };
 
   const resetScanner = () => {
@@ -74,7 +82,7 @@ export const ScannerPage: React.FC = () => {
   return (
     <div className="max-w-xl mx-auto space-y-6 pb-12">
       <Link
-        to={`/organizer/events/${id || 'evt_react_workshop_2026'}`}
+        to={`/organizer/events/${id || ''}`}
         className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#0B5D4B] hover:underline"
       >
         <ArrowLeft className="w-4 h-4" />
@@ -87,7 +95,7 @@ export const ScannerPage: React.FC = () => {
         </Badge>
         <h1 className="text-2xl sm:text-3xl font-extrabold text-[#17211E]">Live Door QR Scanner</h1>
         <p className="text-xs text-[#66736E]">
-          Point camera at attendee QR ticket pass or use rapid test simulations below.
+          Point camera at attendee QR ticket pass or input scanned token to verify against backend database.
         </p>
       </div>
 
@@ -129,6 +137,7 @@ export const ScannerPage: React.FC = () => {
               <CheckCircle2 className="w-10 h-10" />
             </div>
             <h3 className="text-xl font-extrabold text-emerald-300">✓ Check-in successful</h3>
+            <p className="text-xs text-emerald-100">{scanResult?.message}</p>
 
             {scanResult?.ticket && (
               <div className="text-xs text-white space-y-1 bg-black/40 p-4 rounded-xl text-left border border-emerald-500/30">
@@ -158,13 +167,6 @@ export const ScannerPage: React.FC = () => {
             <h3 className="text-xl font-extrabold text-amber-300">Already checked in</h3>
             <p className="text-xs text-gray-200">{scanResult?.message}</p>
 
-            {scanResult?.ticket && (
-              <div className="text-xs text-white space-y-1 bg-black/40 p-3 rounded-xl text-left">
-                <p className="font-bold text-[#D6A84F]">{scanResult.ticket.attendeeName}</p>
-                <p className="text-gray-300">Previous Check-in logged.</p>
-              </div>
-            )}
-
             <Button onClick={resetScanner} size="sm" variant="accent" icon={<RotateCcw className="w-4 h-4" />}>
               Scan Next Attendee
             </Button>
@@ -187,68 +189,32 @@ export const ScannerPage: React.FC = () => {
         )}
       </div>
 
-      {/* Interactive Test Scanner Controls */}
+      {/* Manual Input Payload Entry */}
       <div className="bg-white p-6 rounded-3xl border border-gray-200 shadow-md space-y-4">
         <h3 className="font-bold text-sm text-[#17211E] flex items-center gap-2">
           <Zap className="w-4 h-4 text-[#D6A84F]" />
-          Interactive QR Scan Simulations
+          Manual QR Token Verification
         </h3>
         <p className="text-xs text-[#66736E]">
-          Test scanner response states without an active camera feed:
+          Paste or scan raw QR token string to verify directly against backend check-in endpoint:
         </p>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-          <Button
-            onClick={() =>
-              handleScanPayload('SHEBA_TICKET_VERIFY::SHB-8921-2026::evt_react_workshop_2026::usr_kirubel_01')
-            }
-            isLoading={isProcessing}
-            variant="primary"
-            size="sm"
-            className="text-xs"
-          >
-            Simulate Valid Scan
-          </Button>
-
-          <Button
-            onClick={() =>
-              handleScanPayload('SHEBA_TICKET_VERIFY::SHB-4412-2026::evt_open_source_addis::usr_kirubel_01')
-            }
-            isLoading={isProcessing}
-            variant="accent"
-            size="sm"
-            className="text-xs"
-          >
-            Simulate Duplicate Scan
-          </Button>
-
-          <Button
-            onClick={() => handleScanPayload('INVALID_PAYLOAD_STRING')}
-            isLoading={isProcessing}
-            variant="danger"
-            size="sm"
-            className="text-xs"
-          >
-            Simulate Invalid Scan
-          </Button>
-        </div>
-
-        {/* Manual Input Payload Entry */}
-        <div className="pt-3 border-t border-gray-100 flex gap-2">
+        <div className="flex gap-2">
           <input
             type="text"
-            placeholder="Paste QR payload or Ticket ID..."
+            placeholder="Paste JWT QR token string..."
             value={inputPayload}
             onChange={(e) => setInputPayload(e.target.value)}
             className="flex-1 px-3 py-2 bg-[#F7F8F5] border border-gray-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-[#0B5D4B]"
           />
           <Button
             onClick={() => handleScanPayload(inputPayload)}
+            isLoading={isProcessing}
             disabled={!inputPayload.trim()}
-            variant="secondary"
+            variant="primary"
             size="sm"
           >
-            Scan Manual
+            Verify Token
           </Button>
         </div>
       </div>

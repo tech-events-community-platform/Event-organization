@@ -23,8 +23,9 @@ export const AdminEventsPage: React.FC = () => {
 
   const handleCancelEvent = async () => {
     if (!cancelModalEvent) return;
-    const updated = await api.updateEventStatus(cancelModalEvent.id, 'Draft');
-    setEvents(updated);
+    await api.events.update(cancelModalEvent.id, { status: 'Draft' });
+    const refreshed = await api.getEvents();
+    setEvents(refreshed);
     setCancelModalEvent(null);
   };
 

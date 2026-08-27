@@ -14,4 +14,5 @@ export interface Ticket {
   issuedAt: string;
   checkedInAt?: string;
   qrPayload: string;
+  qrCodeDataUrl?: string;
 }

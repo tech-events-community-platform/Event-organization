@@ -23,4 +23,5 @@ export interface SponsorReportData {
   attendanceRate: number;
   hourlyCheckIns: { time: string; count: number }[];
   selfReportedSkills: { skill: string; count: number; percentage: number }[];
+  attendees?: any[];
 }
