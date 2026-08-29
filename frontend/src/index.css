@@ -1,30 +1,43 @@
 @import "tailwindcss";
 
 @theme {
-  --color-sheba-green: #0B5D4B;
-  --color-sheba-dark: #064638;
-  --color-sheba-gold: #D6A84F;
-  --color-sheba-bg: #F7F8F5;
+  --color-sheba-primary: #63474D;
+  --color-sheba-secondary: #AA767C;
+  --color-sheba-tertiary: #D6A184;
+  --color-sheba-accent: #FFA686;
+  --color-sheba-light: #FEC196;
+  
+  --color-sheba-bg: #FAF7F5;
   --color-sheba-surface: #FFFFFF;
-  --color-sheba-text: #17211E;
-  --color-sheba-muted: #66736E;
-  --color-sheba-success: #238B6E;
-  --color-sheba-error: #C94C4C;
+  --color-sheba-surface-alt: #F4EFEB;
+  --color-sheba-text: #2D1F23;
+  --color-sheba-muted: #756366;
+  --color-sheba-border: #E8DDD7;
+  
+  --color-sheba-success: #2A7B5F;
+  --color-sheba-warning: #D97706;
+  --color-sheba-error: #B91C1C;
 
-  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  --font-serif: 'Lora', Georgia, serif;
+  --font-sans: 'Nunito', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
 }
 
 @layer base {
   :root {
     color-scheme: light;
   }
+  
   body {
-    background-color: #F7F8F5;
-    color: #17211E;
+    background-color: #FAF7F5;
+    color: #2D1F23;
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     min-height: 100vh;
+  }
+
+  h1, h2, h3, .font-display, .font-serif {
+    font-family: var(--font-serif);
   }
 }
 
@@ -34,31 +47,33 @@
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #F7F8F5;
+  background: #FAF7F5;
 }
 ::-webkit-scrollbar-thumb {
-  background: #CBD5E1;
+  background: #D6A184;
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #94A3B8;
+  background: #AA767C;
 }
 
-/* Custom animations & subtle glows */
-@keyframes pulse-subtle {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.85; transform: scale(1.02); }
+/* Minimalist container utilities */
+.sheba-section {
+  background: transparent;
 }
 
-.animate-pulse-subtle {
-  animation: pulse-subtle 3s infinite ease-in-out;
+.sheba-paper {
+  background: #FFFFFF;
+  border-bottom: 1px solid #E8DDD7;
 }
 
-.gold-gradient-border {
-  border: 1px solid rgba(214, 168, 79, 0.3);
-}
-
-.sheba-glass {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(12px);
+/* Print utilities for sponsor reports */
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+  .no-print {
+    display: none !important;
+  }
 }

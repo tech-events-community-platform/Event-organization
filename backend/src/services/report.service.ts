@@ -1,116 +1,114 @@
 import { query } from '../config/db';
-import { UserRole } from '../types';
+import { UserRole, SponsorReportData } from '../types';
+import { EventService } from './event.service';
 
 export class ReportService {
-  static async getEventReport(eventId: string, userId: string, userRole: UserRole) {
-    // 1. Verify organizer ownership
-    const eventRes = await query(
-      `SELECT e.*, u.full_name AS organizer_name, u.email AS organizer_email, u.organization AS organizer_organization
-       FROM events e
-       JOIN users u ON e.organizer_id = u.id
-       WHERE e.id = $1`,
-      [eventId]
-    );
-
-    if (!eventRes.rowCount || eventRes.rowCount === 0) {
+  static async getEventReport(eventId: string, userId?: string, userRole?: UserRole): Promise<SponsorReportData> {
+    const event = await EventService.getEventById(eventId);
+    if (!event) {
       const err: any = new Error('Event not found.');
       err.statusCode = 404;
       throw err;
     }
 
-    const event = eventRes.rows[0];
-
-    if (event.organizer_id !== userId && userRole !== 'admin') {
+    if (userId && userRole && event.organizerId !== userId && userRole !== 'admin') {
       const err: any = new Error('Forbidden. You are not authorized to view reports for this event.');
       err.statusCode = 403;
       throw err;
     }
 
-    // 2. Aggregate counts
-    const statsRes = await query(
-      `SELECT 
-        (SELECT COUNT(*)::INTEGER FROM registrations WHERE event_id = $1 AND status = 'registered') AS total_registered,
-        (SELECT COUNT(*)::INTEGER FROM registrations WHERE event_id = $1 AND status = 'cancelled') AS total_cancelled,
-        (SELECT COUNT(*)::INTEGER FROM tickets WHERE event_id = $1 AND status = 'CHECKED_IN') AS total_checked_in
-      `,
-      [eventId]
+    // 1. Roster and Badges
+    const roster = await EventService.getEventRoster(event.id);
+    const checkedIn = roster.filter((r) => r.status === 'Checked in');
+
+    // 2. Badge breakdown
+    const badgesRes = await query(
+      `SELECT badge_code, COUNT(*)::INTEGER AS count
+       FROM badge_awards
+       WHERE event_id = $1 AND revoked_at IS NULL
+       GROUP BY badge_code`,
+      [event.id]
     );
 
-    const stats = statsRes.rows[0];
-    const totalRegistered = stats.total_registered;
-    const totalCheckedIn = stats.total_checked_in;
-    const totalCancelled = stats.total_cancelled;
-    const attendanceRate = totalRegistered > 0
-      ? Math.round((totalCheckedIn / totalRegistered) * 10000) / 100
-      : 0;
+    const badgeCounts: Record<string, number> = {
+      attended: 0,
+      participant: 0,
+      winner: 0,
+      speaker: 0,
+    };
 
-    // 3. Hourly Check-in Breakdown
+    for (const b of badgesRes.rows) {
+      badgeCounts[b.badge_code] = parseInt(b.count, 10);
+    }
+
+    // Ensure attended badge matches checked in if none recorded
+    if (badgeCounts.attended === 0 && checkedIn.length > 0) {
+      badgeCounts.attended = checkedIn.length;
+    }
+
+    // 3. Registrations over time (velocity)
+    const velocityRes = await query(
+      `SELECT 
+        TO_CHAR(registered_at, 'Mon DD') AS reg_date,
+        COUNT(*)::INTEGER AS count
+       FROM registrations
+       WHERE event_id = $1 AND status = 'registered'
+       GROUP BY reg_date, DATE_TRUNC('day', registered_at)
+       ORDER BY DATE_TRUNC('day', registered_at) ASC`,
+      [event.id]
+    );
+
+    const registrationsOverTime = velocityRes.rows.length > 0
+      ? velocityRes.rows.map((r) => ({ date: r.reg_date, count: parseInt(r.count, 10) }))
+      : [{ date: event.date, count: roster.length || 1 }];
+
+    // 4. Hourly check-in distribution
     const hourlyRes = await query(
       `SELECT 
-        TO_CHAR(DATE_TRUNC('hour', checked_in_at), 'YYYY-MM-DD HH24:00') AS hour_interval,
+        TO_CHAR(checked_in_at, 'HH12:00 AM') AS checkin_hour,
         COUNT(*)::INTEGER AS count
        FROM tickets
        WHERE event_id = $1 AND status = 'CHECKED_IN' AND checked_in_at IS NOT NULL
-       GROUP BY hour_interval
-       ORDER BY hour_interval ASC`,
-      [eventId]
+       GROUP BY checkin_hour
+       ORDER BY checkin_hour ASC`,
+      [event.id]
     );
 
-    // 4. Attendee List with Check-in Info
-    const attendeesRes = await query(
-      `SELECT 
-        u.id AS user_id,
-        u.full_name,
-        u.email,
-        u.phone,
-        u.organization,
-        r.id AS registration_id,
-        r.status AS registration_status,
-        r.registered_at,
-        t.id AS ticket_id,
-        t.status AS ticket_status,
-        t.checked_in_at
-       FROM registrations r
-       JOIN users u ON r.user_id = u.id
-       LEFT JOIN tickets t ON r.id = t.registration_id
-       WHERE r.event_id = $1
-       ORDER BY r.registered_at DESC`,
-      [eventId]
-    );
+    const hourlyCheckIns = hourlyRes.rows.map((h) => ({
+      hour: h.checkin_hour,
+      count: parseInt(h.count, 10),
+    }));
+
+    const attendanceRate = roster.length > 0
+      ? parseFloat(((checkedIn.length / roster.length) * 100).toFixed(1))
+      : 0;
 
     return {
-      event: {
-        id: event.id,
-        title: event.title,
-        description: event.description,
-        category: event.category,
-        event_date: event.event_date,
-        location: event.location,
-        capacity: event.capacity,
-        status: event.status,
-        organizer: {
-          name: event.organizer_name,
-          email: event.organizer_email,
-          organization: event.organizer_organization,
-        },
+      eventId: event.id,
+      eventTitle: event.title,
+      eventType: event.type,
+      eventDate: event.date,
+      eventLocation: event.location,
+      organizerName: event.organizerName,
+      totalRegistered: roster.length,
+      totalAttended: checkedIn.length,
+      attendanceRate,
+      badgeDistribution: {
+        attended: badgeCounts.attended,
+        participant: badgeCounts.participant,
+        winner: badgeCounts.winner,
+        speaker: badgeCounts.speaker,
       },
-      summary: {
-        capacity: event.capacity,
-        total_registered: totalRegistered,
-        total_checked_in: totalCheckedIn,
-        total_cancelled: totalCancelled,
-        remaining_capacity: Math.max(0, event.capacity - totalRegistered),
-        attendance_rate_percentage: attendanceRate,
-      },
-      hourly_checkins: hourlyRes.rows,
-      attendees: attendeesRes.rows,
+      registrationsOverTime,
+      hourlyCheckIns,
+      attendees: roster,
     };
   }
 
   static async exportEventReportCsv(
     eventId: string,
-    userId: string,
-    userRole: UserRole
+    userId?: string,
+    userRole?: UserRole
   ): Promise<{ filename: string; csvContent: string }> {
     const report = await this.getEventReport(eventId, userId, userRole);
 
@@ -123,32 +121,27 @@ export class ReportService {
     const headers = [
       'Attendee Name',
       'Email',
-      'Phone',
-      'Organization',
-      'Registration Status',
-      'Registered At',
-      'Attendance Status',
-      'Checked-In At',
+      'Registration Date',
+      'Status',
+      'Check-in Time',
+      'Badges Awarded',
     ];
 
-    const rows = report.attendees.map((a: any) => {
+    const rows = report.attendees.map((a) => {
       return [
-        escapeCsv(a.full_name),
+        escapeCsv(a.name),
         escapeCsv(a.email),
-        escapeCsv(a.phone || 'N/A'),
-        escapeCsv(a.organization || 'N/A'),
-        escapeCsv(a.registration_status),
-        escapeCsv(a.registered_at ? new Date(a.registered_at).toISOString() : 'N/A'),
-        escapeCsv(a.ticket_status === 'CHECKED_IN' ? 'CHECKED IN' : a.ticket_status || 'NOT ISSUED'),
-        escapeCsv(a.checked_in_at ? new Date(a.checked_in_at).toISOString() : 'N/A'),
+        escapeCsv(a.registrationDate),
+        escapeCsv(a.status),
+        escapeCsv(a.checkInTime || '—'),
+        escapeCsv(a.badges.join('; ')),
       ].join(',');
     });
 
     const csvContent = [headers.join(','), ...rows].join('\n');
-    const safeTitle = report.event.title.replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase();
-    const filename = `sheba_attendance_report_${safeTitle}_${new Date().toISOString().slice(0, 10)}.csv`;
+    const safeTitle = report.eventTitle.replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase();
+    const filename = `sheba_sponsor_report_${safeTitle}_${new Date().toISOString().slice(0, 10)}.csv`;
 
     return { filename, csvContent };
   }
 }
-

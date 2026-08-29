@@ -6,181 +6,259 @@ import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import {
   BarChart3,
-  CheckCircle2,
   ShieldCheck,
   ArrowLeft,
-  AlertCircle,
   FileSpreadsheet,
+  Printer,
+  Calendar,
+  MapPin,
+  Award,
+  Users,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 
 export const ReportPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [report, setReport] = useState<SponsorReportData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [exported, setExported] = useState(false);
+  const [showAppendix, setShowAppendix] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     const fetchReport = async () => {
       setLoading(true);
       if (id) {
-        try {
-          const data = await api.reports.getEventReport(id);
-          setReport(data);
-        } catch (e) {
-          console.error(e);
-        }
+        const data = await api.reports.getEventReport(id);
+        setReport(data);
       }
       setLoading(false);
     };
     fetchReport();
   }, [id]);
 
+  const handlePrintPDF = () => {
+    window.print();
+  };
+
   const handleExportCSV = async () => {
     if (!id) return;
     setIsExporting(true);
     try {
       await api.reports.exportCsv(id);
-      setExported(true);
-      setTimeout(() => setExported(false), 4000);
     } catch (e) {
-      console.error('CSV Export error:', e);
-      alert('Failed to download report CSV from backend.');
+      console.error(e);
     } finally {
       setIsExporting(false);
     }
   };
 
   if (loading) {
-    return <div className="max-w-4xl mx-auto py-12 px-4 animate-pulse h-64 bg-gray-200 rounded-3xl"></div>;
+    return <div className="max-w-4xl mx-auto py-12 px-4 animate-pulse h-64 bg-[#E8DDD7]/50 rounded-3xl"></div>;
   }
 
   if (!report) return null;
 
   return (
-    <div className="space-y-8 pb-12">
-      <Link
-        to={`/organizer/events/${id || ''}`}
-        className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#0B5D4B] hover:underline"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Back to Event Dashboard
-      </Link>
-
-      {/* Header */}
-      <div className="bg-[#064638] text-white p-6 sm:p-8 rounded-3xl space-y-4 shadow-lg border border-[#0B5D4B] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="space-y-2">
-          <Badge variant="gold" icon={<ShieldCheck className="w-3.5 h-3.5" />}>
-            Verified Sponsor Impact Report
-          </Badge>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white">{report.eventTitle}</h1>
-          <p className="text-xs text-gray-300">
-            Host: {report.organizerName} • Report Date: {report.eventDate}
-          </p>
-        </div>
-
-        <Button
-          onClick={handleExportCSV}
-          isLoading={isExporting}
-          variant="accent"
-          size="lg"
-          icon={<FileSpreadsheet className="w-5 h-5" />}
+    <div className="space-y-8 pb-20 max-w-4xl mx-auto">
+      <div className="no-print">
+        <Link
+          to={`/organizer`}
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#63474D] hover:underline"
         >
-          Export Report (.CSV)
-        </Button>
+          <ArrowLeft className="w-4 h-4" />
+          Back to Dashboard
+        </Link>
       </div>
 
-      {exported && (
-        <div className="bg-[#238B6E]/10 border border-[#238B6E]/40 p-4 rounded-2xl text-xs text-[#238B6E] font-bold flex items-center gap-2 animate-fade-in">
-          <CheckCircle2 className="w-5 h-5" />
-          Sponsor report exported successfully from backend! Download initialized.
+      {/* Header Block (SRS Section 9.1 Product Decision) */}
+      <div className="bg-[#63474D] text-white p-6 sm:p-8 rounded-3xl space-y-4 shadow-sm border border-[#AA767C]/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="space-y-2">
+          <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-[#FFA686]/20 border border-[#FFA686]/30 text-[#FFA686] text-xs font-semibold">
+            <ShieldCheck className="w-3.5 h-3.5" />
+            <span>Sponsor Evidence Report</span>
+          </div>
+          <h1 className="font-serif text-2xl sm:text-3xl font-extrabold text-white">{report.eventTitle}</h1>
+          <div className="flex flex-wrap items-center gap-3 text-xs text-[#E8DDD7]">
+            <span>Organizer: {report.organizerName}</span>
+            <span>•</span>
+            <span className="flex items-center gap-1">
+              <Calendar className="w-3.5 h-3.5 text-[#FFA686]" /> {report.eventDate}
+            </span>
+            <span>•</span>
+            <span className="flex items-center gap-1">
+              <MapPin className="w-3.5 h-3.5 text-[#FFA686]" /> {report.eventLocation}
+            </span>
+          </div>
         </div>
-      )}
 
-      {/* Metrics Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-2xs space-y-1">
-          <span className="text-xs font-semibold text-[#66736E]">Total Registered</span>
-          <p className="text-3xl font-extrabold text-[#17211E]">{report.totalRegistered}</p>
-          <p className="text-[10px] text-[#66736E]">Confirmed Registrations</p>
-        </div>
-
-        <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-2xs space-y-1">
-          <span className="text-xs font-semibold text-[#66736E]">Total Attended</span>
-          <p className="text-3xl font-extrabold text-[#238B6E]">{report.totalAttended}</p>
-          <p className="text-[10px] text-[#238B6E] font-medium">Door QR Verified</p>
-        </div>
-
-        <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-2xs space-y-1">
-          <span className="text-xs font-semibold text-[#66736E]">Verified Attendance Rate</span>
-          <p className="text-3xl font-extrabold text-[#D6A84F]">{report.attendanceRate}%</p>
-          <p className="text-[10px] text-[#66736E]">Actual turnout ratio</p>
+        <div className="flex items-center gap-2 no-print">
+          <Button
+            onClick={handleExportCSV}
+            isLoading={isExporting}
+            variant="outline"
+            size="sm"
+            className="text-white border-white/40 hover:bg-white/10"
+            icon={<FileSpreadsheet className="w-4 h-4" />}
+          >
+            CSV
+          </Button>
+          <Button
+            onClick={handlePrintPDF}
+            variant="accent"
+            size="sm"
+            icon={<Printer className="w-4 h-4" />}
+          >
+            1-Click PDF Export
+          </Button>
         </div>
       </div>
 
-      {/* Timeline & Tag Distribution */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {/* Entrance Timeline Check-in Chart */}
-        <div className="bg-white p-6 rounded-3xl border border-gray-200 shadow-2xs space-y-4">
-          <h3 className="font-bold text-base text-[#17211E] flex items-center gap-2">
-            <BarChart3 className="w-4 h-4 text-[#0B5D4B]" />
-            Entrance Velocity (Hourly Check-ins)
+      {/* Metric Cards Row */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="bg-white p-5 rounded-2xl border border-[#E8DDD7] shadow-xs space-y-1">
+          <span className="text-[10px] uppercase font-bold text-[#756366]">Registered</span>
+          <p className="font-serif text-3xl font-extrabold text-[#2D1F23]">{report.totalRegistered}</p>
+          <p className="text-[10px] text-[#756366]">Confirmed RSVPs</p>
+        </div>
+
+        <div className="bg-white p-5 rounded-2xl border border-[#E8DDD7] shadow-xs space-y-1">
+          <span className="text-[10px] uppercase font-bold text-[#756366]">Turnout / Attended</span>
+          <p className="font-serif text-3xl font-extrabold text-[#2A7B5F]">{report.totalAttended}</p>
+          <p className="text-[10px] text-[#2A7B5F] font-semibold">QR Door Scanned</p>
+        </div>
+
+        <div className="bg-white p-5 rounded-2xl border border-[#E8DDD7] shadow-xs space-y-1">
+          <span className="text-[10px] uppercase font-bold text-[#756366]">Attendance Rate</span>
+          <p className="font-serif text-3xl font-extrabold text-[#63474D]">{report.attendanceRate}%</p>
+          <p className="text-[10px] text-[#756366]">Turnout efficiency</p>
+        </div>
+
+        <div className="bg-white p-5 rounded-2xl border border-[#E8DDD7] shadow-xs space-y-1">
+          <span className="text-[10px] uppercase font-bold text-[#756366]">Total Badges Awarded</span>
+          <p className="font-serif text-3xl font-extrabold text-[#AA767C]">
+            {report.badgeDistribution.attended +
+              report.badgeDistribution.participant +
+              report.badgeDistribution.winner +
+              report.badgeDistribution.speaker}
+          </p>
+          <p className="text-[10px] text-[#756366]">Verified Credentials</p>
+        </div>
+      </div>
+
+      {/* Two Sponsor Evidence Charts (Registrations & Badges) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Chart 1: Registration & Arrival Velocity */}
+        <div className="bg-white p-6 rounded-3xl border border-[#E8DDD7] shadow-xs space-y-4">
+          <h3 className="font-serif font-bold text-base text-[#2D1F23] flex items-center gap-2">
+            <BarChart3 className="w-4 h-4 text-[#63474D]" />
+            1. Registration Timeline (Velocity)
           </h3>
 
           <div className="space-y-3 pt-2">
-            {report.hourlyCheckIns.length === 0 ? (
-              <p className="text-xs text-gray-500 py-4 text-center">No hourly check-ins recorded yet.</p>
-            ) : (
-              report.hourlyCheckIns.map((slot, idx) => (
-                <div key={idx} className="space-y-1">
-                  <div className="flex justify-between text-xs font-semibold text-[#17211E]">
-                    <span>{slot.time}</span>
-                    <span className="text-[#0B5D4B] font-mono">{slot.count} scans</span>
-                  </div>
-                  <div className="w-full bg-gray-100 h-3 rounded-full overflow-hidden">
-                    <div
-                      className="bg-[#0B5D4B] h-full rounded-full transition-all"
-                      style={{ width: `${Math.min(100, (slot.count / Math.max(1, report.totalAttended)) * 100)}%` }}
-                    ></div>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* Self-Reported Skill Tag Distribution */}
-        <div className="bg-white p-6 rounded-3xl border border-gray-200 shadow-2xs space-y-4">
-          <div className="space-y-1">
-            <h3 className="font-bold text-base text-[#17211E]">
-              Self-Reported Tech Interests
-            </h3>
-            {/* Product Rule Alert */}
-            <div className="bg-amber-50 border border-amber-200 p-2.5 rounded-xl text-[11px] text-amber-900 flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-[#D6A84F] flex-shrink-0" />
-              <span>
-                Note: Tech tags are self-reported interests selected by attendees during RSVP (Not verified skill tests).
-              </span>
-            </div>
-          </div>
-
-          <div className="space-y-3 pt-2">
-            {report.selfReportedSkills.map((item, idx) => (
+            {report.registrationsOverTime.map((slot, idx) => (
               <div key={idx} className="space-y-1">
-                <div className="flex justify-between text-xs font-semibold text-[#17211E]">
-                  <span>{item.skill}</span>
-                  <span className="text-[#D6A84F] font-mono">{item.percentage}% ({item.count})</span>
+                <div className="flex justify-between text-xs font-semibold text-[#2D1F23]">
+                  <span>{slot.date}</span>
+                  <span className="text-[#63474D] font-mono">{slot.count} RSVPs</span>
                 </div>
-                <div className="w-full bg-gray-100 h-3 rounded-full overflow-hidden">
+                <div className="w-full bg-[#FAF7F5] h-3 rounded-full overflow-hidden border border-[#E8DDD7]">
                   <div
-                    className="bg-[#D6A84F] h-full rounded-full transition-all"
-                    style={{ width: `${item.percentage}%` }}
+                    className="bg-[#63474D] h-full rounded-full transition-all"
+                    style={{ width: `${Math.min(100, (slot.count / report.totalRegistered) * 100)}%` }}
                   ></div>
                 </div>
               </div>
             ))}
           </div>
         </div>
+
+        {/* Chart 2: Badge Distribution Breakdown (SRS Section 9.1) */}
+        <div className="bg-white p-6 rounded-3xl border border-[#E8DDD7] shadow-xs space-y-4">
+          <h3 className="font-serif font-bold text-base text-[#2D1F23] flex items-center gap-2">
+            <Award className="w-4 h-4 text-[#AA767C]" />
+            2. Badge Distribution Breakdown
+          </h3>
+
+          <div className="space-y-3 pt-2">
+            {[
+              { label: 'Attended (Automatic check-in)', count: report.badgeDistribution.attended, color: 'bg-[#63474D]' },
+              { label: 'Participant (Workshop coders)', count: report.badgeDistribution.participant, color: 'bg-[#AA767C]' },
+              { label: 'Speaker (Session leads)', count: report.badgeDistribution.speaker, color: 'bg-[#D6A184]' },
+              { label: 'Winner (Prize recipients)', count: report.badgeDistribution.winner, color: 'bg-[#FFA686]' },
+            ].map((item, idx) => (
+              <div key={idx} className="space-y-1">
+                <div className="flex justify-between text-xs font-semibold text-[#2D1F23]">
+                  <span>{item.label}</span>
+                  <span className="font-mono text-[#63474D]">{item.count} awarded</span>
+                </div>
+                <div className="w-full bg-[#FAF7F5] h-3 rounded-full overflow-hidden border border-[#E8DDD7]">
+                  <div
+                    className={`${item.color} h-full rounded-full transition-all`}
+                    style={{
+                      width: `${Math.min(
+                        100,
+                        (item.count / Math.max(1, report.totalAttended)) * 100
+                      )}%`,
+                    }}
+                  ></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Togglable Appendix Table (Off by default for sponsor reports) */}
+      <div className="bg-white p-6 rounded-3xl border border-[#E8DDD7] shadow-xs space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="font-serif font-bold text-base text-[#2D1F23] flex items-center gap-2">
+              <Users className="w-4 h-4 text-[#63474D]" />
+              Attendee Roster Appendix
+            </h3>
+            <p className="text-xs text-[#756366]">
+              Optional granular list of individual participants (Toggled off by default for privacy in sponsor PDFs).
+            </p>
+          </div>
+
+          <button
+            onClick={() => setShowAppendix(!showAppendix)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[#E8DDD7] text-xs font-bold text-[#63474D] hover:bg-[#FAF7F5] transition-colors no-print"
+          >
+            {showAppendix ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+            {showAppendix ? 'Hide Appendix' : 'Show Appendix'}
+          </button>
+        </div>
+
+        {showAppendix && (
+          <div className="pt-2 border-t border-[#E8DDD7] overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="bg-[#FAF7F5] border-b border-[#E8DDD7] text-[10px] font-bold uppercase tracking-wider text-[#756366]">
+                  <th className="py-2 px-3">Name</th>
+                  <th className="py-2 px-3">Email</th>
+                  <th className="py-2 px-3">Status</th>
+                  <th className="py-2 px-3">Badges Issued</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#E8DDD7] text-[#2D1F23]">
+                {(report.attendees || []).map((att) => (
+                  <tr key={att.id}>
+                    <td className="py-2 px-3 font-semibold">{att.name}</td>
+                    <td className="py-2 px-3 text-[#756366]">{att.email}</td>
+                    <td className="py-2 px-3">
+                      <Badge variant={att.status === 'Checked in' ? 'success' : 'gray'}>
+                        {att.status}
+                      </Badge>
+                    </td>
+                    <td className="py-2 px-3">{att.badges.join(', ') || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

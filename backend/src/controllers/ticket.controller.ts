@@ -4,14 +4,12 @@ import { sendSuccess } from '../utils/apiResponse';
 import { AuthRequest } from '../types';
 
 export class TicketController {
-  static async issueTicket(req: AuthRequest, res: Response, next: NextFunction) {
+  static async getMyTickets(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const eventId = req.params.eventId as string;
       const userId = req.user!.userId;
+      const tickets = await TicketService.getAttendeeTickets(userId);
 
-      const ticket = await TicketService.issueTicket(eventId, userId);
-
-      return sendSuccess(res, ticket, 'Ticket issued successfully.', 201);
+      return sendSuccess(res, tickets, 'Attendee tickets retrieved.');
     } catch (error) {
       next(error);
     }
@@ -23,6 +21,10 @@ export class TicketController {
       const userId = req.user!.userId;
 
       const ticket = await TicketService.getTicketByEventAndUser(eventId, userId);
+
+      if (!ticket) {
+        return res.status(404).json({ success: false, message: 'Ticket not found for this event.' });
+      }
 
       return sendSuccess(res, ticket, 'Ticket retrieved successfully.');
     } catch (error) {
@@ -41,4 +43,3 @@ export class TicketController {
     }
   }
 }
-

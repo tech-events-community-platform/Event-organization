@@ -4,10 +4,14 @@ import { useAuth } from '../../context/AuthContext';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import {
-  QrCode,
+  Award,
+  Search,
   Menu,
   X,
   LogIn,
+  Settings,
+  PlusCircle,
+  Ticket,
 } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
@@ -27,74 +31,102 @@ export const Navbar: React.FC = () => {
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-[#FFFFFF]/90 backdrop-blur-md border-b border-gray-200/80 shadow-xs">
+    <header className="sticky top-0 z-40 bg-[#FAF7F5]/90 backdrop-blur-md border-b border-[#E8DDD7]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Brand Logo */}
-          <Link to="/" className="flex items-center gap-2.5 group">
-            <div className="w-9 h-9 rounded-xl bg-[#0B5D4B] flex items-center justify-center text-white shadow-sm group-hover:bg-[#064638] transition-colors">
-              <QrCode className="w-5 h-5 text-[#D6A84F]" />
+          <Link to="/" className="flex items-center gap-3 group">
+            <div className="w-9 h-9 rounded-xl bg-[#63474D] flex items-center justify-center text-white shadow-xs group-hover:bg-[#523a3f] transition-colors">
+              <Award className="w-5 h-5 text-[#FFA686]" />
             </div>
             <div className="flex flex-col">
-              <span className="font-extrabold text-xl tracking-tight text-[#17211E] flex items-center gap-1">
-                SHEBA
-                <span className="w-1.5 h-1.5 rounded-full bg-[#D6A84F]"></span>
+              <span className="font-serif font-bold text-xl tracking-tight text-[#2D1F23] flex items-center gap-1.5">
+                SHEEBA
+                <span className="w-1.5 h-1.5 rounded-full bg-[#FFA686]"></span>
               </span>
-              <span className="text-[10px] font-semibold text-[#0B5D4B] -mt-1 tracking-wider">
-                EVENT INFRASTRUCTURE
+              <span className="text-[10px] font-sans font-semibold text-[#756366] -mt-1 tracking-wider uppercase">
+                Attendance, verified.
               </span>
             </div>
           </Link>
 
           {/* Desktop Navigation Links */}
-          <nav className="hidden md:flex items-center gap-1">
+          <nav className="hidden md:flex items-center gap-2">
             <Link
-              to="/events"
-              className={`px-3.5 py-2 rounded-lg text-sm font-medium transition-colors ${
-                isActive('/events')
-                  ? 'bg-[#0B5D4B]/10 text-[#0B5D4B]'
-                  : 'text-[#66736E] hover:text-[#17211E] hover:bg-gray-100/80'
+              to="/search"
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+                isActive('/search')
+                  ? 'bg-[#63474D]/10 text-[#63474D]'
+                  : 'text-[#756366] hover:text-[#2D1F23] hover:bg-[#E8DDD7]/40'
               }`}
             >
-              Explore Events
+              <Search className="w-3.5 h-3.5" />
+              Search Profiles & Events
             </Link>
 
             {isAuthenticated && role === 'ATTENDEE' && (
-              <Link
-                to="/app"
-                className={`px-3.5 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  isActive('/app')
-                    ? 'bg-[#0B5D4B]/10 text-[#0B5D4B]'
-                    : 'text-[#66736E] hover:text-[#17211E] hover:bg-gray-100/80'
-                }`}
-              >
-                Attendee Hub
-              </Link>
+              <>
+                <Link
+                  to="/app/events"
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+                    isActive('/app/events') || isActive('/app/ticket')
+                      ? 'bg-[#63474D]/10 text-[#63474D]'
+                      : 'text-[#756366] hover:text-[#2D1F23] hover:bg-[#E8DDD7]/40'
+                  }`}
+                >
+                  <Ticket className="w-3.5 h-3.5" />
+                  My Tickets / QR Wallet
+                </Link>
+                <Link
+                  to="/app/profile"
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+                    isActive('/app/profile')
+                      ? 'bg-[#63474D]/10 text-[#63474D]'
+                      : 'text-[#756366] hover:text-[#2D1F23] hover:bg-[#E8DDD7]/40'
+                  }`}
+                >
+                  <Award className="w-3.5 h-3.5" />
+                  My Badges & Profile
+                </Link>
+              </>
             )}
 
             {isAuthenticated && role === 'ORGANIZER' && (
-              <Link
-                to="/organizer"
-                className={`px-3.5 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  isActive('/organizer')
-                    ? 'bg-[#0B5D4B]/10 text-[#0B5D4B]'
-                    : 'text-[#66736E] hover:text-[#17211E] hover:bg-gray-100/80'
-                }`}
-              >
-                Organizer Console
-              </Link>
+              <>
+                <Link
+                  to="/organizer"
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
+                    isActive('/organizer') && !location.pathname.includes('/create')
+                      ? 'bg-[#63474D]/10 text-[#63474D]'
+                      : 'text-[#756366] hover:text-[#2D1F23] hover:bg-[#E8DDD7]/40'
+                  }`}
+                >
+                  Events Dashboard
+                </Link>
+                <Link
+                  to="/organizer/events/create"
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+                    isActive('/organizer/events/create')
+                      ? 'bg-[#63474D] text-white'
+                      : 'text-[#63474D] bg-[#63474D]/10 hover:bg-[#63474D]/20'
+                  }`}
+                >
+                  <PlusCircle className="w-3.5 h-3.5" />
+                  Create Event
+                </Link>
+              </>
             )}
 
             {isAuthenticated && role === 'ADMIN' && (
               <Link
                 to="/admin"
-                className={`px-3.5 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
                   isActive('/admin')
-                    ? 'bg-[#0B5D4B]/10 text-[#0B5D4B]'
-                    : 'text-[#66736E] hover:text-[#17211E] hover:bg-gray-100/80'
+                    ? 'bg-[#63474D]/10 text-[#63474D]'
+                    : 'text-[#756366] hover:text-[#2D1F23] hover:bg-[#E8DDD7]/40'
                 }`}
               >
-                Admin Console
+                Admin Oversight
               </Link>
             )}
           </nav>
@@ -103,16 +135,15 @@ export const Navbar: React.FC = () => {
           <div className="hidden md:flex items-center gap-3">
             {isAuthenticated ? (
               <div className="flex items-center gap-3">
-                {/* Logged in User Role Badge */}
                 <Badge
                   variant={
                     role === 'ADMIN'
-                      ? 'dark'
+                      ? 'primary'
                       : role === 'ORGANIZER'
-                      ? 'gold'
-                      : 'green'
+                      ? 'secondary'
+                      : 'tertiary'
                   }
-                  className="font-semibold px-3 py-1 text-xs shadow-2xs"
+                  className="font-semibold px-3 py-1 text-xs"
                 >
                   {role === 'ADMIN'
                     ? 'Admin'
@@ -122,22 +153,24 @@ export const Navbar: React.FC = () => {
                 </Badge>
 
                 <Link
-                  to={role === 'ORGANIZER' ? '/organizer' : role === 'ADMIN' ? '/admin/profile' : '/app/profile'}
-                  className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-full hover:bg-gray-100 transition-colors border border-gray-200"
+                  to={role === 'ORGANIZER' ? '/organizer/settings' : role === 'ADMIN' ? '/admin/profile' : '/app/settings'}
+                  className="flex items-center gap-2 pl-2 pr-3 py-1 rounded-full hover:bg-[#E8DDD7]/40 transition-colors border border-[#E8DDD7]"
+                  title="Account Settings"
                 >
                   <img
                     src={user?.avatarUrl}
                     alt={user?.name}
-                    className="w-7 h-7 rounded-full object-cover border border-[#D6A84F]"
+                    className="w-7 h-7 rounded-full object-cover border border-[#D6A184]"
                   />
-                  <span className="text-xs font-semibold text-[#17211E]">
+                  <span className="text-xs font-semibold text-[#2D1F23]">
                     {user?.name}
                   </span>
+                  <Settings className="w-3.5 h-3.5 text-[#756366]" />
                 </Link>
 
                 <button
                   onClick={handleLogout}
-                  className="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-red-600 hover:bg-red-50 transition-colors"
+                  className="px-2.5 py-1 text-xs font-semibold text-[#B91C1C] hover:bg-red-50 rounded-lg transition-colors"
                 >
                   Log out
                 </button>
@@ -155,18 +188,9 @@ export const Navbar: React.FC = () => {
 
           {/* Mobile Hamburger Button */}
           <div className="flex md:hidden items-center gap-2">
-            {isAuthenticated && role === 'ATTENDEE' && (
-              <Link
-                to="/app/ticket/evt_react_workshop_2026"
-                className="p-2 bg-[#0B5D4B]/10 text-[#0B5D4B] rounded-lg"
-                title="My Ticket"
-              >
-                <QrCode className="w-5 h-5" />
-              </Link>
-            )}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="p-2 text-[#17211E] rounded-lg hover:bg-gray-100 focus:outline-none"
+              className="p-2 text-[#2D1F23] rounded-lg hover:bg-[#E8DDD7]/40 focus:outline-none"
             >
               {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
@@ -176,58 +200,76 @@ export const Navbar: React.FC = () => {
 
       {/* Mobile Menu */}
       {isMobileMenuOpen && (
-        <div className="md:hidden border-t border-gray-200 bg-white px-4 pt-3 pb-6 space-y-3 animate-fade-in shadow-lg">
+        <div className="md:hidden border-t border-[#E8DDD7] bg-[#FAF7F5] px-4 pt-3 pb-6 space-y-3 animate-fade-in shadow-md">
           <nav className="flex flex-col space-y-1">
             <Link
-              to="/events"
+              to="/search"
               onClick={() => setIsMobileMenuOpen(false)}
-              className="px-3 py-2.5 rounded-lg text-sm font-medium text-[#17211E] hover:bg-[#F7F8F5]"
+              className="px-3 py-2 rounded-lg text-sm font-semibold text-[#2D1F23] hover:bg-white flex items-center gap-2"
             >
-              Explore Events
+              <Search className="w-4 h-4 text-[#63474D]" />
+              Search Profiles & Events
             </Link>
+
             {isAuthenticated ? (
               <>
                 {role === 'ATTENDEE' && (
                   <>
                     <Link
-                      to="/app"
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className="px-3 py-2.5 rounded-lg text-sm font-medium text-[#17211E] hover:bg-[#F7F8F5]"
-                    >
-                      Attendee Hub
-                    </Link>
-                    <Link
                       to="/app/events"
                       onClick={() => setIsMobileMenuOpen(false)}
-                      className="px-3 py-2.5 rounded-lg text-sm font-medium text-[#17211E] hover:bg-[#F7F8F5]"
+                      className="px-3 py-2 rounded-lg text-sm font-semibold text-[#2D1F23] hover:bg-white"
                     >
-                      My Registered Events
+                      My Tickets / QR Wallet
                     </Link>
                     <Link
                       to="/app/profile"
                       onClick={() => setIsMobileMenuOpen(false)}
-                      className="px-3 py-2.5 rounded-lg text-sm font-medium text-[#17211E] hover:bg-[#F7F8F5]"
+                      className="px-3 py-2 rounded-lg text-sm font-semibold text-[#2D1F23] hover:bg-white"
                     >
-                      Attendee Profile
+                      My Badges & Profile
+                    </Link>
+                    <Link
+                      to="/app/settings"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="px-3 py-2 rounded-lg text-sm font-semibold text-[#2D1F23] hover:bg-white"
+                    >
+                      Account Settings & Data Export
                     </Link>
                   </>
                 )}
                 {role === 'ORGANIZER' && (
-                  <Link
-                    to="/organizer"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className="px-3 py-2.5 rounded-lg text-sm font-medium text-[#0B5D4B] bg-[#0B5D4B]/10 font-semibold"
-                  >
-                    Organizer Console
-                  </Link>
+                  <>
+                    <Link
+                      to="/organizer"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="px-3 py-2 rounded-lg text-sm font-semibold text-[#63474D] bg-[#63474D]/10"
+                    >
+                      Organizer Dashboard
+                    </Link>
+                    <Link
+                      to="/organizer/events/create"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="px-3 py-2 rounded-lg text-sm font-semibold text-[#2D1F23] hover:bg-white"
+                    >
+                      Create New Event
+                    </Link>
+                    <Link
+                      to="/organizer/settings"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="px-3 py-2 rounded-lg text-sm font-semibold text-[#2D1F23] hover:bg-white"
+                    >
+                      Account & Export Data
+                    </Link>
+                  </>
                 )}
                 {role === 'ADMIN' && (
                   <Link
                     to="/admin"
                     onClick={() => setIsMobileMenuOpen(false)}
-                    className="px-3 py-2.5 rounded-lg text-sm font-medium text-slate-900 bg-slate-100 font-semibold"
+                    className="px-3 py-2 rounded-lg text-sm font-semibold text-[#2D1F23] bg-white"
                   >
-                    Admin Console
+                    Admin Oversight Panel
                   </Link>
                 )}
               </>
@@ -235,25 +277,25 @@ export const Navbar: React.FC = () => {
               <Link
                 to="/login"
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="px-3 py-2.5 rounded-lg text-sm font-semibold text-[#0B5D4B]"
+                className="px-3 py-2 rounded-lg text-sm font-bold text-[#63474D]"
               >
-                Sign In
+                Sign In / Register
               </Link>
             )}
           </nav>
 
-          <div className="pt-3 border-t border-gray-100">
+          <div className="pt-3 border-t border-[#E8DDD7]">
             {isAuthenticated ? (
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <img
                     src={user?.avatarUrl}
                     alt={user?.name}
-                    className="w-8 h-8 rounded-full border border-[#D6A84F]"
+                    className="w-8 h-8 rounded-full border border-[#D6A184]"
                   />
                   <div>
-                    <p className="text-xs font-semibold text-[#17211E]">{user?.name}</p>
-                    <p className="text-[10px] text-[#66736E]">{user?.role}</p>
+                    <p className="text-xs font-bold text-[#2D1F23]">{user?.name}</p>
+                    <p className="text-[10px] text-[#756366]">{user?.role}</p>
                   </div>
                 </div>
                 <button
@@ -261,7 +303,7 @@ export const Navbar: React.FC = () => {
                     handleLogout();
                     setIsMobileMenuOpen(false);
                   }}
-                  className="text-xs text-red-600 font-medium"
+                  className="text-xs text-[#B91C1C] font-semibold"
                 >
                   Sign out
                 </button>

@@ -1,6 +1,6 @@
 import React from 'react';
 
-export type BadgeVariant = 'gold' | 'green' | 'dark' | 'outline' | 'gray' | 'error';
+export type BadgeVariant = 'primary' | 'secondary' | 'tertiary' | 'accent' | 'light' | 'outline' | 'gray' | 'error' | 'success';
 
 interface BadgeProps {
   children: React.ReactNode;
@@ -11,17 +11,20 @@ interface BadgeProps {
 
 export const Badge: React.FC<BadgeProps> = ({
   children,
-  variant = 'green',
+  variant = 'primary',
   className = '',
   icon,
 }) => {
   const variantStyles: Record<BadgeVariant, string> = {
-    gold: 'bg-[#D6A84F]/15 text-[#8C6415] border border-[#D6A84F]/40 font-semibold',
-    green: 'bg-[#238B6E]/10 text-[#0B5D4B] border border-[#238B6E]/30 font-medium',
-    dark: 'bg-[#064638] text-white font-medium',
-    outline: 'border border-[#66736E]/30 text-[#17211E] font-medium bg-white',
-    gray: 'bg-gray-100 text-[#66736E] border border-gray-200 font-medium',
-    error: 'bg-[#C94C4C]/10 text-[#C94C4C] border border-[#C94C4C]/30 font-medium',
+    primary: 'bg-[#63474D]/15 text-[#63474D] border border-[#63474D]/30 font-semibold',
+    secondary: 'bg-[#AA767C]/15 text-[#AA767C] border border-[#AA767C]/30 font-semibold',
+    tertiary: 'bg-[#D6A184]/20 text-[#7D4930] border border-[#D6A184]/40 font-semibold',
+    accent: 'bg-[#FFA686]/25 text-[#913F21] border border-[#FFA686]/50 font-bold',
+    light: 'bg-[#FEC196]/30 text-[#8C461F] border border-[#FEC196]/60 font-semibold',
+    outline: 'border border-[#E8DDD7] text-[#2D1F23] font-medium bg-white',
+    gray: 'bg-[#F4EFEB] text-[#756366] border border-[#E8DDD7] font-medium',
+    success: 'bg-[#2A7B5F]/15 text-[#2A7B5F] border border-[#2A7B5F]/30 font-semibold',
+    error: 'bg-[#B91C1C]/10 text-[#B91C1C] border border-[#B91C1C]/30 font-medium',
   };
 
   return (

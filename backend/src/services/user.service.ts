@@ -1,21 +1,33 @@
 import { query } from '../config/db';
-import { IUserSafe } from '../types';
+import { AuthService } from './auth.service';
+import { BadgeService } from './badge.service';
 
 export class UserService {
-  static async getUserProfile(userId: string): Promise<IUserSafe> {
-    const result = await query<IUserSafe>(
-      `SELECT id, email, full_name, role, phone, bio, organization, created_at, updated_at
+  static async getUserProfile(userId: string) {
+    return AuthService.getCurrentUser(userId);
+  }
+
+  static async getPublicProfile(userId: string) {
+    const result = await query(
+      `SELECT id, email, full_name, role, phone, bio, organization, avatar_url, visibility, member_since, created_at
        FROM users WHERE id = $1`,
       [userId]
     );
 
     if (!result.rowCount || result.rowCount === 0) {
-      const err: any = new Error('User not found.');
+      const err: any = new Error('Public profile not found.');
       err.statusCode = 404;
       throw err;
     }
 
-    return result.rows[0];
+    const user = result.rows[0];
+    const stats = await AuthService.computeUserStats(user.id);
+    const badges = await BadgeService.getAttendeeBadges(user.id);
+
+    return {
+      user: AuthService.formatUserResponse(user, stats),
+      badges,
+    };
   }
 
   static async updateUserProfile(
@@ -25,8 +37,10 @@ export class UserService {
       phone?: string;
       bio?: string;
       organization?: string;
+      visibility?: 'public' | 'private';
+      avatar_url?: string;
     }
-  ): Promise<IUserSafe> {
+  ) {
     const fields: string[] = [];
     const values: any[] = [];
     let counter = 1;
@@ -47,6 +61,14 @@ export class UserService {
       fields.push(`organization = $${counter++}`);
       values.push(data.organization);
     }
+    if (data.visibility !== undefined) {
+      fields.push(`visibility = $${counter++}`);
+      values.push(data.visibility);
+    }
+    if (data.avatar_url !== undefined) {
+      fields.push(`avatar_url = $${counter++}`);
+      values.push(data.avatar_url);
+    }
 
     if (fields.length === 0) {
       return this.getUserProfile(userId);
@@ -59,10 +81,10 @@ export class UserService {
       UPDATE users
       SET ${fields.join(', ')}
       WHERE id = $${counter}
-      RETURNING id, email, full_name, role, phone, bio, organization, created_at, updated_at
+      RETURNING id, email, full_name, role, phone, bio, organization, avatar_url, visibility, member_since, created_at, updated_at
     `;
 
-    const result = await query<IUserSafe>(queryText, values);
+    const result = await query(queryText, values);
 
     if (!result.rowCount || result.rowCount === 0) {
       const err: any = new Error('User not found.');
@@ -70,13 +92,50 @@ export class UserService {
       throw err;
     }
 
-    return result.rows[0];
+    const stats = await AuthService.computeUserStats(userId);
+    return AuthService.formatUserResponse(result.rows[0], stats);
+  }
+
+  static async updateVisibility(userId: string, visibility: 'public' | 'private') {
+    await query('UPDATE users SET visibility = $1, updated_at = NOW() WHERE id = $2', [visibility, userId]);
+    return true;
+  }
+
+  static async deleteAccount(userId: string) {
+    await query('DELETE FROM users WHERE id = $1', [userId]);
+    return true;
+  }
+
+  static async exportUserData(userId: string, format: 'json' | 'csv' = 'json') {
+    const userRes = await query('SELECT id, email, full_name, role, visibility, member_since, created_at FROM users WHERE id = $1', [userId]);
+    const ticketsRes = await query('SELECT * FROM tickets WHERE user_id = $1', [userId]);
+    const badgesRes = await query('SELECT * FROM badge_awards WHERE user_id = $1', [userId]);
+
+    const user = userRes.rows[0];
+    const tickets = ticketsRes.rows;
+    const badges = badgesRes.rows;
+
+    if (format === 'csv') {
+      const header = 'Type,ID,Name_Or_Title,Date,Details\n';
+      const userRow = `User,"${user.id}","${user.full_name}","${user.member_since}","${user.email}"\n`;
+      const ticketRows = tickets.map((t) => `Ticket,"${t.id}","Ticket ${t.ticket_code || t.id}","${t.created_at}","${t.status}"`).join('\n');
+      const badgeRows = badges.map((b) => `Badge,"${b.id}","${b.badge_label}","${b.awarded_at}","${b.badge_code}"`).join('\n');
+      return header + userRow + ticketRows + (ticketRows ? '\n' : '') + badgeRows;
+    }
+
+    return {
+      user,
+      tickets,
+      badges,
+      exportedAt: new Date().toISOString(),
+    };
   }
 
   static async getUserAttendanceHistory(userId: string) {
     const result = await query(
       `SELECT 
         t.id AS ticket_id,
+        t.ticket_code,
         t.status AS ticket_status,
         t.checked_in_at,
         t.qr_token,
@@ -85,21 +144,49 @@ export class UserService {
         e.id AS event_id,
         e.title AS event_title,
         e.description AS event_description,
-        e.category AS event_category,
+        e.event_type,
         e.event_date,
+        e.start_time,
+        e.end_time,
+        e.time_str,
         e.location AS event_location,
+        e.venue_name,
         e.banner_url AS event_banner_url,
-        u.full_name AS organizer_name
+        u.full_name AS organizer_name,
+        COALESCE(
+          json_agg(
+            json_build_object(
+              'id', b.id,
+              'badgeCode', b.badge_code,
+              'badgeLabel', b.badge_label,
+              'awardedAt', b.awarded_at
+            )
+          ) FILTER (WHERE b.id IS NOT NULL AND b.revoked_at IS NULL),
+          '[]'::json
+        ) AS badges
        FROM tickets t
        JOIN registrations r ON t.registration_id = r.id
        JOIN events e ON t.event_id = e.id
        JOIN users u ON e.organizer_id = u.id
+       LEFT JOIN badge_awards b ON b.event_id = e.id AND b.user_id = t.user_id
        WHERE t.user_id = $1 AND t.status = 'CHECKED_IN'
+       GROUP BY t.id, r.id, e.id, u.id
        ORDER BY t.checked_in_at DESC`,
       [userId]
     );
 
-    return result.rows;
+    return result.rows.map((row) => ({
+      id: row.event_id,
+      ticketId: row.ticket_id,
+      ticketCode: row.ticket_code || 'SHB-8921',
+      title: row.event_title,
+      type: row.event_type || 'workshop',
+      date: new Date(row.event_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      time: row.time_str || `${row.start_time} - ${row.end_time}`,
+      location: row.event_location,
+      organizerName: row.organizer_name,
+      checkedInAt: row.checked_in_at,
+      badges: row.badges || [],
+    }));
   }
 }
-

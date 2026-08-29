@@ -24,8 +24,8 @@ export const validateRegistration = (
     return;
   }
 
-  if (role && !['attendee', 'organizer', 'admin'].includes(role)) {
-    sendError(res, 'Role must be either attendee or organizer.', 400);
+  if (role && !['attendee', 'organizer', 'admin', 'ATTENDEE', 'ORGANIZER', 'ADMIN'].includes(role)) {
+    sendError(res, 'Role must be either ATTENDEE, ORGANIZER, or ADMIN.', 400);
     return;
   }
 
@@ -52,20 +52,21 @@ export const validateEvent = (
   res: Response,
   next: NextFunction
 ): void => {
-  const { title, description, event_date, location, capacity } = req.body;
+  const { title, description, event_date, date, location, capacity } = req.body;
+  const targetDate = event_date || date;
 
-  if (!title || !description || !event_date || !location || capacity === undefined) {
+  if (!title || !description || !targetDate || !location || capacity === undefined) {
     sendError(
       res,
-      'Title, description, event_date, location, and capacity are required.',
+      'Title, description, date, location, and capacity are required.',
       400
     );
     return;
   }
 
-  const parsedDate = new Date(event_date);
+  const parsedDate = new Date(targetDate);
   if (isNaN(parsedDate.getTime())) {
-    sendError(res, 'Invalid event_date format. Use ISO 8601 date string.', 400);
+    sendError(res, 'Invalid date format. Use YYYY-MM-DD or ISO 8601 string.', 400);
     return;
   }
 
@@ -83,13 +84,12 @@ export const validateCheckIn = (
   res: Response,
   next: NextFunction
 ): void => {
-  const { qr_token, event_id } = req.body;
+  const { qr_token, event_id, eventId, attendeeId, attendeeRosterId } = req.body;
 
-  if (!qr_token) {
-    sendError(res, 'qr_token is required for check-in verification.', 400);
+  if (!qr_token && !attendeeId && !attendeeRosterId) {
+    sendError(res, 'QR token or attendee ID is required.', 400);
     return;
   }
 
   next();
 };
-

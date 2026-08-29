@@ -1,223 +1,275 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api } from '../../services/api';
-import type { Ticket } from '../../types/ticket';
+import { useAuth } from '../../context/AuthContext';
+import type { Event } from '../../types/event';
+import type { AttendeeRosterItem, BadgeAward } from '../../types/attendance';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import {
   CheckCircle2,
   AlertTriangle,
-  XCircle,
   ArrowLeft,
   Camera,
   RotateCcw,
-  Zap,
   ShieldCheck,
+  Search,
+  Award,
+  User,
 } from 'lucide-react';
-
-type ScanState = 'IDLE' | 'SUCCESS' | 'DUPLICATE' | 'INVALID';
 
 export const ScannerPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const [scanState, setScanState] = useState<ScanState>('IDLE');
-  const [scanResult, setScanResult] = useState<{
-    message: string;
-    ticket?: Ticket;
-    attendee?: any;
-    time?: string;
+  const { user } = useAuth();
+  const [event, setEvent] = useState<Event | null>(null);
+
+  const [inputQuery, setInputQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+  const [surfacedAttendee, setSurfacedAttendee] = useState<AttendeeRosterItem | null>(null);
+  const [isApproving, setIsApproving] = useState(false);
+  const [approvalResult, setApprovalResult] = useState<{
+    badge: BadgeAward;
+    rosterItem: AttendeeRosterItem;
   } | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const [inputPayload, setInputPayload] = useState('');
-  const [isProcessing, setIsProcessing] = useState(false);
+  useEffect(() => {
+    if (id) {
+      api.events.getById(id).then((e) => setEvent(e || null));
+    }
+  }, [id]);
 
-  const handleScanPayload = async (payload: string) => {
-    if (!payload.trim()) return;
-    setIsProcessing(true);
-    setScanState('IDLE');
-    setScanResult(null);
+  const handleLookup = async (queryText: string) => {
+    if (!queryText.trim() || !id) return;
+    setIsSearching(true);
+    setErrorMsg(null);
+    setApprovalResult(null);
 
     try {
-      const res = await api.verifyTicketQR(payload, id);
-      const nowTime = new Date().toLocaleTimeString('en-US', {
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-
-      if (res.result === 'SUCCESS') {
-        setScanState('SUCCESS');
-        setScanResult({
-          message: res.message,
-          ticket: res.ticket,
-          time: nowTime,
-        });
-      } else if (res.result === 'DUPLICATE') {
-        setScanState('DUPLICATE');
-        setScanResult({
-          message: res.message,
-          ticket: res.ticket,
-          time: nowTime,
-        });
+      const found = await api.checkin.lookupByTokenOrName(id, queryText);
+      if (found) {
+        setSurfacedAttendee(found);
       } else {
-        setScanState('INVALID');
-        setScanResult({
-          message: res.message,
-        });
+        setSurfacedAttendee(null);
+        setErrorMsg('No attendee record found matching this token or name.');
       }
     } catch (e: any) {
-      setScanState('INVALID');
-      setScanResult({
-        message: e.message || 'Error processing scan.',
-      });
+      setErrorMsg(e.message || 'Lookup error.');
     } finally {
-      setIsProcessing(false);
+      setIsSearching(false);
     }
   };
 
-  const resetScanner = () => {
-    setScanState('IDLE');
-    setScanResult(null);
-    setInputPayload('');
+  const handleApproveCheckIn = async () => {
+    if (!surfacedAttendee || !id) return;
+    setIsApproving(true);
+    setErrorMsg(null);
+
+    try {
+      const res = await api.checkin.approveCheckIn({
+        eventId: id,
+        attendeeRosterId: surfacedAttendee.id,
+        approvedByOrganizerId: user?.id || 'demo-organizer-001',
+      });
+      setApprovalResult({
+        badge: res.badgeAwarded,
+        rosterItem: res.rosterItem,
+      });
+      setSurfacedAttendee(null);
+    } catch (e: any) {
+      setErrorMsg(e.message || 'Check-in approval failed.');
+    } finally {
+      setIsApproving(false);
+    }
+  };
+
+  const handleReset = () => {
+    setInputQuery('');
+    setSurfacedAttendee(null);
+    setApprovalResult(null);
+    setErrorMsg(null);
   };
 
   return (
-    <div className="max-w-xl mx-auto space-y-6 pb-12">
+    <div className="max-w-xl mx-auto space-y-6 pb-20">
       <Link
-        to={`/organizer/events/${id || ''}`}
-        className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#0B5D4B] hover:underline"
+        to={`/organizer`}
+        className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#63474D] hover:underline"
       >
         <ArrowLeft className="w-4 h-4" />
-        Back to Event Dashboard
+        Back to Organizer Dashboard
       </Link>
 
       <div className="text-center space-y-2">
-        <Badge variant="gold" icon={<ShieldCheck className="w-3.5 h-3.5" />}>
-          Sheba Entrance Scanner
+        <Badge variant="accent" icon={<ShieldCheck className="w-3.5 h-3.5" />}>
+          Door Entrance Console
         </Badge>
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-[#17211E]">Live Door QR Scanner</h1>
-        <p className="text-xs text-[#66736E]">
-          Point camera at attendee QR ticket pass or input scanned token to verify against backend database.
+        <h1 className="font-serif text-2xl sm:text-3xl font-extrabold text-[#2D1F23]">
+          Check-In Console
+        </h1>
+        <p className="text-xs text-[#756366]">
+          {event ? event.title : 'Event'} • Scan attendee QR pass or search attendee by name.
         </p>
       </div>
 
-      {/* Camera Viewport Frame */}
-      <div
-        className={`bg-slate-900 rounded-3xl p-6 sm:p-8 text-white border-4 transition-all overflow-hidden relative shadow-xl text-center space-y-6 ${
-          scanState === 'SUCCESS'
-            ? 'border-[#238B6E] ring-4 ring-[#238B6E]/30'
-            : scanState === 'DUPLICATE'
-            ? 'border-[#D6A84F] ring-4 ring-[#D6A84F]/30'
-            : scanState === 'INVALID'
-            ? 'border-[#C94C4C] ring-4 ring-[#C94C4C]/30'
-            : 'border-[#0B5D4B]'
-        }`}
-      >
-        {/* Scanner Corner Crosshair Overlays */}
-        <div className="absolute top-4 left-4 w-8 h-8 border-t-4 border-l-4 border-[#D6A84F]"></div>
-        <div className="absolute top-4 right-4 w-8 h-8 border-t-4 border-r-4 border-[#D6A84F]"></div>
-        <div className="absolute bottom-4 left-4 w-8 h-8 border-b-4 border-l-4 border-[#D6A84F]"></div>
-        <div className="absolute bottom-4 right-4 w-8 h-8 border-b-4 border-r-4 border-[#D6A84F]"></div>
+      {/* Simulated Web Camera Scanner Viewfinder */}
+      <div className="bg-[#63474D] rounded-3xl p-6 sm:p-8 text-white border-4 border-[#FFA686]/50 shadow-md relative text-center space-y-4 overflow-hidden">
+        {/* Corner Guides */}
+        <div className="absolute top-4 left-4 w-7 h-7 border-t-4 border-l-4 border-[#FFA686]"></div>
+        <div className="absolute top-4 right-4 w-7 h-7 border-t-4 border-r-4 border-[#FFA686]"></div>
+        <div className="absolute bottom-4 left-4 w-7 h-7 border-b-4 border-l-4 border-[#FFA686]"></div>
+        <div className="absolute bottom-4 right-4 w-7 h-7 border-b-4 border-r-4 border-[#FFA686]"></div>
 
-        {/* Viewport Content */}
-        {scanState === 'IDLE' && (
-          <div className="py-8 space-y-4">
-            <div className="w-20 h-20 rounded-2xl bg-[#0B5D4B]/40 border border-[#D6A84F]/40 flex items-center justify-center mx-auto text-[#D6A84F] animate-pulse">
-              <Camera className="w-10 h-10" />
-            </div>
-            <div>
-              <p className="text-base font-bold text-white">Scan attendee QR</p>
-              <p className="text-xs text-gray-400 mt-1">Ready for entrance ticket verification</p>
-            </div>
-          </div>
-        )}
+        <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center mx-auto text-[#FFA686] animate-pulse">
+          <Camera className="w-8 h-8" />
+        </div>
+        <div>
+          <p className="font-serif font-bold text-base text-white">Live Web Camera Active</p>
+          <p className="text-xs text-[#E8DDD7]">Hold attendee dynamic QR pass up to camera to surface record</p>
+        </div>
 
-        {/* SUCCESS State */}
-        {scanState === 'SUCCESS' && (
-          <div className="py-6 space-y-3 bg-[#238B6E]/20 p-6 rounded-2xl border border-[#238B6E] animate-fade-in">
-            <div className="w-16 h-16 bg-[#238B6E] rounded-full flex items-center justify-center mx-auto text-white shadow-lg">
-              <CheckCircle2 className="w-10 h-10" />
-            </div>
-            <h3 className="text-xl font-extrabold text-emerald-300">✓ Check-in successful</h3>
-            <p className="text-xs text-emerald-100">{scanResult?.message}</p>
-
-            {scanResult?.ticket && (
-              <div className="text-xs text-white space-y-1 bg-black/40 p-4 rounded-xl text-left border border-emerald-500/30">
-                <p className="font-bold text-base text-[#D6A84F]">
-                  {scanResult.ticket.attendeeName}
-                </p>
-                <p className="text-emerald-200">{scanResult.ticket.telegramHandle}</p>
-                <p className="text-gray-300">Event: {scanResult.ticket.eventTitle}</p>
-                <p className="text-gray-400 font-mono text-[11px]">
-                  Check-in Time: {scanResult.time}
-                </p>
-              </div>
-            )}
-
-            <Button onClick={resetScanner} size="sm" variant="accent" icon={<RotateCcw className="w-4 h-4" />}>
-              Scan Next Attendee
-            </Button>
-          </div>
-        )}
-
-        {/* DUPLICATE State */}
-        {scanState === 'DUPLICATE' && (
-          <div className="py-6 space-y-3 bg-[#D6A84F]/20 p-6 rounded-2xl border border-[#D6A84F] animate-fade-in">
-            <div className="w-16 h-16 bg-[#D6A84F] rounded-full flex items-center justify-center mx-auto text-[#17211E] shadow-lg">
-              <AlertTriangle className="w-10 h-10" />
-            </div>
-            <h3 className="text-xl font-extrabold text-amber-300">Already checked in</h3>
-            <p className="text-xs text-gray-200">{scanResult?.message}</p>
-
-            <Button onClick={resetScanner} size="sm" variant="accent" icon={<RotateCcw className="w-4 h-4" />}>
-              Scan Next Attendee
-            </Button>
-          </div>
-        )}
-
-        {/* INVALID State */}
-        {scanState === 'INVALID' && (
-          <div className="py-6 space-y-3 bg-[#C94C4C]/20 p-6 rounded-2xl border border-[#C94C4C] animate-fade-in">
-            <div className="w-16 h-16 bg-[#C94C4C] rounded-full flex items-center justify-center mx-auto text-white shadow-lg">
-              <XCircle className="w-10 h-10" />
-            </div>
-            <h3 className="text-xl font-extrabold text-red-300">Invalid or expired ticket</h3>
-            <p className="text-xs text-red-100">{scanResult?.message}</p>
-
-            <Button onClick={resetScanner} size="sm" variant="danger" icon={<RotateCcw className="w-4 h-4" />}>
-              Try Again
-            </Button>
-          </div>
-        )}
+        {/* Quick Sample Token Test Trigger */}
+        <div className="pt-2">
+          <button
+            type="button"
+            onClick={() => {
+              setInputQuery('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.shb_ticket_token_8921');
+              handleLookup('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.shb_ticket_token_8921');
+            }}
+            className="px-3 py-1 bg-white/15 hover:bg-white/25 rounded-lg text-[11px] font-mono text-[#FFA686] transition-colors"
+          >
+            Simulate Camera Scan (#SHB-8921)
+          </button>
+        </div>
       </div>
 
-      {/* Manual Input Payload Entry */}
-      <div className="bg-white p-6 rounded-3xl border border-gray-200 shadow-md space-y-4">
-        <h3 className="font-bold text-sm text-[#17211E] flex items-center gap-2">
-          <Zap className="w-4 h-4 text-[#D6A84F]" />
-          Manual QR Token Verification
-        </h3>
-        <p className="text-xs text-[#66736E]">
-          Paste or scan raw QR token string to verify directly against backend check-in endpoint:
-        </p>
+      {/* Manual Name & Token Search Bar */}
+      <div className="bg-white p-6 rounded-3xl border border-[#E8DDD7] shadow-xs space-y-4">
+        <div>
+          <h3 className="font-serif font-bold text-sm text-[#2D1F23] flex items-center gap-2">
+            <Search className="w-4 h-4 text-[#63474D]" />
+            Lookup by Name, Email, or Scanned Token
+          </h3>
+          <p className="text-xs text-[#756366]">
+            Enter attendee name or paste dynamic token string to surface record with Approve action.
+          </p>
+        </div>
 
         <div className="flex gap-2">
           <input
             type="text"
-            placeholder="Paste JWT QR token string..."
-            value={inputPayload}
-            onChange={(e) => setInputPayload(e.target.value)}
-            className="flex-1 px-3 py-2 bg-[#F7F8F5] border border-gray-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-[#0B5D4B]"
+            placeholder="e.g. Abebe Kebede or QR token string..."
+            value={inputQuery}
+            onChange={(e) => setInputQuery(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleLookup(inputQuery)}
+            className="flex-1 px-3.5 py-2 bg-[#FAF7F5] border border-[#E8DDD7] rounded-xl text-xs text-[#2D1F23] focus:outline-none focus:ring-2 focus:ring-[#63474D]"
           />
           <Button
-            onClick={() => handleScanPayload(inputPayload)}
-            isLoading={isProcessing}
-            disabled={!inputPayload.trim()}
+            onClick={() => handleLookup(inputQuery)}
+            isLoading={isSearching}
             variant="primary"
             size="sm"
           >
-            Verify Token
+            Find Record
           </Button>
         </div>
+
+        {errorMsg && (
+          <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+            <span>{errorMsg}</span>
+          </div>
+        )}
       </div>
+
+      {/* Surfaced Attendee with APPROVE Action (SRS Section 6.5) */}
+      {surfacedAttendee && (
+        <div className="bg-white p-6 rounded-3xl border-2 border-[#63474D] shadow-md space-y-4 animate-fade-in">
+          <div className="flex items-center justify-between pb-3 border-b border-[#E8DDD7]">
+            <Badge variant="primary">Surfaced Attendee Record</Badge>
+            <span className="text-xs font-mono text-[#756366]">Reg ID: {surfacedAttendee.registrationId}</span>
+          </div>
+
+          <div className="flex items-start justify-between">
+            <div className="space-y-1">
+              <h3 className="font-serif font-bold text-lg text-[#2D1F23] flex items-center gap-2">
+                <User className="w-4 h-4 text-[#63474D]" />
+                {surfacedAttendee.name}
+              </h3>
+              <p className="text-xs text-[#756366]">{surfacedAttendee.email}</p>
+              <p className="text-[11px] text-[#756366]">Registered: {surfacedAttendee.registrationDate}</p>
+            </div>
+
+            <Badge variant={surfacedAttendee.status === 'Checked in' ? 'success' : 'gray'}>
+              {surfacedAttendee.status}
+            </Badge>
+          </div>
+
+          {surfacedAttendee.answers && Object.keys(surfacedAttendee.answers).length > 0 && (
+            <div className="p-3 bg-[#FAF7F5] rounded-xl border border-[#E8DDD7] text-xs space-y-1">
+              <span className="text-[10px] uppercase font-bold text-[#756366]">Registration Answers:</span>
+              {Object.entries(surfacedAttendee.answers).map(([q, a]) => (
+                <p key={q} className="text-[#2D1F23]">
+                  <strong>{q}:</strong> {a}
+                </p>
+              ))}
+            </div>
+          )}
+
+          {surfacedAttendee.status === 'Checked in' ? (
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4" />
+              <span>This attendee has already been checked in at {surfacedAttendee.checkInTime}.</span>
+            </div>
+          ) : (
+            <div className="pt-2 flex gap-3">
+              <Button
+                onClick={handleApproveCheckIn}
+                isLoading={isApproving}
+                variant="accent"
+                size="lg"
+                fullWidth
+                icon={<CheckCircle2 className="w-5 h-5" />}
+              >
+                Approve & Issue Attended Badge
+              </Button>
+              <Button onClick={handleReset} variant="outline" size="lg">
+                Cancel
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Check-In Approval Success Notice */}
+      {approvalResult && (
+        <div className="bg-[#2A7B5F]/10 border border-[#2A7B5F]/40 p-6 rounded-3xl space-y-4 animate-fade-in text-center">
+          <div className="w-14 h-14 bg-[#2A7B5F] text-white rounded-full flex items-center justify-center mx-auto shadow-md">
+            <CheckCircle2 className="w-8 h-8" />
+          </div>
+
+          <div className="space-y-1">
+            <h3 className="font-serif font-bold text-xl text-[#2A7B5F]">
+              Check-In Approved!
+            </h3>
+            <p className="text-xs text-[#2D1F23]">
+              <strong>{approvalResult.rosterItem.name}</strong> checked in successfully at {approvalResult.rosterItem.checkInTime}.
+            </p>
+          </div>
+
+          <div className="p-4 bg-white rounded-2xl border border-[#E8DDD7] text-left text-xs space-y-1">
+            <div className="flex items-center gap-2 text-[#63474D] font-bold">
+              <Award className="w-4 h-4 text-[#FFA686]" />
+              <span>Automatic Badge Granted: "{approvalResult.badge.badgeLabel}"</span>
+            </div>
+            <p className="text-[11px] text-[#756366]">Given by {approvalResult.badge.issuerName}</p>
+          </div>
+
+          <Button onClick={handleReset} variant="primary" size="sm" icon={<RotateCcw className="w-4 h-4" />}>
+            Ready for Next Attendee
+          </Button>
+        </div>
+      )}
     </div>
   );
 };

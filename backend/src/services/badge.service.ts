@@ -1,0 +1,145 @@
+import { query } from '../config/db';
+import { BadgeCode, IBadgeAward } from '../types';
+
+export class BadgeService {
+  static formatBadge(row: any): any {
+    const badgeLabels: Record<string, string> = {
+      attended: 'Attended',
+      participant: 'Participant',
+      winner: 'Winner',
+      speaker: 'Speaker',
+    };
+
+    return {
+      id: row.id,
+      badgeCode: row.badge_code as BadgeCode,
+      badgeLabel: row.badge_label || badgeLabels[row.badge_code] || 'Verified Badge',
+      eventId: row.event_id,
+      eventTitle: row.event_title || 'Tech Event',
+      eventType: row.event_type || 'workshop',
+      eventDate: row.event_date ? new Date(row.event_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '2026',
+      eventLocation: row.event_location || 'Addis Ababa',
+      attendeeId: row.user_id,
+      attendeeName: row.attendee_name || row.user_name || 'Attendee',
+      attendeeEmail: row.attendee_email || row.user_email || '',
+      issuerName: row.issuer_name || row.organizer_name || 'GDG Addis',
+      awardedBy: row.awarded_by,
+      awardedAt: row.awarded_at ? new Date(row.awarded_at).toISOString() : new Date().toISOString(),
+      revokedAt: row.revoked_at ? new Date(row.revoked_at).toISOString() : null,
+      revocationReason: row.revocation_reason || null,
+    };
+  }
+
+  static async getAllBadgeAwards(): Promise<any[]> {
+    const result = await query(
+      `SELECT 
+        b.id, b.badge_code, b.badge_label, b.event_id, b.user_id, b.awarded_by, b.awarded_at, b.revoked_at, b.revocation_reason,
+        e.title AS event_title, e.event_type, e.event_date, e.location AS event_location,
+        u.full_name AS attendee_name, u.email AS attendee_email,
+        org.full_name AS issuer_name
+       FROM badge_awards b
+       JOIN events e ON b.event_id = e.id
+       JOIN users u ON b.user_id = u.id
+       JOIN users org ON e.organizer_id = org.id
+       ORDER BY b.awarded_at DESC`
+    );
+
+    return result.rows.map(this.formatBadge);
+  }
+
+  static async getAttendeeBadges(userId: string): Promise<any[]> {
+    const result = await query(
+      `SELECT 
+        b.id, b.badge_code, b.badge_label, b.event_id, b.user_id, b.awarded_by, b.awarded_at, b.revoked_at,
+        e.title AS event_title, e.event_type, e.event_date, e.location AS event_location,
+        u.full_name AS attendee_name, u.email AS attendee_email,
+        org.full_name AS issuer_name
+       FROM badge_awards b
+       JOIN events e ON b.event_id = e.id
+       JOIN users u ON b.user_id = u.id
+       JOIN users org ON e.organizer_id = org.id
+       WHERE b.user_id = $1 AND b.revoked_at IS NULL
+       ORDER BY b.awarded_at DESC`,
+      [userId]
+    );
+
+    return result.rows.map(this.formatBadge);
+  }
+
+  static async getBadgeById(badgeId: string): Promise<any> {
+    const result = await query(
+      `SELECT 
+        b.id, b.badge_code, b.badge_label, b.event_id, b.user_id, b.awarded_by, b.awarded_at, b.revoked_at, b.revocation_reason,
+        e.title AS event_title, e.event_type, e.event_date, e.location AS event_location,
+        u.full_name AS attendee_name, u.email AS attendee_email,
+        org.full_name AS issuer_name
+       FROM badge_awards b
+       JOIN events e ON b.event_id = e.id
+       JOIN users u ON b.user_id = u.id
+       JOIN users org ON e.organizer_id = org.id
+       WHERE b.id = $1`,
+      [badgeId]
+    );
+
+    if (!result.rowCount || result.rowCount === 0) {
+      const err: any = new Error('Badge not found.');
+      err.statusCode = 404;
+      throw err;
+    }
+
+    return this.formatBadge(result.rows[0]);
+  }
+
+  static async bulkAwardBadges(params: {
+    eventId: string;
+    attendeeUserIds: string[];
+    badgeCode: BadgeCode;
+    awardedByOrganizerId: string;
+  }): Promise<{ awardedCount: number }> {
+    const { eventId, attendeeUserIds, badgeCode, awardedByOrganizerId } = params;
+
+    const badgeLabels: Record<BadgeCode, string> = {
+      attended: 'Attended',
+      participant: 'Participant',
+      winner: 'Winner',
+      speaker: 'Speaker',
+    };
+
+    const badgeLabel = badgeLabels[badgeCode] || 'Participant';
+    let count = 0;
+
+    for (const userId of attendeeUserIds) {
+      const res = await query(
+        `INSERT INTO badge_awards (badge_code, badge_label, event_id, user_id, awarded_by)
+         VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (event_id, user_id, badge_code) 
+         DO UPDATE SET revoked_at = NULL, awarded_at = NOW()
+         RETURNING id`,
+        [badgeCode, badgeLabel, eventId, userId, awardedByOrganizerId]
+      );
+      if (res.rowCount && res.rowCount > 0) count++;
+    }
+
+    return { awardedCount: count };
+  }
+
+  static async adminRevokeBadge(badgeAwardId: string, revokedByUserId?: string, reason?: string): Promise<boolean> {
+    const res = await query(
+      `UPDATE badge_awards
+       SET revoked_at = NOW(),
+           revoked_by = $1,
+           revocation_reason = $2
+       WHERE id = $3
+       RETURNING id`,
+      [revokedByUserId || null, reason || 'Admin revocation action', badgeAwardId]
+    );
+
+    if (!res.rowCount || res.rowCount === 0) {
+      const err: any = new Error('Badge award record not found.');
+      err.statusCode = 404;
+      throw err;
+    }
+
+    return true;
+  }
+}

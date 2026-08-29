@@ -1,74 +1,119 @@
 import { query, getClient } from '../config/db';
-import { IEvent, EventStatus, UserRole } from '../types';
+import { IEvent, EventType, EventStatus, UserRole, AttendeeRosterItem } from '../types';
 import { generateTicketToken, generateQrDataUrl } from '../utils/qr.util';
 
 export class EventService {
+  static formatEvent(row: any): any {
+    const isPaid = Boolean(row.is_paid);
+    const ticketPrice = parseFloat(row.ticket_price || '0');
+
+    return {
+      id: row.id,
+      organizerId: row.organizer_id,
+      organizerName: row.organizer_name || 'GDG Addis',
+      organizerEmail: row.organizer_email || '',
+      title: row.title,
+      description: row.description,
+      type: (row.event_type || 'workshop') as EventType,
+      category: row.category || 'Tech',
+      date: row.event_date ? new Date(row.event_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '2026',
+      rawDate: row.event_date,
+      startTime: row.start_time || '09:00 AM',
+      endTime: row.end_time || '05:00 PM',
+      time: row.time_str || `${row.start_time || '09:00 AM'} - ${row.end_time || '05:00 PM'} EAT`,
+      location: row.location,
+      venueName: row.venue_name || row.location,
+      capacity: parseInt(row.capacity || '100', 10),
+      registeredCount: parseInt(row.registered_count || '0', 10),
+      checkedInCount: parseInt(row.checked_in_count || '0', 10),
+      status: row.status || 'open',
+      isPaid,
+      ticketPrice,
+      currency: row.currency || 'ETB',
+      shareLinkToken: row.share_link_token || row.id,
+      customQuestions: typeof row.custom_questions === 'string' ? JSON.parse(row.custom_questions) : row.custom_questions || [],
+      bannerUrl: row.banner_url || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80',
+      createdAt: row.created_at,
+    };
+  }
+
   static async createEvent(
     organizerId: string,
     data: {
       title: string;
       description: string;
-      category?: string;
-      event_date: string;
-      end_date?: string;
+      type?: EventType;
+      date: string;
+      startTime?: string;
+      endTime?: string;
       location: string;
+      venueName?: string;
       capacity: number;
-      banner_url?: string;
-      status?: EventStatus;
+      isPaid?: boolean;
+      ticketPrice?: number;
+      customQuestions?: any[];
+      bannerUrl?: string;
+      organizerName?: string;
     }
-  ): Promise<IEvent> {
+  ): Promise<any> {
     const {
       title,
       description,
-      category = 'General',
-      event_date,
-      end_date = null,
+      type = 'workshop',
+      date,
+      startTime = '09:00 AM',
+      endTime = '05:00 PM',
       location,
+      venueName = location,
       capacity,
-      banner_url = null,
-      status = 'published',
+      isPaid = false,
+      ticketPrice = 0,
+      customQuestions = [],
+      bannerUrl = 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80',
     } = data;
 
-    const result = await query<IEvent>(
+    const timeStr = `${startTime} - ${endTime} EAT`;
+    const shareLinkToken = `shb-${Math.random().toString(36).substring(2, 8)}`;
+
+    const result = await query(
       `INSERT INTO events (
-        organizer_id, title, description, category, event_date, end_date, location, capacity, status, banner_url
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        organizer_id, title, description, event_type, category, event_date,
+        start_time, end_time, time_str, location, venue_name, capacity,
+        status, is_paid, ticket_price, currency, share_link_token,
+        custom_questions, banner_url
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'open', $13, $14, 'ETB', $15, $16, $17)
       RETURNING *`,
       [
         organizerId,
         title,
         description,
-        category,
-        new Date(event_date),
-        end_date ? new Date(end_date) : null,
+        type,
+        type.charAt(0).toUpperCase() + type.slice(1),
+        new Date(date),
+        startTime,
+        endTime,
+        timeStr,
         location,
+        venueName,
         capacity,
-        status,
-        banner_url,
+        isPaid,
+        ticketPrice,
+        shareLinkToken,
+        JSON.stringify(customQuestions),
+        bannerUrl,
       ]
     );
 
-    return result.rows[0];
+    return this.formatEvent(result.rows[0]);
   }
 
   static async getEvents(filters: {
     search?: string;
-    category?: string;
+    type?: string;
     status?: string;
     organizerId?: string;
-    upcomingOnly?: boolean;
-    limit?: number;
-    offset?: number;
-  }) {
-    const {
-      search,
-      category,
-      status = 'published',
-      organizerId,
-      upcomingOnly = false,
-      limit = 50,
-      offset = 0,
-    } = filters;
+  } = {}) {
+    const { search, type, status, organizerId } = filters;
 
     const conditions: string[] = [];
     const values: any[] = [];
@@ -77,118 +122,88 @@ export class EventService {
     if (organizerId) {
       conditions.push(`e.organizer_id = $${counter++}`);
       values.push(organizerId);
-    } else if (status) {
+    }
+
+    if (status && status !== 'All') {
       conditions.push(`e.status = $${counter++}`);
       values.push(status);
     }
 
-    if (category) {
-      conditions.push(`LOWER(e.category) = LOWER($${counter++})`);
-      values.push(category);
+    if (type && type !== 'All') {
+      conditions.push(`e.event_type = $${counter++}`);
+      values.push(type);
     }
 
     if (search) {
-      conditions.push(`(e.title ILIKE $${counter} OR e.description ILIKE $${counter} OR e.location ILIKE $${counter})`);
+      conditions.push(`(e.title ILIKE $${counter} OR e.description ILIKE $${counter} OR e.location ILIKE $${counter} OR u.full_name ILIKE $${counter})`);
       values.push(`%${search}%`);
       counter++;
     }
 
-    if (upcomingOnly) {
-      conditions.push(`e.event_date >= NOW()`);
-    }
-
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
-    const sql = `
+    const queryText = `
       SELECT 
         e.*,
         u.full_name AS organizer_name,
         u.email AS organizer_email,
-        u.organization AS organizer_organization,
-        COALESCE(r.registered_count, 0)::INTEGER AS registered_count,
-        COALESCE(t.checked_in_count, 0)::INTEGER AS checked_in_count
+        COUNT(DISTINCT r.id) AS registered_count,
+        COUNT(DISTINCT CASE WHEN t.status = 'CHECKED_IN' THEN t.id END) AS checked_in_count
       FROM events e
       JOIN users u ON e.organizer_id = u.id
-      LEFT JOIN (
-        SELECT event_id, COUNT(*) AS registered_count 
-        FROM registrations 
-        WHERE status = 'registered' 
-        GROUP BY event_id
-      ) r ON e.id = r.event_id
-      LEFT JOIN (
-        SELECT event_id, COUNT(*) AS checked_in_count 
-        FROM tickets 
-        WHERE status = 'CHECKED_IN' 
-        GROUP BY event_id
-      ) t ON e.id = t.event_id
+      LEFT JOIN registrations r ON e.id = r.event_id AND r.status = 'registered'
+      LEFT JOIN tickets t ON e.id = t.event_id
       ${whereClause}
-      ORDER BY e.event_date ASC
-      LIMIT $${counter++} OFFSET $${counter++}
+      GROUP BY e.id, u.id
+      ORDER BY e.event_date DESC
     `;
 
-    values.push(limit, offset);
-
-    const result = await query(sql, values);
-    return result.rows;
+    const result = await query(queryText, values);
+    return result.rows.map(this.formatEvent);
   }
 
-  static async getEventById(eventId: string): Promise<IEvent> {
-    const sql = `
+  static async getEventById(identifier: string): Promise<any> {
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier);
+
+    const queryText = `
       SELECT 
         e.*,
         u.full_name AS organizer_name,
         u.email AS organizer_email,
-        u.organization AS organizer_organization,
-        COALESCE(r.registered_count, 0)::INTEGER AS registered_count,
-        COALESCE(t.checked_in_count, 0)::INTEGER AS checked_in_count
+        COUNT(DISTINCT r.id) AS registered_count,
+        COUNT(DISTINCT CASE WHEN t.status = 'CHECKED_IN' THEN t.id END) AS checked_in_count
       FROM events e
       JOIN users u ON e.organizer_id = u.id
-      LEFT JOIN (
-        SELECT event_id, COUNT(*) AS registered_count 
-        FROM registrations 
-        WHERE status = 'registered' 
-        GROUP BY event_id
-      ) r ON e.id = r.event_id
-      LEFT JOIN (
-        SELECT event_id, COUNT(*) AS checked_in_count 
-        FROM tickets 
-        WHERE status = 'CHECKED_IN' 
-        GROUP BY event_id
-      ) t ON e.id = t.event_id
-      WHERE e.id = $1
+      LEFT JOIN registrations r ON e.id = r.event_id AND r.status = 'registered'
+      LEFT JOIN tickets t ON e.id = t.event_id
+      WHERE e.id::text = $1 OR e.share_link_token = $1
+      GROUP BY e.id, u.id
     `;
 
-    const result = await query<IEvent>(sql, [eventId]);
+    const result = await query(queryText, [identifier]);
 
     if (!result.rowCount || result.rowCount === 0) {
-      const err: any = new Error('Event not found.');
-      err.statusCode = 404;
-      throw err;
+      return null;
     }
 
-    return result.rows[0];
+    return this.formatEvent(result.rows[0]);
   }
 
   static async updateEvent(
     eventId: string,
     userId: string,
     userRole: UserRole,
-    data: Partial<{
-      title: string;
-      description: string;
-      category: string;
-      event_date: string;
-      end_date: string;
-      location: string;
-      capacity: number;
-      banner_url: string;
-      status: EventStatus;
-    }>
-  ): Promise<IEvent> {
-    // Check ownership
-    const event = await this.getEventById(eventId);
-    if (event.organizer_id !== userId && userRole !== 'admin') {
-      const err: any = new Error('Forbidden. You are not authorized to update this event.');
+    data: Partial<IEvent>
+  ): Promise<any> {
+    const existing = await query('SELECT organizer_id FROM events WHERE id = $1', [eventId]);
+    if (!existing.rowCount || existing.rowCount === 0) {
+      const err: any = new Error('Event not found.');
+      err.statusCode = 404;
+      throw err;
+    }
+
+    if (existing.rows[0].organizer_id !== userId && userRole !== 'admin') {
+      const err: any = new Error('You are not authorized to update this event.');
       err.statusCode = 403;
       throw err;
     }
@@ -197,48 +212,21 @@ export class EventService {
     const values: any[] = [];
     let counter = 1;
 
-    if (data.title !== undefined) {
-      fields.push(`title = $${counter++}`);
-      values.push(data.title);
-    }
-    if (data.description !== undefined) {
-      fields.push(`description = $${counter++}`);
-      values.push(data.description);
-    }
-    if (data.category !== undefined) {
-      fields.push(`category = $${counter++}`);
-      values.push(data.category);
-    }
-    if (data.event_date !== undefined) {
-      fields.push(`event_date = $${counter++}`);
-      values.push(new Date(data.event_date));
-    }
-    if (data.end_date !== undefined) {
-      fields.push(`end_date = $${counter++}`);
-      values.push(data.end_date ? new Date(data.end_date) : null);
-    }
-    if (data.location !== undefined) {
-      fields.push(`location = $${counter++}`);
-      values.push(data.location);
-    }
-    if (data.capacity !== undefined) {
-      fields.push(`capacity = $${counter++}`);
-      values.push(data.capacity);
-    }
-    if (data.banner_url !== undefined) {
-      fields.push(`banner_url = $${counter++}`);
-      values.push(data.banner_url);
-    }
-    if (data.status !== undefined) {
-      fields.push(`status = $${counter++}`);
-      values.push(data.status);
+    const allowedFields = ['title', 'description', 'event_type', 'location', 'venue_name', 'capacity', 'status', 'is_paid', 'ticket_price', 'start_time', 'end_time', 'time_str', 'banner_url'];
+
+    for (const [key, value] of Object.entries(data)) {
+      const dbKey = key === 'type' ? 'event_type' : key === 'ticketPrice' ? 'ticket_price' : key === 'isPaid' ? 'is_paid' : key;
+      if (allowedFields.includes(dbKey)) {
+        fields.push(`${dbKey} = $${counter++}`);
+        values.push(value);
+      }
     }
 
     if (fields.length === 0) {
-      return event;
+      return this.getEventById(eventId);
     }
 
-    fields.push(`updated_at = NOW()`);
+    fields.push('updated_at = NOW()');
     values.push(eventId);
 
     const queryText = `
@@ -248,219 +236,201 @@ export class EventService {
       RETURNING *
     `;
 
-    const result = await query<IEvent>(queryText, values);
-    return result.rows[0];
+    await query(queryText, values);
+    return this.getEventById(eventId);
   }
 
-  static async deleteEvent(
-    eventId: string,
-    userId: string,
-    userRole: UserRole
-  ): Promise<void> {
-    const event = await this.getEventById(eventId);
-    if (event.organizer_id !== userId && userRole !== 'admin') {
-      const err: any = new Error('Forbidden. You are not authorized to delete this event.');
+  static async deleteEvent(eventId: string, userId: string, userRole: UserRole): Promise<boolean> {
+    const existing = await query('SELECT organizer_id FROM events WHERE id = $1', [eventId]);
+    if (!existing.rowCount || existing.rowCount === 0) {
+      const err: any = new Error('Event not found.');
+      err.statusCode = 404;
+      throw err;
+    }
+
+    if (existing.rows[0].organizer_id !== userId && userRole !== 'admin') {
+      const err: any = new Error('Unauthorized to delete this event.');
       err.statusCode = 403;
       throw err;
     }
 
     await query('DELETE FROM events WHERE id = $1', [eventId]);
+    return true;
   }
 
-  static async registerForEvent(eventId: string, userId: string) {
-    const client = await getClient();
+  static async registerForEvent(params: {
+    eventId: string;
+    userId: string;
+    answers?: Record<string, string>;
+    paymentReference?: string;
+  }): Promise<{ ticket: any; isPaymentRequired: boolean; checkoutUrl?: string }> {
+    const { eventId, userId, answers = {}, paymentReference } = params;
 
+    const event = await this.getEventById(eventId);
+    if (!event) {
+      const err: any = new Error('Event not found.');
+      err.statusCode = 404;
+      throw err;
+    }
+
+    if (event.status !== 'open' && event.status !== 'published') {
+      const err: any = new Error('Registration for this event is closed.');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    if (event.registeredCount >= event.capacity) {
+      const err: any = new Error('Event has reached maximum capacity.');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    // Check duplicate registration
+    const existingReg = await query('SELECT id FROM registrations WHERE event_id = $1 AND user_id = $2', [event.id, userId]);
+    if (existingReg.rowCount && existingReg.rowCount > 0) {
+      // User already registered, return existing ticket
+      const existingTicket = await query('SELECT * FROM tickets WHERE event_id = $1 AND user_id = $2', [event.id, userId]);
+      if (existingTicket.rowCount && existingTicket.rowCount > 0) {
+        return {
+          ticket: existingTicket.rows[0],
+          isPaymentRequired: false,
+        };
+      }
+    }
+
+    // Handle Paid Event Check (Chapa ETB)
+    if (event.isPaid && !paymentReference) {
+      return {
+        ticket: null,
+        isPaymentRequired: true,
+        checkoutUrl: `https://checkout.chapa.co/checkout/payment-simulation?amount=${event.ticketPrice}&currency=ETB`,
+      };
+    }
+
+    const client = await getClient();
     try {
       await client.query('BEGIN');
 
-      // 1. Check event exists and lock for capacity check
-      const eventRes = await client.query<IEvent>(
-        `SELECT * FROM events WHERE id = $1 FOR UPDATE`,
-        [eventId]
-      );
-
-      if (!eventRes.rowCount || eventRes.rowCount === 0) {
-        const err: any = new Error('Event not found.');
-        err.statusCode = 404;
-        throw err;
-      }
-
-      const event = eventRes.rows[0];
-
-      if (event.status !== 'published') {
-        const err: any = new Error('Event is not available for registration.');
-        err.statusCode = 400;
-        throw err;
-      }
-
-      // 2. Check if already registered
       const regRes = await client.query(
-        `SELECT id, status FROM registrations WHERE event_id = $1 AND user_id = $2`,
-        [eventId, userId]
+        `INSERT INTO registrations (event_id, user_id, status, answers, payment_reference, payment_status)
+         VALUES ($1, $2, 'registered', $3, $4, 'settled')
+         RETURNING id`,
+        [event.id, userId, JSON.stringify(answers), paymentReference || null]
       );
+      const registrationId = regRes.rows[0].id;
 
-      if (regRes.rowCount && regRes.rowCount > 0) {
-        const existing = regRes.rows[0];
-        if (existing.status === 'registered') {
-          const err: any = new Error('You are already registered for this event.');
-          err.statusCode = 409;
-          throw err;
-        } else {
-          // Reactivate cancelled registration
-          await client.query(
-            `UPDATE registrations SET status = 'registered', updated_at = NOW() WHERE id = $1`,
-            [existing.id]
-          );
-        }
-      }
+      const ticketCode = `SHB-${Math.floor(1000 + Math.random() * 9000)}-2026`;
+      const ticketId = (await client.query('SELECT gen_random_uuid() AS id')).rows[0].id;
+      const qrToken = generateTicketToken(ticketId, event.id, userId);
+      const qrDataUrl = await generateQrDataUrl(qrToken);
 
-      // 3. Check capacity limit
-      const countRes = await client.query(
-        `SELECT COUNT(*)::INTEGER AS total FROM registrations WHERE event_id = $1 AND status = 'registered'`,
-        [eventId]
-      );
-      const currentCount = countRes.rows[0].total;
-
-      if (currentCount >= event.capacity) {
-        const err: any = new Error('Event registration is full. Capacity limit reached.');
-        err.statusCode = 400;
-        throw err;
-      }
-
-      let registrationId: string;
-
-      if (!regRes.rowCount || regRes.rowCount === 0) {
-        // 4. Create new registration
-        const newReg = await client.query(
-          `INSERT INTO registrations (event_id, user_id, status)
-           VALUES ($1, $2, 'registered')
-           RETURNING id, event_id, user_id, status, registered_at`,
-          [eventId, userId]
-        );
-        registrationId = newReg.rows[0].id;
-      } else {
-        registrationId = regRes.rows[0].id;
-      }
-
-      // 5. Generate / Issue Ticket
       const ticketRes = await client.query(
-        `SELECT * FROM tickets WHERE registration_id = $1`,
-        [registrationId]
+        `INSERT INTO tickets (
+          id, ticket_code, registration_id, event_id, user_id, qr_token, qr_code_data_url,
+          status, is_paid, ticket_price, currency, expires_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'ISSUED', $8, $9, 'ETB', NOW() + INTERVAL '2 days')
+        RETURNING *`,
+        [ticketId, ticketCode, registrationId, event.id, userId, qrToken, qrDataUrl, event.isPaid, event.ticketPrice]
       );
 
-      let ticket;
+      // Record Chapa payment transaction if paid
+      if (event.isPaid && event.ticketPrice > 0) {
+        const commission = event.ticketPrice * 0.03;
+        const payout = event.ticketPrice - commission;
+        const txId = paymentReference || `TX-CHAPA-${Math.floor(100000 + Math.random() * 900000)}`;
 
-      if (ticketRes.rowCount && ticketRes.rowCount > 0) {
-        ticket = ticketRes.rows[0];
-        if (ticket.status === 'CANCELLED') {
-          const qrToken = generateTicketToken(ticket.id, eventId, userId);
-          const qrDataUrl = await generateQrDataUrl(qrToken);
-          const updatedTicket = await client.query(
-            `UPDATE tickets SET status = 'ISSUED', qr_token = $1, qr_code_data_url = $2, updated_at = NOW() WHERE id = $3 RETURNING *`,
-            [qrToken, qrDataUrl, ticket.id]
-          );
-          ticket = updatedTicket.rows[0];
-        }
-      } else {
-        // Pre-generate UUID for ticket
-        const ticketIdRes = await client.query(`SELECT gen_random_uuid() AS id`);
-        const ticketId = ticketIdRes.rows[0].id;
-
-        const qrToken = generateTicketToken(ticketId, eventId, userId);
-        const qrDataUrl = await generateQrDataUrl(qrToken);
-
-        const newTicket = await client.query(
-          `INSERT INTO tickets (id, registration_id, event_id, user_id, qr_token, qr_code_data_url, status)
-           VALUES ($1, $2, $3, $4, $5, $6, 'ISSUED')
-           RETURNING *`,
-          [ticketId, registrationId, eventId, userId, qrToken, qrDataUrl]
+        await client.query(
+          `INSERT INTO payments (transaction_id, event_id, user_id, amount, commission_amount, organizer_payout, currency, status)
+           VALUES ($1, $2, $3, $4, $5, $6, 'ETB', 'SETTLED')
+           ON CONFLICT (transaction_id) DO NOTHING`,
+          [txId, event.id, userId, event.ticketPrice, commission, payout]
         );
-        ticket = newTicket.rows[0];
       }
 
       await client.query('COMMIT');
 
-      return {
-        registration_id: registrationId,
-        event,
-        ticket,
+      const rawTicket = ticketRes.rows[0];
+      const userRes = await query('SELECT full_name, email FROM users WHERE id = $1', [userId]);
+      const attendeeUser = userRes.rows[0] || {};
+
+      const formattedTicket = {
+        id: rawTicket.ticket_code || rawTicket.id,
+        registrationId,
+        eventId: event.id,
+        eventTitle: event.title,
+        eventType: event.type,
+        eventDate: event.date,
+        eventTime: event.time,
+        eventLocation: event.location,
+        attendeeId: userId,
+        attendeeName: attendeeUser.full_name,
+        attendeeEmail: attendeeUser.email,
+        qrToken: rawTicket.qr_token,
+        qrDataUrl: rawTicket.qr_code_data_url,
+        status: 'Valid',
+        issuedAt: rawTicket.created_at,
+        expiresAt: rawTicket.expires_at,
+        isPaid: rawTicket.is_paid,
+        ticketPrice: rawTicket.ticket_price,
+        currency: 'ETB',
       };
-    } catch (error) {
+
+      return { ticket: formattedTicket, isPaymentRequired: false };
+    } catch (err) {
       await client.query('ROLLBACK');
-      throw error;
+      throw err;
     } finally {
       client.release();
     }
   }
 
-  static async getUserRegistration(eventId: string, userId: string) {
-    const sql = `
+  static async getEventRoster(eventId: string): Promise<AttendeeRosterItem[]> {
+    const event = await this.getEventById(eventId);
+    if (!event) {
+      const err: any = new Error('Event not found.');
+      err.statusCode = 404;
+      throw err;
+    }
+
+    const queryText = `
       SELECT 
+        r.id AS roster_id,
         r.id AS registration_id,
-        r.status AS registration_status,
+        u.id AS attendee_id,
+        u.full_name AS name,
+        u.email,
         r.registered_at,
-        e.id AS event_id,
-        e.title AS event_title,
-        e.description AS event_description,
-        e.event_date,
-        e.location AS event_location,
-        t.id AS ticket_id,
-        t.qr_token,
-        t.qr_code_data_url,
+        r.answers,
         t.status AS ticket_status,
-        t.checked_in_at
+        t.checked_in_at,
+        COALESCE(
+          json_agg(b.badge_code) FILTER (WHERE b.id IS NOT NULL AND b.revoked_at IS NULL),
+          '[]'::json
+        ) AS badges
       FROM registrations r
-      JOIN events e ON r.event_id = e.id
-      LEFT JOIN tickets t ON r.id = t.registration_id
-      WHERE r.event_id = $1 AND r.user_id = $2
+      JOIN users u ON r.user_id = u.id
+      LEFT JOIN tickets t ON t.registration_id = r.id
+      LEFT JOIN badge_awards b ON b.event_id = r.event_id AND b.user_id = u.id
+      WHERE r.event_id = $1 AND r.status = 'registered'
+      GROUP BY r.id, u.id, t.id
+      ORDER BY r.registered_at ASC
     `;
 
-    const result = await query(sql, [eventId, userId]);
+    const result = await query(queryText, [event.id]);
 
-    if (!result.rowCount || result.rowCount === 0) {
-      return null;
-    }
-
-    return result.rows[0];
-  }
-
-  static async cancelRegistration(eventId: string, userId: string) {
-    const client = await getClient();
-
-    try {
-      await client.query('BEGIN');
-
-      const regRes = await client.query(
-        `SELECT id FROM registrations WHERE event_id = $1 AND user_id = $2 AND status = 'registered'`,
-        [eventId, userId]
-      );
-
-      if (!regRes.rowCount || regRes.rowCount === 0) {
-        const err: any = new Error('No active registration found for this event.');
-        err.statusCode = 404;
-        throw err;
-      }
-
-      const regId = regRes.rows[0].id;
-
-      await client.query(
-        `UPDATE registrations SET status = 'cancelled', updated_at = NOW() WHERE id = $1`,
-        [regId]
-      );
-
-      await client.query(
-        `UPDATE tickets SET status = 'CANCELLED', updated_at = NOW() WHERE registration_id = $1`,
-        [regId]
-      );
-
-      await client.query('COMMIT');
-      return { message: 'Registration cancelled successfully.' };
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
+    return result.rows.map((row) => ({
+      id: row.attendee_id,
+      registrationId: row.registration_id,
+      attendeeId: row.attendee_id,
+      name: row.name,
+      email: row.email,
+      registrationDate: new Date(row.registered_at).toISOString().split('T')[0],
+      status: row.ticket_status === 'CHECKED_IN' ? 'Checked in' : 'Registered',
+      checkInTime: row.checked_in_at
+        ? new Date(row.checked_in_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) + ' EAT'
+        : undefined,
+      badges: row.badges || [],
+      answers: typeof row.answers === 'string' ? JSON.parse(row.answers) : row.answers || {},
+    }));
   }
 }
-

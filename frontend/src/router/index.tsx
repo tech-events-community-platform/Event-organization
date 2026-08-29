@@ -9,9 +9,11 @@ import { ProtectedRoute } from '../components/auth/ProtectedRoute';
 
 // Public Pages
 import { LandingPage } from '../pages/public/LandingPage';
-import { EventsPage } from '../pages/public/EventsPage';
-import { EventDetailPage } from '../pages/public/EventDetailPage';
 import { LoginPage } from '../pages/public/LoginPage';
+import { PublicRegisterPage } from '../pages/public/PublicRegisterPage';
+import { PublicProfilePage } from '../pages/public/PublicProfilePage';
+import { BadgeDetailPage } from '../pages/public/BadgeDetailPage';
+import { PublicSearchPage } from '../pages/public/PublicSearchPage';
 
 // Attendee Pages
 import { AttendeeDashboardPage } from '../pages/attendee/DashboardPage';
@@ -19,12 +21,12 @@ import { MyEventsPage } from '../pages/attendee/MyEventsPage';
 import { TicketPage } from '../pages/attendee/TicketPage';
 import { ProfilePage } from '../pages/attendee/ProfilePage';
 import { AttendanceHistoryPage } from '../pages/attendee/AttendanceHistoryPage';
+import { AccountSettingsPage } from '../pages/attendee/AccountSettingsPage';
 
 // Organizer Pages
 import { OrganizerDashboardPage } from '../pages/organizer/OrganizerDashboardPage';
 import { EventListPage } from '../pages/organizer/EventListPage';
 import { CreateEventPage } from '../pages/organizer/CreateEventPage';
-import { EventDashboardPage } from '../pages/organizer/EventDashboardPage';
 import { AttendeeListPage } from '../pages/organizer/AttendeeListPage';
 import { ScannerPage } from '../pages/organizer/ScannerPage';
 import { ReportPage } from '../pages/organizer/ReportPage';
@@ -32,22 +34,21 @@ import { ReportPage } from '../pages/organizer/ReportPage';
 // Admin Pages
 import { AdminDashboardPage } from '../pages/admin/AdminDashboardPage';
 import { AdminEventsPage } from '../pages/admin/AdminEventsPage';
-import { AdminEventDetailPage } from '../pages/admin/AdminEventDetailPage';
 import { AdminUsersPage } from '../pages/admin/AdminUsersPage';
-import { AdminOrganizersPage } from '../pages/admin/AdminOrganizersPage';
-import { AdminReportsPage } from '../pages/admin/AdminReportsPage';
-import { AdminProfilePage } from '../pages/admin/AdminProfilePage';
 
 export const router = createBrowserRouter([
-  // Public Routes
+  // Public Routes (SRS Section 18)
   {
     path: '/',
     element: <PublicLayout />,
     children: [
       { index: true, element: <LandingPage /> },
       { path: 'login', element: <LoginPage /> },
-      { path: 'events', element: <EventsPage /> },
-      { path: 'events/:id', element: <EventDetailPage /> },
+      { path: 'search', element: <PublicSearchPage /> },
+      { path: 'e/:token', element: <PublicRegisterPage /> },
+      { path: 'events/:id/register', element: <PublicRegisterPage /> },
+      { path: 'profile/:id', element: <PublicProfilePage /> },
+      { path: 'badge/:id', element: <BadgeDetailPage /> },
     ],
   },
   // Protected Attendee Routes (/app)
@@ -63,6 +64,7 @@ export const router = createBrowserRouter([
           { path: 'ticket/:eventId', element: <TicketPage /> },
           { path: 'profile', element: <ProfilePage /> },
           { path: 'profile/attendance', element: <AttendanceHistoryPage /> },
+          { path: 'settings', element: <AccountSettingsPage /> },
         ],
       },
     ],
@@ -78,10 +80,10 @@ export const router = createBrowserRouter([
           { index: true, element: <OrganizerDashboardPage /> },
           { path: 'events', element: <EventListPage /> },
           { path: 'events/create', element: <CreateEventPage /> },
-          { path: 'events/:id', element: <EventDashboardPage /> },
           { path: 'events/:id/attendees', element: <AttendeeListPage /> },
           { path: 'events/:id/scanner', element: <ScannerPage /> },
           { path: 'events/:id/report', element: <ReportPage /> },
+          { path: 'settings', element: <AccountSettingsPage /> },
         ],
       },
     ],
@@ -96,11 +98,10 @@ export const router = createBrowserRouter([
         children: [
           { index: true, element: <AdminDashboardPage /> },
           { path: 'events', element: <AdminEventsPage /> },
-          { path: 'events/:id', element: <AdminEventDetailPage /> },
           { path: 'users', element: <AdminUsersPage /> },
-          { path: 'organizers', element: <AdminOrganizersPage /> },
-          { path: 'reports', element: <AdminReportsPage /> },
-          { path: 'profile', element: <AdminProfilePage /> },
+          { path: 'organizers', element: <AdminUsersPage /> },
+          { path: 'reports', element: <AdminDashboardPage /> },
+          { path: 'profile', element: <AccountSettingsPage /> },
         ],
       },
     ],

@@ -27,23 +27,23 @@ export const Button: React.FC<ButtonProps> = ({
 
   const variantStyles: Record<ButtonVariant, string> = {
     primary:
-      'bg-[#0B5D4B] text-white hover:bg-[#064638] focus:ring-[#0B5D4B] shadow-sm hover:shadow',
+      'bg-[#63474D] text-white hover:bg-[#523a3f] focus:ring-[#63474D] shadow-xs hover:shadow-sm',
     secondary:
-      'bg-[#064638] text-white hover:bg-[#043329] focus:ring-[#064638]',
+      'bg-[#AA767C] text-white hover:bg-[#966369] focus:ring-[#AA767C]',
     accent:
-      'bg-[#D6A84F] text-[#17211E] hover:bg-[#c7983e] focus:ring-[#D6A84F] font-semibold shadow-sm',
+      'bg-[#FFA686] text-[#2D1F23] hover:bg-[#ff9570] focus:ring-[#FFA686] font-bold shadow-xs',
     outline:
-      'border border-[#0B5D4B] text-[#0B5D4B] hover:bg-[#0B5D4B]/5 focus:ring-[#0B5D4B]',
+      'border border-[#63474D] text-[#63474D] hover:bg-[#63474D]/10 focus:ring-[#63474D]',
     ghost:
-      'text-[#17211E] hover:bg-gray-100 focus:ring-gray-400',
+      'text-[#2D1F23] hover:bg-[#E8DDD7]/50 focus:ring-[#AA767C]',
     danger:
-      'bg-[#C94C4C] text-white hover:bg-[#b23e3e] focus:ring-[#C94C4C]',
+      'bg-[#B91C1C] text-white hover:bg-[#991B1B] focus:ring-[#B91C1C]',
   };
 
   const sizeStyles: Record<ButtonSize, string> = {
     sm: 'px-3 py-1.5 text-xs font-medium gap-1.5',
-    md: 'px-4 py-2.5 text-sm gap-2',
-    lg: 'px-6 py-3.5 text-base gap-2.5',
+    md: 'px-4 py-2 text-sm gap-2',
+    lg: 'px-6 py-3 text-base gap-2.5',
   };
 
   return (

@@ -1,18 +1,26 @@
+import type { EventType } from './event';
+
 export type TicketStatus = 'Valid' | 'Checked in' | 'Expired' | 'Cancelled';
 
 export interface Ticket {
-  id: string; // unique ticket ID e.g. "SHB-8921-2026"
+  id: string; // e.g. "SHB-8921-2026"
+  registrationId: string;
   eventId: string;
-  userId: string;
-  attendeeName: string;
-  telegramHandle: string;
   eventTitle: string;
+  eventType: EventType;
   eventDate: string;
   eventTime: string;
   eventLocation: string;
+  attendeeId: string;
+  attendeeName: string;
+  attendeeEmail: string;
+  qrToken: string; // Dynamic signed token evaluated server-side
+  qrCodeDataUrl?: string;
   status: TicketStatus;
   issuedAt: string;
+  expiresAt: string; // Valid through day after event (auto-updates on postponement)
   checkedInAt?: string;
-  qrPayload: string;
-  qrCodeDataUrl?: string;
+  isPaid: boolean;
+  ticketPrice: number;
+  currency: 'ETB';
 }

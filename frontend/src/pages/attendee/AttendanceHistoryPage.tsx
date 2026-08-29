@@ -1,21 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/api';
-import type { VerifiedAttendance } from '../../types/attendance';
+import type { BadgeAward } from '../../types/attendance';
 import { Badge } from '../../components/ui/Badge';
-import { ShieldCheck, Calendar, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Award, Calendar, MapPin, ShieldCheck, ArrowLeft } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export const AttendanceHistoryPage: React.FC = () => {
   const { user } = useAuth();
-  const [history, setHistory] = useState<VerifiedAttendance[]>([]);
+  const [badges, setBadges] = useState<BadgeAward[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchHistory = async () => {
       setLoading(true);
       if (user) {
-        const data = await api.getAttendanceHistory(user.id);
-        setHistory(data);
+        const data = await api.badges.getAttendeeBadges(user.id);
+        setBadges(data);
       }
       setLoading(false);
     };
@@ -23,73 +24,84 @@ export const AttendanceHistoryPage: React.FC = () => {
   }, [user]);
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6 pb-12">
-      {/* Header Banner */}
-      <div className="bg-[#064638] text-white p-6 sm:p-8 rounded-3xl space-y-3 shadow-md border border-[#0B5D4B]">
-        <Badge variant="gold" icon={<ShieldCheck className="w-3.5 h-3.5" />}>
-          Verified Attendance Record
-        </Badge>
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-white">
-          Verified Attendance History
-        </h1>
-        <p className="text-xs text-gray-300 leading-relaxed">
-          Official entrance verification record logged via Sheba QR scanner at door.
-        </p>
+    <div className="max-w-3xl mx-auto space-y-6 pb-16">
+      <Link
+        to="/app/profile"
+        className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#63474D] hover:underline"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        Back to Profile
+      </Link>
 
-        {/* Product Rule Disclaimer Banner */}
-        <div className="bg-[#0B5D4B]/60 p-3 rounded-xl border border-[#D6A84F]/30 text-[11px] text-[#D6A84F] flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 flex-shrink-0" />
-          <span>
-            Note: Verified attendance records door presence at event. It does not certify technical competence or skills.
-          </span>
-        </div>
+      {/* Header Banner */}
+      <div className="bg-[#63474D] text-white p-6 sm:p-8 rounded-3xl space-y-3 shadow-sm">
+        <Badge variant="accent" icon={<ShieldCheck className="w-3.5 h-3.5" />}>
+          Verified Participation Log
+        </Badge>
+        <h1 className="font-serif text-2xl sm:text-3xl font-extrabold text-white">
+          Verified Attendance Timeline
+        </h1>
+        <p className="text-xs text-[#E8DDD7] leading-relaxed">
+          Official attendance entries verified at the door and credentialed by community organizers.
+        </p>
       </div>
 
       {/* Timeline list */}
       {loading ? (
         <div className="space-y-4 animate-pulse">
           {[1, 2].map((i) => (
-            <div key={i} className="h-24 bg-gray-200 rounded-2xl"></div>
+            <div key={i} className="h-24 bg-[#E8DDD7]/50 rounded-2xl"></div>
           ))}
         </div>
-      ) : history.length === 0 ? (
-        <div className="bg-white rounded-2xl p-10 text-center border border-gray-200 space-y-2">
-          <p className="text-sm font-bold text-[#17211E]">No verified attendance records yet.</p>
-          <p className="text-xs text-[#66736E]">
-            Your verified participation will appear here after you present your QR ticket at an event door scanner.
+      ) : badges.length === 0 ? (
+        <div className="bg-white rounded-3xl p-10 text-center border border-[#E8DDD7] space-y-2">
+          <p className="font-serif text-sm font-bold text-[#2D1F23]">No verified participation records yet.</p>
+          <p className="text-xs text-[#756366]">
+            Your attendance will appear here automatically when you check in at an event door scanner.
           </p>
         </div>
       ) : (
-        <div className="relative pl-6 border-l-2 border-[#0B5D4B]/30 space-y-6">
-          {history.map((record) => (
+        <div className="relative pl-6 border-l-2 border-[#D6A184]/50 space-y-6">
+          {badges.map((record) => (
             <div key={record.id} className="relative group">
-              {/* Timeline Bullet Dot */}
-              <div className="absolute -left-[31px] top-1.5 w-4 h-4 rounded-full bg-[#0B5D4B] border-2 border-white ring-4 ring-[#0B5D4B]/15"></div>
+              <div className="absolute -left-[31px] top-1.5 w-4 h-4 rounded-full bg-[#63474D] border-2 border-white ring-4 ring-[#63474D]/20"></div>
 
-              <div className="bg-white p-5 rounded-2xl border border-gray-200/90 shadow-2xs space-y-3 hover:border-[#0B5D4B]/40 transition-colors">
+              <div className="bg-white p-5 rounded-2xl border border-[#E8DDD7] shadow-xs space-y-3 hover:border-[#63474D] transition-colors">
                 <div className="flex items-center justify-between gap-2">
-                  <Badge variant="green" icon={<CheckCircle2 className="w-3.5 h-3.5" />}>
-                    Verified Attended
+                  <Badge
+                    variant={
+                      record.badgeCode === 'winner'
+                        ? 'accent'
+                        : record.badgeCode === 'speaker'
+                        ? 'tertiary'
+                        : record.badgeCode === 'participant'
+                        ? 'secondary'
+                        : 'primary'
+                    }
+                    icon={<Award className="w-3.5 h-3.5" />}
+                  >
+                    {record.badgeLabel}
                   </Badge>
-                  <span className="text-[10px] font-mono text-[#66736E]">
-                    Log Time: {record.checkInTime || 'Checked in'}
+                  <span className="text-[10px] font-mono text-[#756366]">
+                    Awarded: {new Date(record.awardedAt).toLocaleDateString()}
                   </span>
                 </div>
 
                 <div>
-                  <h3 className="font-bold text-base text-[#17211E]">{record.eventTitle}</h3>
-                  <p className="text-xs text-[#0B5D4B] font-semibold mt-0.5">
-                    Host: {record.organizerName}
+                  <h3 className="font-serif font-bold text-base text-[#2D1F23]">{record.eventTitle}</h3>
+                  <p className="text-xs text-[#AA767C] font-semibold mt-0.5">
+                    Given by {record.issuerName}
                   </p>
                 </div>
 
-                <div className="pt-2 border-t border-gray-100 flex items-center justify-between text-xs text-[#66736E]">
+                <div className="pt-2 border-t border-[#E8DDD7] flex items-center justify-between text-xs text-[#756366]">
                   <span className="flex items-center gap-1">
-                    <Calendar className="w-3.5 h-3.5 text-[#0B5D4B]" />
+                    <Calendar className="w-3.5 h-3.5 text-[#63474D]" />
                     Event Date: {record.eventDate}
                   </span>
-                  <span className="text-[10px] bg-gray-100 px-2 py-0.5 rounded-md font-mono">
-                    VERIFIED PASS
+                  <span className="flex items-center gap-1">
+                    <MapPin className="w-3.5 h-3.5 text-[#63474D]" />
+                    {record.eventLocation.split(',')[0]}
                   </span>
                 </div>
               </div>

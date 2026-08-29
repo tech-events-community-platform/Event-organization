@@ -1,37 +1,36 @@
 import { Response, NextFunction } from 'express';
 import { CheckinService } from '../services/checkin.service';
-import { sendSuccess, sendError } from '../utils/apiResponse';
+import { sendSuccess } from '../utils/apiResponse';
 import { AuthRequest } from '../types';
 
 export class CheckinController {
-  static async verifyCheckIn(req: AuthRequest, res: Response, next: NextFunction) {
+  static async lookup(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const { qr_token, event_id } = req.body;
-      const scannedByUserId = req.user!.userId;
+      const { eventId, query: queryText } = req.body;
+      const result = await CheckinService.lookupAttendee(eventId, queryText);
+
+      return sendSuccess(res, result, result ? 'Attendee record found.' : 'No attendee record found.');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async approve(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const { eventId, attendeeRosterId, attendeeId } = req.body;
+      const approvedByOrganizerId = req.user!.userId;
       const userRole = req.user!.role;
 
-      const result = await CheckinService.verifyAndCheckIn(
-        qr_token,
-        scannedByUserId,
+      const result = await CheckinService.approveCheckIn({
+        eventId,
+        attendeeId: attendeeId || attendeeRosterId,
+        approvedByOrganizerId,
         userRole,
-        event_id
-      );
+      });
 
-      return sendSuccess(res, result, 'Check-in verified successfully. Attendance recorded.');
-    } catch (error: any) {
-      if (error.alreadyCheckedIn) {
-        return res.status(409).json({
-          success: false,
-          message: error.message,
-          error: 'ALREADY_CHECKED_IN',
-          data: {
-            checked_in_at: error.checked_in_at,
-            attendee: error.attendee,
-          },
-        });
-      }
+      return sendSuccess(res, result, 'Check-in approved and Attended badge granted.');
+    } catch (error) {
       next(error);
     }
   }
 }
-

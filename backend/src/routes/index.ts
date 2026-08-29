@@ -4,7 +4,10 @@ import userRoutes from './user.routes';
 import eventRoutes from './event.routes';
 import ticketRoutes from './ticket.routes';
 import checkinRoutes from './checkin.routes';
+import badgeRoutes from './badge.routes';
 import reportRoutes from './report.routes';
+import adminRoutes from './admin.routes';
+import searchRoutes from './search.routes';
 
 const router = Router();
 
@@ -23,7 +26,9 @@ router.use('/users', userRoutes);
 router.use('/events', eventRoutes);
 router.use('/tickets', ticketRoutes);
 router.use('/checkin', checkinRoutes);
+router.use('/badges', badgeRoutes);
 router.use('/reports', reportRoutes);
+router.use('/admin', adminRoutes);
+router.use('/search', searchRoutes);
 
 export default router;
-

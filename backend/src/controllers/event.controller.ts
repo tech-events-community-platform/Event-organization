@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { EventService } from '../services/event.service';
+import { CheckinService } from '../services/checkin.service';
 import { sendSuccess } from '../utils/apiResponse';
 import { AuthRequest } from '../types';
 
@@ -10,25 +11,33 @@ export class EventController {
       const {
         title,
         description,
-        category,
-        event_date,
-        end_date,
+        type,
+        date,
+        startTime,
+        endTime,
         location,
+        venueName,
         capacity,
-        banner_url,
-        status,
+        isPaid,
+        ticketPrice,
+        customQuestions,
+        bannerUrl,
       } = req.body;
 
       const event = await EventService.createEvent(organizerId, {
         title,
         description,
-        category,
-        event_date,
-        end_date,
+        type,
+        date,
+        startTime,
+        endTime,
         location,
+        venueName,
         capacity,
-        banner_url,
-        status,
+        isPaid,
+        ticketPrice,
+        customQuestions,
+        bannerUrl,
       });
 
       return sendSuccess(res, event, 'Event created successfully.', 201);
@@ -39,16 +48,13 @@ export class EventController {
 
   static async getEvents(req: Request, res: Response, next: NextFunction) {
     try {
-      const { search, category, status, organizerId, upcomingOnly, limit, offset } = req.query;
+      const { search, type, status, organizerId } = req.query;
 
       const events = await EventService.getEvents({
         search: search as string,
-        category: category as string,
+        type: type as string,
         status: status as string,
         organizerId: organizerId as string,
-        upcomingOnly: upcomingOnly === 'true',
-        limit: limit ? parseInt(limit as string, 10) : 50,
-        offset: offset ? parseInt(offset as string, 10) : 0,
       });
 
       return sendSuccess(res, events, 'Events retrieved successfully.');
@@ -59,10 +65,29 @@ export class EventController {
 
   static async getEventById(req: Request, res: Response, next: NextFunction) {
     try {
-      const eventId = req.params.id as string;
-      const event = await EventService.getEventById(eventId);
+      const identifier = (req.params.id || req.params.token) as string;
+      const event = await EventService.getEventById(identifier);
+
+      if (!event) {
+        return res.status(404).json({ success: false, message: 'Event not found.' });
+      }
 
       return sendSuccess(res, event, 'Event details retrieved successfully.');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async getEventByShareToken(req: Request, res: Response, next: NextFunction) {
+    try {
+      const token = req.params.token as string;
+      const event = await EventService.getEventById(token);
+
+      if (!event) {
+        return res.status(404).json({ success: false, message: 'Event not found.' });
+      }
+
+      return sendSuccess(res, event, 'Event retrieved by share link.');
     } catch (error) {
       next(error);
     }
@@ -104,14 +129,27 @@ export class EventController {
   static async registerForEvent(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const eventId = req.params.id as string;
-      const userId = req.user!.userId;
+      const userId = req.user?.userId || req.body.attendee?.id;
+      const answers = req.body.answers || {};
+      const paymentReference = req.body.paymentReference;
 
-      const registration = await EventService.registerForEvent(eventId, userId);
+      if (!userId) {
+        return res.status(401).json({ success: false, message: 'Authentication required to register.' });
+      }
+
+      const result = await EventService.registerForEvent({
+        eventId,
+        userId,
+        answers,
+        paymentReference,
+      });
 
       return sendSuccess(
         res,
-        registration,
-        'Successfully registered for event. QR Ticket issued.',
+        result,
+        result.isPaymentRequired
+          ? 'Payment required. Redirecting to Chapa checkout.'
+          : 'Successfully registered for event. QR Ticket issued.',
         201
       );
     } catch (error) {
@@ -119,34 +157,26 @@ export class EventController {
     }
   }
 
-  static async getUserRegistration(req: AuthRequest, res: Response, next: NextFunction) {
+  static async getEventRoster(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const eventId = req.params.id as string;
-      const userId = req.user!.userId;
+      const roster = await EventService.getEventRoster(eventId);
 
-      const registration = await EventService.getUserRegistration(eventId, userId);
-
-      return sendSuccess(
-        res,
-        registration,
-        registration ? 'Registration details retrieved.' : 'User is not registered for this event.'
-      );
+      return sendSuccess(res, roster, 'Event attendee roster retrieved.');
     } catch (error) {
       next(error);
     }
   }
 
-  static async cancelRegistration(req: AuthRequest, res: Response, next: NextFunction) {
+  static async lookupAttendee(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const eventId = req.params.id as string;
-      const userId = req.user!.userId;
+      const queryText = (req.query.q || req.query.query || '') as string;
+      const attendee = await CheckinService.lookupAttendee(eventId, queryText);
 
-      const result = await EventService.cancelRegistration(eventId, userId);
-
-      return sendSuccess(res, result, 'Registration cancelled successfully.');
+      return sendSuccess(res, attendee, attendee ? 'Attendee record found.' : 'No matching record.');
     } catch (error) {
       next(error);
     }
   }
 }
-

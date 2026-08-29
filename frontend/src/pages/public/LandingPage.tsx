@@ -5,188 +5,181 @@ import { Badge } from '../../components/ui/Badge';
 import {
   QrCode,
   CheckCircle2,
-  BarChart3,
-  Calendar,
+  Award,
   ShieldCheck,
   Zap,
   LogIn,
   ArrowRight,
   Sparkles,
+  FileSpreadsheet,
+  Search,
 } from 'lucide-react';
 
 export const LandingPage: React.FC = () => {
   return (
-    <div className="space-y-16 pb-16 overflow-hidden">
+    <div className="space-y-20 pb-20 overflow-hidden">
       {/* HERO SECTION */}
-      <section className="relative pt-12 md:pt-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-96 bg-gradient-to-b from-[#0B5D4B]/10 via-[#D6A84F]/5 to-transparent blur-3xl -z-10 rounded-full"></div>
-
-        <div className="text-center space-y-6 max-w-3xl mx-auto">
-          <Badge variant="gold" className="px-3.5 py-1 text-xs shadow-xs" icon={<Sparkles className="w-3.5 h-3.5" />}>
-            Ethiopia&apos;s Dedicated Event Infrastructure Platform
-          </Badge>
-
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-[#17211E] tracking-tight leading-[1.15]">
-            Run better tech events.{' '}
-            <span className="text-[#0B5D4B] block sm:inline">Prove the impact.</span>
-          </h1>
-
-          <p className="text-base sm:text-lg text-[#66736E] max-w-2xl mx-auto leading-relaxed">
-            Sheba helps Ethiopia&apos;s tech communities manage registration, verify attendance via digital QR passes, and turn event activity into sponsor-ready reports.
-          </p>
-
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-            <Link to="/events" className="w-full sm:w-auto">
-              <Button size="lg" variant="primary" fullWidth icon={<ArrowRight className="w-5 h-5" />}>
-                Explore Events
-              </Button>
-            </Link>
-            <Link to="/login" className="w-full sm:w-auto">
-              <Button size="lg" variant="outline" fullWidth icon={<LogIn className="w-5 h-5" />}>
-                Sign In / Demo Access
-              </Button>
-            </Link>
-          </div>
+      <section className="relative pt-12 md:pt-20 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto text-center space-y-6">
+        <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#FEC196]/40 border border-[#FFA686]/50 text-[#63474D] text-xs font-semibold">
+          <Sparkles className="w-3.5 h-3.5 text-[#63474D]" />
+          <span>Ethiopia&apos;s Event Infrastructure Platform</span>
         </div>
 
-        {/* Product Interactive Check-in Preview Card */}
-        <div className="mt-12 max-w-4xl mx-auto bg-white rounded-3xl p-4 sm:p-6 shadow-xl border border-gray-200/80 relative">
-          <div className="flex items-center justify-between pb-4 mb-4 border-b border-gray-100">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-red-400"></div>
-              <div className="w-3 h-3 rounded-full bg-yellow-400"></div>
-              <div className="w-3 h-3 rounded-full bg-green-400"></div>
-              <span className="text-xs font-mono text-[#66736E] ml-2">sheba.net/organizer/scanner</span>
+        <h1 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-extrabold text-[#2D1F23] tracking-tight leading-[1.15]">
+          Attendance, <span className="text-[#63474D] italic">verified.</span>
+        </h1>
+
+        <p className="font-sans text-base sm:text-lg text-[#756366] max-w-2xl mx-auto leading-relaxed">
+          Sheba turns event attendance into verifiable organizer badges for attendees, and clean, sponsor-ready proof for community organizers in Ethiopia.
+        </p>
+
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+          <Link to="/login" className="w-full sm:w-auto">
+            <Button size="lg" variant="primary" fullWidth icon={<ArrowRight className="w-5 h-5" />}>
+              Organizer Portal
+            </Button>
+          </Link>
+          <Link to="/search" className="w-full sm:w-auto">
+            <Button size="lg" variant="outline" fullWidth icon={<Search className="w-5 h-5" />}>
+              Search Badges & Events
+            </Button>
+          </Link>
+        </div>
+
+        {/* Value Proposition Pills */}
+        <div className="pt-6 grid grid-cols-1 sm:grid-cols-3 gap-4 text-left max-w-4xl mx-auto">
+          <div className="p-5 rounded-2xl bg-white border border-[#E8DDD7] space-y-2 shadow-xs">
+            <div className="w-8 h-8 rounded-lg bg-[#63474D]/10 flex items-center justify-center text-[#63474D]">
+              <QrCode className="w-4 h-4" />
             </div>
-            <Badge variant="green" icon={<ShieldCheck className="w-3 h-3" />}>
-              Live Entrance Scanner Preview
+            <h3 className="font-serif font-bold text-sm text-[#2D1F23]">Shareable Link & Dynamic QR</h3>
+            <p className="text-xs text-[#756366]">
+              Publish events with custom question forms. Attendee QR passes dynamically update without reissuance.
+            </p>
+          </div>
+
+          <div className="p-5 rounded-2xl bg-white border border-[#E8DDD7] space-y-2 shadow-xs">
+            <div className="w-8 h-8 rounded-lg bg-[#AA767C]/15 flex items-center justify-center text-[#AA767C]">
+              <Award className="w-4 h-4" />
+            </div>
+            <h3 className="font-serif font-bold text-sm text-[#2D1F23]">Organizer-Issued Badges</h3>
+            <p className="text-xs text-[#756366]">
+              Attended, Participant, Winner, and Speaker badges live permanently on verifiable public profiles.
+            </p>
+          </div>
+
+          <div className="p-5 rounded-2xl bg-white border border-[#E8DDD7] space-y-2 shadow-xs">
+            <div className="w-8 h-8 rounded-lg bg-[#D6A184]/20 flex items-center justify-center text-[#63474D]">
+              <FileSpreadsheet className="w-4 h-4" />
+            </div>
+            <h3 className="font-serif font-bold text-sm text-[#2D1F23]">Sponsor-Ready Reports</h3>
+            <p className="text-xs text-[#756366]">
+              Export verified metrics, check-in velocity, and badge distributions with 1-click PDF reports.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Interactive Check-in & Badge Issuance Simulation */}
+      <section className="max-w-4xl mx-auto px-4 sm:px-6">
+        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#E8DDD7] shadow-md space-y-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pb-4 border-b border-[#E8DDD7]">
+            <div>
+              <span className="text-xs font-mono text-[#756366]">sheba.et/organizer/scanner</span>
+              <h2 className="font-serif font-bold text-lg text-[#2D1F23]">Door Check-In & Automatic Badge Issuance</h2>
+            </div>
+            <Badge variant="primary" icon={<ShieldCheck className="w-3 h-3" />}>
+              Live Infrastructure Demo
             </Badge>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
-            {/* Left Mock Ticket */}
-            <div className="bg-[#F7F8F5] p-4 rounded-2xl border border-gray-200 space-y-3">
-              <div className="flex items-center justify-between text-xs font-semibold text-[#0B5D4B]">
-                <span>TICKET #SHB-8921</span>
-                <span className="text-[#D6A84F] font-bold">VALID</span>
+            {/* 1. Dynamic QR Ticket */}
+            <div className="bg-[#FAF7F5] p-5 rounded-2xl border border-[#E8DDD7] space-y-3">
+              <div className="flex items-center justify-between text-xs font-semibold text-[#63474D]">
+                <span>PASS #SHB-8921</span>
+                <span className="text-[#2A7B5F] font-bold">VALID</span>
               </div>
-              <h4 className="font-bold text-sm text-[#17211E]">React & Modern Frontend Workshop</h4>
-              <p className="text-xs text-[#66736E]">Abebe Kebede • @abebe_demo</p>
-              <div className="bg-white p-3 rounded-xl border border-gray-200 text-center">
-                <QrCode className="w-24 h-24 mx-auto text-[#064638]" />
+              <h4 className="font-serif font-bold text-sm text-[#2D1F23]">React & Modern Web Architecture</h4>
+              <p className="text-xs text-[#756366]">Abebe Kebede • Bole Innovation Hub</p>
+              <div className="bg-white p-3 rounded-xl border border-[#E8DDD7] text-center">
+                <QrCode className="w-24 h-24 mx-auto text-[#63474D]" />
               </div>
+              <p className="text-[10px] text-center text-[#756366]">Dynamic Signed Token</p>
             </div>
 
-            {/* Middle Scanner Simulation Arrow */}
+            {/* 2. Instant Scanner */}
             <div className="text-center space-y-2 py-2">
-              <div className="w-12 h-12 rounded-full bg-[#0B5D4B] text-[#D6A84F] flex items-center justify-center mx-auto shadow-md animate-pulse">
-                <Zap className="w-6 h-6" />
+              <div className="w-12 h-12 rounded-full bg-[#63474D] text-[#FFA686] flex items-center justify-center mx-auto shadow-md">
+                <Zap className="w-6 h-6 animate-pulse" />
               </div>
-              <p className="text-xs font-bold text-[#0B5D4B]">Instant 0.2s QR Scan</p>
-              <p className="text-[11px] text-[#66736E]">Identity Pass Verified</p>
+              <p className="text-xs font-bold text-[#63474D]">Web Camera Scanner</p>
+              <p className="text-[11px] text-[#756366]">Instant Approval Verification</p>
             </div>
 
-            {/* Right Verified Result */}
-            <div className="bg-[#238B6E]/10 border border-[#238B6E]/30 p-5 rounded-2xl space-y-2 text-left">
-              <div className="flex items-center gap-2 text-[#238B6E] font-bold text-sm">
-                <CheckCircle2 className="w-5 h-5" />
-                Check-in Verified
+            {/* 3. Result: Badge Awarded + Report Updated */}
+            <div className="bg-[#FAF7F5] border border-[#AA767C]/30 p-5 rounded-2xl space-y-3 text-left">
+              <div className="flex items-center gap-2 text-[#2A7B5F] font-bold text-xs">
+                <CheckCircle2 className="w-4 h-4" />
+                Check-in Approved
               </div>
-              <p className="text-xs text-[#17211E] font-semibold">Attendance Logged</p>
-              <p className="text-[11px] text-[#66736E]">Timestamp: 02:14 PM EAT • Bole Innovation Hub</p>
-              <div className="pt-2">
-                <span className="text-[10px] bg-[#064638] text-white px-2 py-0.5 rounded-full font-mono">
-                  Sponsor Report Updated (+1)
-                </span>
+              <div className="p-3 bg-white rounded-xl border border-[#E8DDD7] space-y-1">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-[#63474D]">
+                  <Award className="w-3.5 h-3.5 text-[#FFA686]" />
+                  <span>Badge Issued: "Attended"</span>
+                </div>
+                <p className="text-[11px] text-[#756366]">Given by GDG Addis</p>
               </div>
+              <p className="text-[10px] bg-[#63474D] text-white px-2.5 py-1 rounded-full font-mono text-center">
+                Sponsor Report Turnout Rate: 85.3%
+              </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* HOW SHEBA WORKS */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="text-center space-y-2 mb-12">
-          <Badge variant="green">Architecture</Badge>
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-[#17211E]">How Sheba Works</h2>
-          <p className="text-sm text-[#66736E]">A streamlined loop engineered specifically for event success in Ethiopia.</p>
+      {/* 4-Badge System Showcase */}
+      <section className="max-w-4xl mx-auto px-4 sm:px-6 text-center space-y-6">
+        <div className="space-y-2">
+          <Badge variant="tertiary">The Sheba Credential Standard</Badge>
+          <h2 className="font-serif text-2xl sm:text-3xl font-bold text-[#2D1F23]">
+            Fixed Four-Badge Model
+          </h2>
+          <p className="text-xs text-[#756366] max-w-xl mx-auto">
+            Clear, tamper-proof distinctions of community participation without inflated scores.
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[
-            {
-              step: '01',
-              title: 'Create Event',
-              desc: 'Organizer configures event location, date, capacity, and topic tags.',
-              icon: Calendar,
-            },
-            {
-              step: '02',
-              title: 'Get Digital Pass',
-              desc: 'Attendees discover events and register with 1-click to receive an instant QR pass.',
-              icon: QrCode,
-            },
-            {
-              step: '03',
-              title: 'Door Scan & Verify',
-              desc: 'Organizers scan attendee QR passes at the entrance for instant check-in verification.',
-              icon: ShieldCheck,
-            },
-            {
-              step: '04',
-              title: 'Sponsor Report',
-              desc: 'Export verified attendance rates and technology distribution summaries for sponsors.',
-              icon: BarChart3,
-            },
-          ].map((item) => {
-            const Icon = item.icon;
-            return (
-              <div
-                key={item.step}
-                className="bg-white rounded-2xl p-6 border border-gray-200/80 shadow-2xs space-y-4 hover:border-[#0B5D4B]/40 transition-colors"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="w-10 h-10 rounded-xl bg-[#0B5D4B]/10 flex items-center justify-center text-[#0B5D4B]">
-                    <Icon className="w-5 h-5" />
-                  </div>
-                  <span className="font-mono text-xs font-bold text-[#D6A84F] bg-[#D6A84F]/10 px-2 py-0.5 rounded-full">
-                    {item.step}
-                  </span>
-                </div>
-                <h3 className="font-bold text-lg text-[#17211E]">{item.title}</h3>
-                <p className="text-xs text-[#66736E] leading-relaxed">{item.desc}</p>
-              </div>
-            );
-          })}
+            { code: 'Attended', desc: 'Auto-awarded upon door check-in approval', color: 'primary' as const },
+            { code: 'Participant', desc: 'Awarded to hands-on workshop coders', color: 'secondary' as const },
+            { code: 'Winner', desc: 'Awarded to hackathon prize recipients', color: 'accent' as const },
+            { code: 'Speaker', desc: 'Awarded to keynote & session leads', color: 'tertiary' as const },
+          ].map((b) => (
+            <div key={b.code} className="p-4 rounded-2xl bg-white border border-[#E8DDD7] text-left space-y-2 shadow-xs">
+              <Badge variant={b.color} icon={<Award className="w-3 h-3" />}>
+                {b.code}
+              </Badge>
+              <p className="text-xs text-[#756366]">{b.desc}</p>
+            </div>
+          ))}
         </div>
       </section>
 
-      {/* CTA CARD */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-[#064638] text-white rounded-3xl p-8 sm:p-12 text-center space-y-6 relative overflow-hidden shadow-xl border border-[#0B5D4B]">
-          <div className="absolute -right-12 -bottom-12 w-64 h-64 bg-[#D6A84F]/10 rounded-full blur-2xl"></div>
-
-          <Badge variant="gold" className="mx-auto">
-            Get Started Today
-          </Badge>
-
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-white max-w-xl mx-auto leading-tight">
-            Ready to elevate your tech community events in Ethiopia?
+      {/* CTA Section */}
+      <section className="max-w-4xl mx-auto px-4 sm:px-6">
+        <div className="bg-[#63474D] text-white rounded-3xl p-8 sm:p-12 text-center space-y-6 shadow-lg">
+          <h2 className="font-serif text-3xl sm:text-4xl font-extrabold text-white">
+            Proof you showed up.
           </h2>
-
-          <p className="text-sm text-gray-200 max-w-lg mx-auto">
-            Join software engineers, community builders, and sponsors on Sheba.
+          <p className="text-sm text-[#E8DDD7] max-w-xl mx-auto">
+            Join Ethiopian developer communities hosting hackathons, workshops, and meetups on Sheba infrastructure.
           </p>
-
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
+          <div className="flex flex-col sm:flex-row justify-center gap-3 pt-2">
             <Link to="/login">
-              <Button variant="accent" size="lg" icon={<LogIn className="w-4 h-4" />}>
-                Sign In to Platform
-              </Button>
-            </Link>
-            <Link to="/events">
-              <Button variant="outline" size="lg" className="border-white text-white hover:bg-white/10">
-                Explore Events
+              <Button size="lg" variant="accent" icon={<LogIn className="w-5 h-5" />}>
+                Sign In to Your Account
               </Button>
             </Link>
           </div>

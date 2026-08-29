@@ -6,8 +6,9 @@ import { validateEvent } from '../middlewares/validate.middleware';
 
 const router = Router();
 
-// Public event browsing
+// Public & Share links
 router.get('/', EventController.getEvents);
+router.get('/share/:token', EventController.getEventByShareToken);
 router.get('/:id', EventController.getEventById);
 
 // Organizer Event Management
@@ -35,8 +36,8 @@ router.delete(
 
 // Attendee Registration
 router.post('/:id/register', authenticate, EventController.registerForEvent);
-router.get('/:id/registration', authenticate, EventController.getUserRegistration);
-router.delete('/:id/register', authenticate, EventController.cancelRegistration);
+router.get('/:id/roster', authenticate, authorizeRoles('organizer', 'admin'), EventController.getEventRoster);
+router.get('/:id/attendees', authenticate, authorizeRoles('organizer', 'admin'), EventController.getEventRoster);
+router.get('/:id/lookup', authenticate, authorizeRoles('organizer', 'admin'), EventController.lookupAttendee);
 
 export default router;
-

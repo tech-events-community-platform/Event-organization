@@ -7,8 +7,8 @@ import {
   LayoutDashboard,
   Calendar,
   Users,
-  Building2,
-  BarChart3,
+  Award,
+  CreditCard,
   User,
 } from 'lucide-react';
 
@@ -16,7 +16,10 @@ export const AdminLayout: React.FC = () => {
   const location = useLocation();
 
   const isTabActive = (path: string) => {
-    if (path === '/admin') return location.pathname === '/admin';
+    if (path.includes('#')) {
+      return location.pathname + location.hash === path;
+    }
+    if (path === '/admin') return location.pathname === '/admin' && !location.hash;
     return location.pathname.startsWith(path);
   };
 
@@ -25,13 +28,13 @@ export const AdminLayout: React.FC = () => {
       <Navbar />
 
       {/* Mobile Top Sub-bar for Admin */}
-      <div className="md:hidden bg-[#064638] text-white py-2.5 px-4 border-b border-[#0B5D4B] overflow-x-auto scrollbar-none flex gap-2">
+      <div className="md:hidden bg-[#63474D] text-white py-2.5 px-4 border-b border-[#AA767C]/40 overflow-x-auto scrollbar-none flex gap-2">
         {[
           { label: 'Overview', path: '/admin', icon: LayoutDashboard },
           { label: 'Events', path: '/admin/events', icon: Calendar },
           { label: 'Users', path: '/admin/users', icon: Users },
-          { label: 'Organizers', path: '/admin/organizers', icon: Building2 },
-          { label: 'Reports', path: '/admin/reports', icon: BarChart3 },
+          { label: 'Badge Queue', path: '/admin#badges', icon: Award },
+          { label: 'Payments', path: '/admin#payments', icon: CreditCard },
           { label: 'Profile', path: '/admin/profile', icon: User },
         ].map((item) => {
           const Icon = item.icon;
@@ -40,8 +43,8 @@ export const AdminLayout: React.FC = () => {
             <Link
               key={item.path}
               to={item.path}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 ${
-                active ? 'bg-[#0B5D4B] text-[#D6A84F]' : 'text-gray-300'
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 transition-colors ${
+                active ? 'bg-[#AA767C] text-[#FFA686] border-b-2 border-[#FFA686]' : 'text-gray-200 hover:text-white'
               }`}
             >
               <Icon className="w-3.5 h-3.5" />

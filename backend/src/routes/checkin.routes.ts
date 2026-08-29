@@ -2,18 +2,21 @@ import { Router } from 'express';
 import { CheckinController } from '../controllers/checkin.controller';
 import { authenticate } from '../middlewares/auth.middleware';
 import { authorizeRoles } from '../middlewares/role.middleware';
-import { validateCheckIn } from '../middlewares/validate.middleware';
 
 const router = Router();
 
-// Scan QR token and verify attendance
 router.post(
-  '/verify',
+  '/lookup',
   authenticate,
   authorizeRoles('organizer', 'admin'),
-  validateCheckIn,
-  CheckinController.verifyCheckIn
+  CheckinController.lookup
+);
+
+router.post(
+  '/approve',
+  authenticate,
+  authorizeRoles('organizer', 'admin'),
+  CheckinController.approve
 );
 
 export default router;
-

@@ -13,14 +13,12 @@ interface AuthContextType {
     email: string;
     password: string;
     full_name: string;
-    role?: string;
-    phone?: string;
+    role?: UserRole;
     organization?: string;
+    phone?: string;
   }) => Promise<User>;
   logout: () => Promise<void>;
-  loginWithTelegram: (asRole?: UserRole) => void;
   loginAsDemoUser: (demoRole: UserRole) => void;
-  switchRole: (newRole: UserRole) => void;
   refreshUser: () => Promise<void>;
 }
 
@@ -33,7 +31,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const refreshUser = async () => {
     const token = getAuthToken();
     if (!token) {
-      // Check if fallback user was saved in localStorage
       const savedUser = localStorage.getItem('sheba_auth_user');
       if (savedUser) {
         try {
@@ -58,7 +55,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.removeItem('sheba_auth_user');
       }
     } catch (e) {
-      console.error('Failed to load session user from backend:', e);
+      console.error('Failed to load session user:', e);
       setUser(null);
     } finally {
       setIsLoading(false);
@@ -85,9 +82,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     email: string;
     password: string;
     full_name: string;
-    role?: string;
-    phone?: string;
+    role?: UserRole;
     organization?: string;
+    phone?: string;
   }): Promise<User> => {
     setIsLoading(true);
     try {
@@ -125,14 +122,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem('sheba_auth_user', JSON.stringify(targetUser));
   };
 
-  const loginWithTelegram = (asRole: UserRole = 'ATTENDEE') => {
-    loginAsDemoUser(asRole);
-  };
-
-  const switchRole = (newRole: UserRole) => {
-    loginAsDemoUser(newRole);
-  };
-
   return (
     <AuthContext.Provider
       value={{
@@ -143,9 +132,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         register,
         logout,
-        loginWithTelegram,
         loginAsDemoUser,
-        switchRole,
         refreshUser,
       }}
     >
