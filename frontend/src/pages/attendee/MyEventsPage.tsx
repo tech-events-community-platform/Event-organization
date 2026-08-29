@@ -3,76 +3,161 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/api';
 import type { Ticket } from '../../types/ticket';
+import type { Event } from '../../types/event';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
-import { Calendar, MapPin, QrCode, ShieldCheck, ArrowRight, Ticket as TicketIcon } from 'lucide-react';
+import {
+  Calendar,
+  MapPin,
+  QrCode,
+  ShieldCheck,
+  ArrowRight,
+  Ticket as TicketIcon,
+  Compass,
+} from 'lucide-react';
 
 export const MyEventsPage: React.FC = () => {
   const { user } = useAuth();
   const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [allEvents, setAllEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'Upcoming' | 'Attended'>('Upcoming');
+  const [activeTab, setActiveTab] = useState<'Upcoming' | 'Explore' | 'Attended'>('Upcoming');
 
   useEffect(() => {
-    const fetchTickets = async () => {
+    const fetchData = async () => {
       setLoading(true);
-      if (user) {
-        const allTickets = await api.registration.getAttendeeTickets(user.id);
-        setTickets(allTickets);
+      try {
+        if (user) {
+          const userTickets = await api.registration.getAttendeeTickets(user.id);
+          setTickets(userTickets);
+        }
+        const events = await api.events.getAll();
+        setAllEvents(events);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
-    fetchTickets();
+    fetchData();
   }, [user]);
 
   const upcomingTickets = tickets.filter((t) => t.status === 'Valid');
   const attendedTickets = tickets.filter((t) => t.status === 'Checked in' || t.status === 'Expired');
-  const currentList = activeTab === 'Upcoming' ? upcomingTickets : attendedTickets;
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto pb-16">
       <div className="space-y-1">
-        <Badge variant="primary">QR Wallet</Badge>
+        <Badge variant="primary">Attendee Events & Passes</Badge>
         <h1 className="font-serif text-2xl sm:text-3xl font-extrabold text-[#2D1F23]">
-          My Tickets & QR Wallet
+          My Events & Discovery
         </h1>
         <p className="text-xs text-[#756366]">
-          Stored dynamic QR passes for registered single-day events.
+          View your active door passes, explore upcoming events, and browse past attended history.
         </p>
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-[#E8DDD7] gap-6">
+      <div className="flex border-b border-[#E8DDD7] gap-4 sm:gap-6 overflow-x-auto">
         <button
           onClick={() => setActiveTab('Upcoming')}
-          className={`pb-3 text-xs sm:text-sm font-bold border-b-2 transition-all flex items-center gap-2 ${
+          className={`pb-3 text-xs sm:text-sm font-bold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
             activeTab === 'Upcoming'
               ? 'border-[#63474D] text-[#63474D]'
               : 'border-transparent text-[#756366] hover:text-[#2D1F23]'
           }`}
         >
+          <TicketIcon className="w-4 h-4" />
           Active Passes ({upcomingTickets.length})
         </button>
         <button
+          onClick={() => setActiveTab('Explore')}
+          className={`pb-3 text-xs sm:text-sm font-bold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
+            activeTab === 'Explore'
+              ? 'border-[#63474D] text-[#63474D]'
+              : 'border-transparent text-[#756366] hover:text-[#2D1F23]'
+          }`}
+        >
+          <Compass className="w-4 h-4" />
+          Explore Events ({allEvents.length})
+        </button>
+        <button
           onClick={() => setActiveTab('Attended')}
-          className={`pb-3 text-xs sm:text-sm font-bold border-b-2 transition-all flex items-center gap-2 ${
+          className={`pb-3 text-xs sm:text-sm font-bold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
             activeTab === 'Attended'
               ? 'border-[#63474D] text-[#63474D]'
               : 'border-transparent text-[#756366] hover:text-[#2D1F23]'
           }`}
         >
-          Past Attended Passes ({attendedTickets.length})
+          <ShieldCheck className="w-4 h-4" />
+          Past Attended ({attendedTickets.length})
         </button>
       </div>
 
-      {/* Ticket List */}
+      {/* Content */}
       {loading ? (
         <div className="space-y-4 animate-pulse">
-          {[1, 2].map((i) => (
+          {[1, 2, 3].map((i) => (
             <div key={i} className="h-28 bg-[#E8DDD7]/50 rounded-2xl"></div>
           ))}
         </div>
-      ) : currentList.length === 0 ? (
+      ) : activeTab === 'Explore' ? (
+        /* Explore All Added Events */
+        <div className="space-y-4">
+          {allEvents.length === 0 ? (
+            <div className="bg-white rounded-3xl p-10 text-center border border-[#E8DDD7] space-y-3 shadow-xs">
+              <Compass className="w-10 h-10 text-[#AA767C] mx-auto" />
+              <h3 className="font-serif text-base font-bold text-[#2D1F23]">No Events Available</h3>
+              <p className="text-xs text-[#756366]">Check back soon for new workshops, meetups, and hackathons.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {allEvents.map((ev) => (
+                <div
+                  key={ev.id}
+                  className="bg-white p-5 rounded-3xl border border-[#E8DDD7] hover:border-[#63474D] transition-all shadow-xs space-y-3 flex flex-col justify-between"
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Badge variant="primary" className="uppercase font-mono text-[10px]">
+                        {ev.type}
+                      </Badge>
+                      <span className="text-xs font-bold text-[#63474D]">
+                        {ev.isPaid ? `${ev.ticketPrice} ETB` : 'FREE'}
+                      </span>
+                    </div>
+
+                    <h3 className="font-serif font-bold text-base text-[#2D1F23]">{ev.title}</h3>
+                    <p className="text-xs font-semibold text-[#AA767C]">Hosted by {ev.organizerName}</p>
+
+                    <div className="space-y-1 text-xs text-[#756366] pt-1">
+                      <div className="flex items-center gap-1.5">
+                        <Calendar className="w-3.5 h-3.5 text-[#63474D]" />
+                        <span>{ev.date} • {ev.time || `${ev.startTime} - ${ev.endTime}`}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <MapPin className="w-3.5 h-3.5 text-[#63474D]" />
+                        <span className="truncate">{ev.venueName || ev.location}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-[#E8DDD7] flex items-center justify-between">
+                    <span className="text-[11px] text-[#756366]">
+                      {ev.registeredCount} / {ev.capacity} spots
+                    </span>
+                    <Link to={`/e/${ev.shareLinkToken}`}>
+                      <Button variant="accent" size="sm" icon={<ArrowRight className="w-3.5 h-3.5" />}>
+                        Register / View
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (activeTab === 'Upcoming' ? upcomingTickets : attendedTickets).length === 0 ? (
         <div className="bg-white rounded-3xl p-10 text-center border border-[#E8DDD7] space-y-3 shadow-xs">
           <TicketIcon className="w-10 h-10 text-[#AA767C] mx-auto" />
           <h3 className="font-serif text-base font-bold text-[#2D1F23]">
@@ -81,17 +166,20 @@ export const MyEventsPage: React.FC = () => {
               : 'No past ticket records found.'}
           </h3>
           <p className="text-xs text-[#756366]">
-            Register for tech hackathons, workshops, or meetups using organizer share links.
+            Browse all upcoming hackathons, workshops, or meetups to register.
           </p>
-          <Link to="/search">
-            <Button variant="primary" size="sm" icon={<ArrowRight className="w-4 h-4" />}>
-              Search Events
-            </Button>
-          </Link>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => setActiveTab('Explore')}
+            icon={<ArrowRight className="w-4 h-4" />}
+          >
+            Explore Added Events
+          </Button>
         </div>
       ) : (
         <div className="space-y-4">
-          {currentList.map((ticket) => (
+          {(activeTab === 'Upcoming' ? upcomingTickets : attendedTickets).map((ticket) => (
             <div
               key={ticket.id}
               className="bg-white rounded-3xl p-6 border border-[#E8DDD7] shadow-xs hover:border-[#63474D] transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"

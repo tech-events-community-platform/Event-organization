@@ -22,8 +22,28 @@ export const removeAuthToken = (): void => {
   localStorage.removeItem('sheba_auth_token');
 };
 
-// In-memory state holders for rich client-side interactivity & offline resilience
-let eventsStore: Event[] = [...mockEvents];
+// In-memory & local-storage state holders for rich client-side interactivity & offline resilience
+const loadInitialEvents = (): Event[] => {
+  try {
+    const saved = localStorage.getItem('sheba_events_store');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (e) {
+    console.error('Failed to parse saved events:', e);
+  }
+  return [...mockEvents];
+};
+
+let eventsStore: Event[] = loadInitialEvents();
+const saveEventsStore = () => {
+  try {
+    localStorage.setItem('sheba_events_store', JSON.stringify(eventsStore));
+  } catch (e) {
+    console.error('Failed to save events:', e);
+  }
+};
 let ticketsStore: Ticket[] = [...mockTickets];
 let badgeAwardsStore: BadgeAward[] = [...mockBadgeAwards];
 let attendeeRosterStore: Record<string, AttendeeRosterItem[]> = {
@@ -198,6 +218,7 @@ export const api = {
         createdAt: new Date().toISOString(),
       };
       eventsStore.unshift(newEvent);
+      saveEventsStore();
       return newEvent;
     },
 
@@ -205,6 +226,7 @@ export const api = {
       const idx = eventsStore.findIndex((e) => e.id === id);
       if (idx !== -1) {
         eventsStore[idx] = { ...eventsStore[idx], ...data };
+        saveEventsStore();
         return eventsStore[idx];
       }
       throw new Error('Event not found');
@@ -212,6 +234,7 @@ export const api = {
 
     delete: async (id: string): Promise<boolean> => {
       eventsStore = eventsStore.filter((e) => e.id !== id);
+      saveEventsStore();
       return true;
     },
   },
@@ -505,13 +528,20 @@ export const api = {
     },
   },
 
-  // Public Search
+  // Public Search & Events Directory
   search: {
-    searchPublic: async (query: string): Promise<{ attendees: User[]; events: Event[] }> => {
-      const lower = query.toLowerCase().trim();
-      if (!lower) return { attendees: [], events: [] };
+    searchPublic: async (query?: string): Promise<{ attendees: User[]; events: Event[] }> => {
+      const lower = (query || '').toLowerCase().trim();
+      const allAttendees = [mockAttendeeUser];
 
-      const matchedAttendees = [mockAttendeeUser].filter(
+      if (!lower) {
+        return {
+          attendees: allAttendees,
+          events: [...eventsStore],
+        };
+      }
+
+      const matchedAttendees = allAttendees.filter(
         (u) => u.name.toLowerCase().includes(lower) || u.email.toLowerCase().includes(lower)
       );
 
@@ -519,7 +549,9 @@ export const api = {
         (e) =>
           e.title.toLowerCase().includes(lower) ||
           e.location.toLowerCase().includes(lower) ||
-          e.organizerName.toLowerCase().includes(lower)
+          e.organizerName.toLowerCase().includes(lower) ||
+          (e.description && e.description.toLowerCase().includes(lower)) ||
+          e.type.toLowerCase().includes(lower)
       );
 
       return {

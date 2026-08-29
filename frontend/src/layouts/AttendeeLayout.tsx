@@ -2,7 +2,7 @@ import React from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { Navbar } from '../components/layout/Navbar';
 import { Footer } from '../components/layout/Footer';
-import { Home, Calendar, QrCode, User, ShieldCheck } from 'lucide-react';
+import { Home, Calendar, QrCode, User, ShieldCheck, Compass } from 'lucide-react';
 
 export const AttendeeLayout: React.FC = () => {
   const location = useLocation();
@@ -24,7 +24,7 @@ export const AttendeeLayout: React.FC = () => {
               to="/app"
               className={`flex items-center gap-1.5 py-1.5 px-3 rounded-lg transition-colors whitespace-nowrap ${
                 isTabActive('/app') && location.pathname === '/app'
-                  ? 'bg-[#0B5D4B] text-white'
+                  ? 'bg-[#63474D] text-white'
                   : 'text-[#66736E] hover:text-[#17211E] hover:bg-gray-100'
               }`}
             >
@@ -32,10 +32,21 @@ export const AttendeeLayout: React.FC = () => {
               <span>Attendee Hub</span>
             </Link>
             <Link
+              to="/search"
+              className={`flex items-center gap-1.5 py-1.5 px-3 rounded-lg transition-colors whitespace-nowrap ${
+                isTabActive('/search')
+                  ? 'bg-[#63474D] text-white'
+                  : 'text-[#66736E] hover:text-[#17211E] hover:bg-gray-100'
+              }`}
+            >
+              <Compass className="w-3.5 h-3.5" />
+              <span>Events</span>
+            </Link>
+            <Link
               to="/app/events"
               className={`flex items-center gap-1.5 py-1.5 px-3 rounded-lg transition-colors whitespace-nowrap ${
                 isTabActive('/app/events')
-                  ? 'bg-[#0B5D4B] text-white'
+                  ? 'bg-[#63474D] text-white'
                   : 'text-[#66736E] hover:text-[#17211E] hover:bg-gray-100'
               }`}
             >
@@ -46,18 +57,18 @@ export const AttendeeLayout: React.FC = () => {
               to="/app/ticket/evt_react_workshop_2026"
               className={`flex items-center gap-1.5 py-1.5 px-3 rounded-lg transition-colors whitespace-nowrap ${
                 isTabActive('/app/ticket')
-                  ? 'bg-[#0B5D4B] text-white'
+                  ? 'bg-[#63474D] text-white'
                   : 'text-[#66736E] hover:text-[#17211E] hover:bg-gray-100'
               }`}
             >
-              <QrCode className="w-3.5 h-3.5 text-[#D6A84F]" />
+              <QrCode className="w-3.5 h-3.5 text-[#FFA686]" />
               <span>QR Ticket Pass</span>
             </Link>
             <Link
               to="/app/profile"
               className={`flex items-center gap-1.5 py-1.5 px-3 rounded-lg transition-colors whitespace-nowrap ${
                 isTabActive('/app/profile') && location.pathname !== '/app/profile/attendance'
-                  ? 'bg-[#0B5D4B] text-white'
+                  ? 'bg-[#63474D] text-white'
                   : 'text-[#66736E] hover:text-[#17211E] hover:bg-gray-100'
               }`}
             >
@@ -68,11 +79,11 @@ export const AttendeeLayout: React.FC = () => {
               to="/app/profile/attendance"
               className={`flex items-center gap-1.5 py-1.5 px-3 rounded-lg transition-colors whitespace-nowrap ${
                 isTabActive('/app/profile/attendance')
-                  ? 'bg-[#0B5D4B] text-white'
+                  ? 'bg-[#63474D] text-white'
                   : 'text-[#66736E] hover:text-[#17211E] hover:bg-gray-100'
               }`}
             >
-              <ShieldCheck className="w-3.5 h-3.5 text-[#D6A84F]" />
+              <ShieldCheck className="w-3.5 h-3.5 text-[#FFA686]" />
               <span>Verified Attendance</span>
             </Link>
           </div>

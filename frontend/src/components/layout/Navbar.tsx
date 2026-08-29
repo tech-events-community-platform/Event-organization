@@ -12,6 +12,8 @@ import {
   Settings,
   PlusCircle,
   Ticket,
+  Home,
+  Compass,
 } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
@@ -52,20 +54,44 @@ export const Navbar: React.FC = () => {
 
           {/* Desktop Navigation Links */}
           <nav className="hidden md:flex items-center gap-2">
-            <Link
-              to="/search"
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors ${
-                isActive('/search')
-                  ? 'bg-[#63474D]/10 text-[#63474D]'
-                  : 'text-[#756366] hover:text-[#2D1F23] hover:bg-[#E8DDD7]/40'
-              }`}
-            >
-              <Search className="w-3.5 h-3.5" />
-              Search Profiles & Events
-            </Link>
+            {!isAuthenticated && (
+              <Link
+                to="/search"
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+                  isActive('/search')
+                    ? 'bg-[#63474D]/10 text-[#63474D]'
+                    : 'text-[#756366] hover:text-[#2D1F23] hover:bg-[#E8DDD7]/40'
+                }`}
+              >
+                <Search className="w-3.5 h-3.5" />
+                Search Profiles & Events
+              </Link>
+            )}
 
             {isAuthenticated && role === 'ATTENDEE' && (
               <>
+                <Link
+                  to="/app"
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+                    location.pathname === '/app'
+                      ? 'bg-[#63474D]/10 text-[#63474D]'
+                      : 'text-[#756366] hover:text-[#2D1F23] hover:bg-[#E8DDD7]/40'
+                  }`}
+                >
+                  <Home className="w-3.5 h-3.5" />
+                  Attendee Hub
+                </Link>
+                <Link
+                  to="/search"
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+                    isActive('/search')
+                      ? 'bg-[#63474D]/10 text-[#63474D]'
+                      : 'text-[#756366] hover:text-[#2D1F23] hover:bg-[#E8DDD7]/40'
+                  }`}
+                >
+                  <Compass className="w-3.5 h-3.5" />
+                  Events
+                </Link>
                 <Link
                   to="/app/events"
                   className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors ${
@@ -75,7 +101,7 @@ export const Navbar: React.FC = () => {
                   }`}
                 >
                   <Ticket className="w-3.5 h-3.5" />
-                  My Tickets / QR Wallet
+                  My Events
                 </Link>
                 <Link
                   to="/app/profile"
@@ -216,25 +242,44 @@ export const Navbar: React.FC = () => {
                 {role === 'ATTENDEE' && (
                   <>
                     <Link
+                      to="/app"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="px-3 py-2 rounded-lg text-sm font-semibold text-[#2D1F23] hover:bg-white flex items-center gap-2"
+                    >
+                      <Home className="w-4 h-4 text-[#63474D]" />
+                      Attendee Hub
+                    </Link>
+                    <Link
+                      to="/search"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="px-3 py-2 rounded-lg text-sm font-semibold text-[#2D1F23] hover:bg-white flex items-center gap-2"
+                    >
+                      <Compass className="w-4 h-4 text-[#63474D]" />
+                      Events
+                    </Link>
+                    <Link
                       to="/app/events"
                       onClick={() => setIsMobileMenuOpen(false)}
-                      className="px-3 py-2 rounded-lg text-sm font-semibold text-[#2D1F23] hover:bg-white"
+                      className="px-3 py-2 rounded-lg text-sm font-semibold text-[#2D1F23] hover:bg-white flex items-center gap-2"
                     >
-                      My Tickets / QR Wallet
+                      <Ticket className="w-4 h-4 text-[#63474D]" />
+                      My Events
                     </Link>
                     <Link
                       to="/app/profile"
                       onClick={() => setIsMobileMenuOpen(false)}
-                      className="px-3 py-2 rounded-lg text-sm font-semibold text-[#2D1F23] hover:bg-white"
+                      className="px-3 py-2 rounded-lg text-sm font-semibold text-[#2D1F23] hover:bg-white flex items-center gap-2"
                     >
+                      <Award className="w-4 h-4 text-[#63474D]" />
                       My Badges & Profile
                     </Link>
                     <Link
                       to="/app/settings"
                       onClick={() => setIsMobileMenuOpen(false)}
-                      className="px-3 py-2 rounded-lg text-sm font-semibold text-[#2D1F23] hover:bg-white"
+                      className="px-3 py-2 rounded-lg text-sm font-semibold text-[#2D1F23] hover:bg-white flex items-center gap-2"
                     >
-                      Account Settings & Data Export
+                      <Settings className="w-4 h-4 text-[#63474D]" />
+                      Account Settings
                     </Link>
                   </>
                 )}

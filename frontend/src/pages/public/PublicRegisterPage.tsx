@@ -145,9 +145,9 @@ export const PublicRegisterPage: React.FC = () => {
         <p className="text-xs text-[#756366]">
           This registration link may be invalid, closed, or the event was removed by the organizer.
         </p>
-        <Link to="/">
+        <Link to="/search">
           <Button variant="outline" size="sm">
-            Return to Home
+            Browse All Events
           </Button>
         </Link>
       </div>
@@ -216,11 +216,11 @@ export const PublicRegisterPage: React.FC = () => {
   return (
     <div className="max-w-2xl mx-auto py-10 px-4 space-y-6">
       <Link
-        to="/"
+        to="/search"
         className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#63474D] hover:underline"
       >
         <ArrowLeft className="w-4 h-4" />
-        Sheba Platform
+        Back to Events
       </Link>
 
       {/* Event Header Banner */}
