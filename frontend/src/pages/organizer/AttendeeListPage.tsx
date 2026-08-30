@@ -1,50 +1,89 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import type { Event } from '../../types/event';
 import type { AttendeeRosterItem, BadgeCode } from '../../types/attendance';
-import { Badge } from '../../components/ui/Badge';
-import { Button } from '../../components/ui/Button';
-import { Modal } from '../../components/ui/Modal';
 import {
   Search,
   Award,
   CheckCircle2,
-  QrCode,
   CheckSquare,
   Square,
   Sparkles,
+  X,
+  Check,
+  Clock,
 } from 'lucide-react';
 
 export const AttendeeListPage: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+  const { id } = useParams<{ id?: string }>();
+  const navigate = useNavigate();
   const { user } = useAuth();
-  const [event, setEvent] = useState<Event | null>(null);
+
+  const [events, setEvents] = useState<Event[]>([]);
+  const [selectedEventId, setSelectedEventId] = useState<string>(id || '');
+  const [currentEvent, setCurrentEvent] = useState<Event | null>(null);
   const [roster, setRoster] = useState<AttendeeRosterItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('All');
 
-  // Multi-selection state for bulk badge awarding
+  // Single & Multi-selection state for badge awarding
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isAwardModalOpen, setIsAwardModalOpen] = useState(false);
+  const [targetAttendee, setTargetAttendee] = useState<AttendeeRosterItem | null>(null);
+
+  // Badge Form State
   const [badgeToAward, setBadgeToAward] = useState<BadgeCode>('participant');
+  const [badgeDomain, setBadgeDomain] = useState<string>('Frontend Architecture & Modern Web');
+  const [endorsementNote, setEndorsementNote] = useState<string>('Demonstrated practical technical proficiency and completed hands-on project milestone.');
   const [isAwarding, setIsAwarding] = useState(false);
   const [awardSuccessMsg, setAwardSuccessMsg] = useState<string | null>(null);
 
-  const loadData = async () => {
-    if (id) {
-      const evt = await api.events.getById(id);
-      setEvent(evt || null);
-      const items = await api.roster.getByEventId(id);
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        const evts = await api.events.getAll();
+        setEvents(evts);
+        if (id) {
+          setSelectedEventId(id);
+        } else if (evts.length > 0 && !selectedEventId) {
+          setSelectedEventId(evts[0].id);
+        }
+      } catch (err) {
+        console.error('Failed to load events:', err);
+      }
+    };
+    fetchEvents();
+  }, [id]);
+
+  const loadRoster = async (eventId: string) => {
+    setLoading(true);
+    try {
+      const evt = await api.events.getById(eventId);
+      setCurrentEvent(evt || null);
+      const items = await api.roster.getByEventId(eventId);
       setRoster(items);
+    } catch (e) {
+      console.error('Failed to load roster:', e);
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadData();
-  }, [id]);
+    if (selectedEventId) {
+      loadRoster(selectedEventId);
+    }
+  }, [selectedEventId]);
+
+  const handleSelectEvent = (eventId: string) => {
+    setSelectedEventId(eventId);
+    setSelectedIds([]);
+    navigate(`/organizer/badges/${eventId}`);
+  };
 
   const filtered = roster.filter((att) => {
     const matchesSearch =
@@ -68,296 +107,438 @@ export const AttendeeListPage: React.FC = () => {
     );
   };
 
+  // Open modal for a specific individual attendee
+  const handleOpenIndividualAward = (attendee: AttendeeRosterItem) => {
+    setTargetAttendee(attendee);
+    setSelectedIds([attendee.id]);
+    setIsAwardModalOpen(true);
+  };
+
+  // Open modal for bulk selected attendees
+  const handleOpenBulkAward = () => {
+    if (selectedIds.length === 0) return;
+    setTargetAttendee(null);
+    setIsAwardModalOpen(true);
+  };
+
   const handleConfirmAwardBadges = async () => {
-    if (!id || selectedIds.length === 0) return;
+    if (!selectedEventId || selectedIds.length === 0) return;
     setIsAwarding(true);
     try {
       const res = await api.badges.bulkAwardBadges({
-        eventId: id,
+        eventId: selectedEventId,
         attendeeRosterIds: selectedIds,
         badgeCode: badgeToAward,
         awardedByOrganizerId: user?.id || 'demo-organizer-001',
       });
       setIsAwardModalOpen(false);
       setSelectedIds([]);
-      setAwardSuccessMsg(`Successfully awarded "${badgeToAward.toUpperCase()}" badge to ${res.awardedCount} attendees!`);
-      setTimeout(() => setAwardSuccessMsg(null), 4000);
-      loadData();
+      setTargetAttendee(null);
+      setAwardSuccessMsg(`Successfully approved & issued "${badgeToAward.toUpperCase()}" badge (${badgeDomain}) to ${res.awardedCount} attendee(s)!`);
+      setTimeout(() => setAwardSuccessMsg(null), 5000);
+      loadRoster(selectedEventId);
     } catch (e: any) {
-      alert(e.message || 'Badge awarding failed.');
+      alert(e.message || 'Badge approval failed.');
     } finally {
       setIsAwarding(false);
     }
   };
 
+  const badgeTypeOptions: { code: BadgeCode; label: string; icon: string; desc: string }[] = [
+    { code: 'attended', label: 'Attended Badge', icon: '🎟️', desc: 'Proof of presence & physical/virtual attendance verification' },
+    { code: 'participant', label: 'Participant Badge', icon: '🎖️', desc: 'Active project submission & hands-on track completion' },
+    { code: 'winner', label: 'Winner / Champion Badge', icon: '🏆', desc: 'Hackathon champion, top podium award, or category winner' },
+    { code: 'speaker', label: 'Speaker / Keynote Badge', icon: '🎤', desc: 'Workshop instructor, keynote speaker, or expert panelist' },
+  ];
+
+  const domainOptions = [
+    'Frontend Architecture & React',
+    'AI & Machine Learning Engineering',
+    'Backend Systems & Cloud Infrastructure',
+    'Mobile Application Development',
+    'UI/UX & Product Design',
+    'Web3 & Smart Contract Engineering',
+    'Open Source Ecosystem Contribution',
+    'Founder & Product Pitch',
+  ];
+
   return (
-    <div className="space-y-6 pb-20">
-
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="font-serif text-2xl sm:text-3xl font-extrabold text-[#2D1F23]">Manage Attendees & Badges</h1>
-            <Badge variant="primary">{roster.length} Registered</Badge>
+    <div className="space-y-6 pb-20 max-w-6xl mx-auto">
+      {/* 1. Header */}
+      <div className="border-b border-gray-100 pb-4">
+        <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2">
+          <div>
+            <h1 className="font-serif text-3xl sm:text-4xl font-bold text-[#0e0622]">
+              Give & Approve Badges
+            </h1>
+            <p className="text-xs text-gray-600 font-light mt-0.5">
+              Select an event to review attendees, verify participation, and issue cryptographically signed organizer badges.
+            </p>
           </div>
-          <p className="text-xs text-[#756366]">
-            {event ? event.title : 'Event'} • Multi-select checked-in attendees to bulk-assign Participant, Winner, or Speaker badges.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <Link to={`/organizer/events/${id}/scanner`}>
-            <Button variant="accent" size="sm" icon={<QrCode className="w-4 h-4" />}>
-              Door Scanner
-            </Button>
-          </Link>
+          <span className="text-xs font-semibold text-[#C84B18] bg-[#FAF7F5] px-3 py-1 rounded-xl border border-gray-200 shrink-0">
+            {user?.organization || 'GDG Addis'} • Authorized Issuer
+          </span>
         </div>
       </div>
 
+      {/* Success Notification Banner */}
       {awardSuccessMsg && (
-        <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs text-emerald-800 font-bold flex items-center gap-2 animate-fade-in">
-          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-          <span>{awardSuccessMsg}</span>
-        </div>
-      )}
-
-      {/* Bulk Action Bar when items selected */}
-      {selectedIds.length > 0 && (
-        <div className="bg-[#63474D] text-white p-4 rounded-2xl flex items-center justify-between shadow-md animate-fade-in">
-          <div className="flex items-center gap-2 text-xs font-bold">
-            <Award className="w-4 h-4 text-[#FFA686]" />
-            <span>{selectedIds.length} attendee(s) selected</span>
+        <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center justify-between shadow-2xs animate-fade-in">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>{awardSuccessMsg}</span>
           </div>
-
-          <Button
-            onClick={() => setIsAwardModalOpen(true)}
-            variant="accent"
-            size="sm"
-            icon={<Sparkles className="w-3.5 h-3.5" />}
-          >
-            Assign Badge to Selected ({selectedIds.length})
-          </Button>
+          <button onClick={() => setAwardSuccessMsg(null)} className="p-1 hover:text-emerald-950">
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 
-      {/* Search & Filter */}
-      <div className="bg-white p-4 rounded-3xl border border-[#E8DDD7] shadow-xs flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#756366]" />
-          <input
-            type="text"
-            placeholder="Search attendee by name or email..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-[#FAF7F5] border border-[#E8DDD7] rounded-xl text-xs text-[#2D1F23] focus:outline-none focus:ring-2 focus:ring-[#63474D]"
-          />
-        </div>
+      {/* 2. Event Scope Selector (Choose which event's attendees to manage) */}
+      <div className="space-y-2">
+        <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500 block">
+          Select Event to Manage Attendees
+        </span>
 
-        <div className="flex gap-2">
-          {['All', 'Checked in', 'Registered'].map((st) => (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {events.map((evt) => (
             <button
-              key={st}
-              onClick={() => setStatusFilter(st)}
-              className={`px-3 py-2 rounded-xl text-xs font-bold transition-all ${
-                statusFilter === st
-                  ? 'bg-[#63474D] text-white shadow-xs'
-                  : 'bg-[#FAF7F5] text-[#756366] hover:bg-[#F4EFEB]'
+              key={evt.id}
+              type="button"
+              onClick={() => handleSelectEvent(evt.id)}
+              className={`p-3.5 rounded-2xl text-left transition-all border cursor-pointer ${
+                selectedEventId === evt.id
+                  ? 'bg-[#fcf7f8] border-2 border-[#C84B18] shadow-xs'
+                  : 'bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50'
               }`}
             >
-              {st}
+              <div className="flex items-center justify-between text-[10px] uppercase font-mono font-bold text-[#C84B18]">
+                <span>{evt.type}</span>
+                <span className="text-gray-400 font-sans">{evt.date}</span>
+              </div>
+              <h3 className="font-serif font-bold text-sm text-[#0e0622] truncate mt-1">
+                {evt.title}
+              </h3>
+              <p className="text-[11px] text-gray-500 font-light mt-0.5">
+                {evt.checkedInCount} checked in / {evt.registeredCount} registered
+              </p>
             </button>
           ))}
         </div>
       </div>
 
-      {/* Desktop Roster Table */}
-      <div className="hidden md:block bg-white rounded-3xl border border-[#E8DDD7] overflow-hidden shadow-xs">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-[#FAF7F5] border-b border-[#E8DDD7] text-[11px] font-bold uppercase tracking-wider text-[#756366]">
-              <th className="py-3.5 px-4 w-12 text-center">
-                <button onClick={handleToggleSelectAll} className="p-1 hover:text-[#63474D]">
-                  {selectedIds.length === filtered.length && filtered.length > 0 ? (
-                    <CheckSquare className="w-4 h-4 text-[#63474D]" />
-                  ) : (
-                    <Square className="w-4 h-4" />
-                  )}
-                </button>
-              </th>
-              <th className="py-3.5 px-4">Attendee Details</th>
-              <th className="py-3.5 px-4">Status & Door Time</th>
-              <th className="py-3.5 px-4">Awarded Badges</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[#E8DDD7] text-xs text-[#2D1F23]">
-            {filtered.map((att) => {
-              const isSelected = selectedIds.includes(att.id);
-              return (
-                <tr
-                  key={att.id}
-                  className={`hover:bg-[#FAF7F5] transition-colors ${
-                    isSelected ? 'bg-[#63474D]/5' : ''
+      {/* 3. Attendee Management Workspace */}
+      <div className="space-y-4 pt-2">
+        {/* Controls Bar: Search, Filters & Bulk Action */}
+        <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="flex items-center gap-3 w-full sm:w-auto flex-1">
+            <div className="relative flex-1 max-w-md">
+              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search attendee by name or email..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-[#0e0622] focus:outline-none focus:ring-2 focus:ring-[#C84B18]"
+              />
+            </div>
+
+            <div className="flex gap-1">
+              {['All', 'Checked in', 'Registered'].map((st) => (
+                <button
+                  key={st}
+                  type="button"
+                  onClick={() => setStatusFilter(st)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                    statusFilter === st
+                      ? 'bg-sheeba-purple text-white'
+                      : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
                   }`}
                 >
-                  <td className="py-3.5 px-4 text-center">
+                  {st}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Bulk Award Action */}
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+            {selectedIds.length > 0 && (
+              <button
+                type="button"
+                onClick={handleOpenBulkAward}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#C84B18] text-white text-xs font-bold hover:bg-[#b04014] transition-all shadow-xs cursor-pointer active:scale-98 animate-fade-in"
+              >
+                <Award className="w-4 h-4" />
+                <span>Bulk Approve Badges ({selectedIds.length})</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Attendees Master Table */}
+        <div className="border border-gray-200 rounded-2xl overflow-hidden bg-white shadow-2xs">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-[#fcfafc] border-b border-gray-200 text-gray-700 font-bold uppercase tracking-wider text-[11px]">
+                <tr>
+                  <th className="py-3.5 px-4 w-10 text-center">
                     <button
-                      onClick={() => handleToggleSelectOne(att.id)}
-                      className="p-1 text-[#756366] hover:text-[#63474D]"
+                      type="button"
+                      onClick={handleToggleSelectAll}
+                      className="text-gray-400 hover:text-gray-700 cursor-pointer"
                     >
-                      {isSelected ? (
-                        <CheckSquare className="w-4 h-4 text-[#63474D]" />
+                      {selectedIds.length === filtered.length && filtered.length > 0 ? (
+                        <CheckSquare className="w-4 h-4 text-[#C84B18]" />
                       ) : (
                         <Square className="w-4 h-4" />
                       )}
                     </button>
-                  </td>
-                  <td className="py-3.5 px-4">
-                    <p className="font-bold text-[#2D1F23]">{att.name}</p>
-                    <p className="text-[11px] text-[#756366]">{att.email}</p>
-                  </td>
-                  <td className="py-3.5 px-4">
-                    <div className="space-y-1">
-                      <Badge variant={att.status === 'Checked in' ? 'success' : 'gray'}>
-                        {att.status}
-                      </Badge>
-                      {att.checkInTime && (
-                        <p className="text-[10px] text-[#756366] font-mono">{att.checkInTime}</p>
-                      )}
-                    </div>
-                  </td>
-                  <td className="py-3.5 px-4">
-                    <div className="flex flex-wrap gap-1.5">
-                      {att.badges.map((b) => (
-                        <Badge
-                          key={b}
-                          variant={
-                            b === 'winner'
-                              ? 'accent'
-                              : b === 'speaker'
-                              ? 'tertiary'
-                              : b === 'participant'
-                              ? 'secondary'
-                              : 'primary'
-                          }
-                          className="capitalize text-[10px]"
-                        >
-                          {b}
-                        </Badge>
-                      ))}
-                      {att.badges.length === 0 && (
-                        <span className="text-[11px] text-[#756366] italic">None awarded yet</span>
-                      )}
-                    </div>
-                  </td>
+                  </th>
+                  <th className="py-3.5 px-4">Attendee Name & Email</th>
+                  <th className="py-3.5 px-4">Check-in Status</th>
+                  <th className="py-3.5 px-4">Currently Awarded Badges</th>
+                  <th className="py-3.5 px-4">Domain / Survey Info</th>
+                  <th className="py-3.5 px-4 text-right">Badge Action</th>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {loading ? (
+                  <tr>
+                    <td colSpan={6} className="py-12 text-center text-gray-400 font-light">
+                      Loading attendee records...
+                    </td>
+                  </tr>
+                ) : filtered.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-12 text-center text-gray-400 font-light">
+                      No attendees matched your filter.
+                    </td>
+                  </tr>
+                ) : (
+                  filtered.map((att) => {
+                    const isChecked = selectedIds.includes(att.id);
+                    const isCheckedIn = att.status === 'Checked in';
+
+                    return (
+                      <tr
+                        key={att.id}
+                        className={`transition-colors ${
+                          isChecked ? 'bg-[#fcf7f8]' : 'hover:bg-gray-50/70'
+                        }`}
+                      >
+                        {/* Checkbox */}
+                        <td className="py-4 px-4 text-center">
+                          <button
+                            type="button"
+                            onClick={() => handleToggleSelectOne(att.id)}
+                            className="text-gray-400 hover:text-gray-700 cursor-pointer"
+                          >
+                            {isChecked ? (
+                              <CheckSquare className="w-4 h-4 text-[#C84B18]" />
+                            ) : (
+                              <Square className="w-4 h-4" />
+                            )}
+                          </button>
+                        </td>
+
+                        {/* Attendee Info */}
+                        <td className="py-4 px-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-[#FAF7F5] border border-gray-200 flex items-center justify-center font-bold text-xs text-[#0e0622]">
+                              {att.name.charAt(0)}
+                            </div>
+                            <div>
+                              <p className="font-serif font-bold text-sm text-[#0e0622]">{att.name}</p>
+                              <p className="text-[11px] text-gray-500 font-light">{att.email}</p>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Check-In Status */}
+                        <td className="py-4 px-4">
+                          {isCheckedIn ? (
+                            <div className="space-y-0.5">
+                              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#1B4332]">
+                                <CheckCircle2 className="w-3.5 h-3.5 text-[#1B4332]" />
+                                Checked in
+                              </span>
+                              <p className="text-[10px] text-gray-400 flex items-center gap-1 font-mono">
+                                <Clock className="w-3 h-3" /> {att.checkInTime || '09:15 AM'}
+                              </p>
+                            </div>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-gray-400">
+                              Registered (Pending Door Scan)
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Badges Held */}
+                        <td className="py-4 px-4">
+                          <div className="flex flex-wrap gap-1.5">
+                            {att.badges && att.badges.length > 0 ? (
+                              att.badges.map((b) => (
+                                <span
+                                  key={b}
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold capitalize bg-gray-100 border border-gray-200 text-[#0e0622]"
+                                >
+                                  <span>{b === 'winner' ? '🏆' : b === 'speaker' ? '🎤' : b === 'participant' ? '🎖️' : '🎟️'}</span>
+                                  <span>{b}</span>
+                                </span>
+                              ))
+                            ) : (
+                              <span className="text-[11px] text-gray-400 font-light italic">None issued yet</span>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Domain / Survey Track Answer */}
+                        <td className="py-4 px-4 max-w-xs">
+                          <p className="text-[11px] text-gray-600 font-light truncate" title={att.answers ? Object.values(att.answers)[0] : 'General Track'}>
+                            {att.answers ? Object.values(att.answers)[0] : 'Frontend / Full Stack Engineering'}
+                          </p>
+                        </td>
+
+                        {/* Action: Give Badge Button */}
+                        <td className="py-4 px-4 text-right">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenIndividualAward(att)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-[#C84B18] text-[#C84B18] hover:bg-[#C84B18] hover:text-white text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95"
+                          >
+                            <Award className="w-3.5 h-3.5" />
+                            <span>Give Badge</span>
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
 
-      {/* Mobile Card List */}
-      <div className="md:hidden space-y-3">
-        {filtered.map((att) => {
-          const isSelected = selectedIds.includes(att.id);
-          return (
-            <div
-              key={att.id}
-              onClick={() => handleToggleSelectOne(att.id)}
-              className={`bg-white p-4 rounded-2xl border shadow-xs space-y-2 text-xs transition-all cursor-pointer ${
-                isSelected ? 'border-[#63474D] ring-2 ring-[#63474D]/20' : 'border-[#E8DDD7]'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  {isSelected ? (
-                    <CheckSquare className="w-4 h-4 text-[#63474D]" />
-                  ) : (
-                    <Square className="w-4 h-4 text-[#756366]" />
-                  )}
-                  <div>
-                    <p className="font-bold text-[#2D1F23]">{att.name}</p>
-                    <p className="text-[11px] text-[#756366]">{att.email}</p>
-                  </div>
-                </div>
-                <Badge variant={att.status === 'Checked in' ? 'success' : 'gray'}>
-                  {att.status}
-                </Badge>
-              </div>
+      {/* 4. Give / Approve Badge Modal */}
+      {isAwardModalOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4">
+          <div
+            onClick={() => setIsAwardModalOpen(false)}
+            className="fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity"
+          />
 
-              <div className="flex flex-wrap gap-1 pt-1">
-                {att.badges.map((b) => (
-                  <Badge key={b} variant="secondary" className="capitalize text-[10px]">
-                    {b}
-                  </Badge>
+          <div className="relative bg-white rounded-3xl max-w-xl w-full p-6 sm:p-7 shadow-2xl border border-gray-100 z-10 space-y-6">
+            {/* Modal Header */}
+            <div className="flex items-start justify-between pb-3 border-b border-gray-100">
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-[#C84B18]">
+                  <Award className="w-4 h-4" />
+                  <span>Issue & Endorse Badge</span>
+                </div>
+                <h3 className="font-serif font-bold text-xl text-[#0e0622]">
+                  {targetAttendee ? `Give Badge to ${targetAttendee.name}` : `Approve Badges for ${selectedIds.length} Attendees`}
+                </h3>
+                <p className="text-xs text-gray-500 font-light">
+                  {currentEvent?.title || 'Selected Event'} • Permanent cryptographic profile credentials
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAwardModalOpen(false)}
+                className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Step 1: Choose Badge Type */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold uppercase tracking-wider text-gray-600 block">
+                1. Select Badge Tier / Type
+              </label>
+              <div className="grid grid-cols-2 gap-2.5">
+                {badgeTypeOptions.map((opt) => (
+                  <button
+                    key={opt.code}
+                    type="button"
+                    onClick={() => setBadgeToAward(opt.code)}
+                    className={`p-3 rounded-2xl text-left border transition-all cursor-pointer flex flex-col justify-between ${
+                      badgeToAward === opt.code
+                        ? 'bg-[#fcf7f8] border-2 border-[#C84B18] shadow-xs'
+                        : 'bg-white border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xl select-none">{opt.icon}</span>
+                      {badgeToAward === opt.code && (
+                        <Check className="w-3.5 h-3.5 text-[#C84B18]" />
+                      )}
+                    </div>
+                    <div className="mt-1.5">
+                      <p className="font-serif font-bold text-xs text-[#0e0622]">{opt.label}</p>
+                      <p className="text-[10px] text-gray-500 font-light mt-0.5 leading-snug">{opt.desc}</p>
+                    </div>
+                  </button>
                 ))}
               </div>
             </div>
-          );
-        })}
-      </div>
 
-      {/* Bulk Badge Award Modal */}
-      <Modal
-        isOpen={isAwardModalOpen}
-        onClose={() => setIsAwardModalOpen(false)}
-        title={`Award Badge to ${selectedIds.length} Selected Attendees`}
-      >
-        <div className="space-y-4 text-xs">
-          <p className="text-[#756366]">
-            Select the credential badge you wish to assign. Selected attendees&apos; public profiles will update immediately.
-          </p>
-
-          <div className="space-y-2">
-            {[
-              { code: 'participant' as BadgeCode, label: 'Participant Badge', desc: 'Award to hands-on workshop coders & active contributors' },
-              { code: 'winner' as BadgeCode, label: 'Winner Badge', desc: 'Award to hackathon 1st/2nd/3rd prize winners' },
-              { code: 'speaker' as BadgeCode, label: 'Speaker Badge', desc: 'Award to session keynotes & lightning talk presenters' },
-            ].map((opt) => (
-              <label
-                key={opt.code}
-                onClick={() => setBadgeToAward(opt.code)}
-                className={`p-3.5 rounded-2xl border flex items-start gap-3 cursor-pointer transition-all ${
-                  badgeToAward === opt.code
-                    ? 'border-[#63474D] bg-[#63474D]/10'
-                    : 'border-[#E8DDD7] hover:bg-[#FAF7F5]'
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="badge_select"
-                  checked={badgeToAward === opt.code}
-                  onChange={() => setBadgeToAward(opt.code)}
-                  className="mt-0.5 text-[#63474D]"
-                />
-                <div>
-                  <p className="font-bold text-[#2D1F23]">{opt.label}</p>
-                  <p className="text-[11px] text-[#756366]">{opt.desc}</p>
-                </div>
+            {/* Step 2: Choose Technical Domain / Specialization Area */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold uppercase tracking-wider text-gray-600 block">
+                2. Technical Track / Specialization Area
               </label>
-            ))}
-          </div>
+              <select
+                value={badgeDomain}
+                onChange={(e) => setBadgeDomain(e.target.value)}
+                className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-[#0e0622] focus:outline-none focus:ring-2 focus:ring-[#C84B18]"
+              >
+                {domainOptions.map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          <div className="pt-2 flex gap-3">
-            <Button
-              variant="outline"
-              size="sm"
-              fullWidth
-              onClick={() => setIsAwardModalOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="primary"
-              size="sm"
-              fullWidth
-              isLoading={isAwarding}
-              onClick={handleConfirmAwardBadges}
-            >
-              Confirm & Award Badges
-            </Button>
+            {/* Step 3: Achievement Endorsement Note */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold uppercase tracking-wider text-gray-600 block">
+                3. Organizer Achievement Endorsement (Public on Profile)
+              </label>
+              <textarea
+                rows={2}
+                value={endorsementNote}
+                onChange={(e) => setEndorsementNote(e.target.value)}
+                className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs text-[#0e0622] focus:outline-none focus:ring-2 focus:ring-[#C84B18]"
+                placeholder="Describe milestone achievements, track completion, or project specifics..."
+              />
+            </div>
+
+            {/* Action Buttons */}
+            <div className="pt-2 border-t border-gray-100 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setIsAwardModalOpen(false)}
+                className="px-4 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmAwardBadges}
+                disabled={isAwarding}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#C84B18] hover:bg-[#b04014] text-white text-xs font-bold shadow-xs transition-all active:scale-98 cursor-pointer disabled:opacity-50"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span>{isAwarding ? 'Signing & Minting Badges...' : 'Approve & Issue Badge'}</span>
+              </button>
+            </div>
           </div>
         </div>
-      </Modal>
+      )}
     </div>
   );
 };
