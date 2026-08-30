@@ -3,38 +3,35 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/api';
 import type { Ticket } from '../../types/ticket';
-import type { BadgeAward } from '../../types/attendance';
 import {
-  Award,
-  ChevronDown,
-  ChevronUp,
+  Download,
+  Share2,
   MapPin,
   Calendar,
   Clock,
   QrCode,
   ShieldCheck,
-  ExternalLink,
   CheckCircle2,
+  X,
+  Copy,
+  Check,
+  Send,
 } from 'lucide-react';
 
 export const AttendeeDashboardPage: React.FC = () => {
   const { user } = useAuth();
   const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [badges, setBadges] = useState<BadgeAward[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [expandedEventId, setExpandedEventId] = useState<string | null>(null);
+  const [isExportOpen, setIsExportOpen] = useState<boolean>(false);
+  const [copied, setCopied] = useState<boolean>(false);
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
         if (user) {
-          const [userTickets, userBadges] = await Promise.all([
-            api.registration.getAttendeeTickets(user.id),
-            api.badges.getAttendeeBadges(user.id),
-          ]);
+          const userTickets = await api.registration.getAttendeeTickets(user.id);
           setTickets(userTickets);
-          setBadges(userBadges);
         }
       } catch (err) {
         console.error('Failed to load attendee data:', err);
@@ -45,137 +42,245 @@ export const AttendeeDashboardPage: React.FC = () => {
     fetchData();
   }, [user]);
 
-  const stats = user?.stats || {
-    meetupsCount: 8,
-    workshopsCount: 4,
-    hackathonsCount: 2,
-    totalEventsAttended: 14,
-  };
-
-  const getEventEmoji = (type?: string) => {
+  // Badge Photos from public/badges/
+  const getBadgeImage = (type?: string) => {
     const t = (type || '').toLowerCase();
-    if (t.includes('hackathon')) return '💻';
-    if (t.includes('workshop')) return '🛠️';
-    if (t.includes('meetup')) return '🤝';
-    return '📅';
+    if (t.includes('hackathon')) return '/badges/hackathon-badge.jpg';
+    if (t.includes('workshop')) return '/badges/workshop-badge.jpg';
+    return '/badges/meetup-badge.jpg';
   };
 
-  const toggleExpand = (id: string) => {
-    setExpandedEventId(expandedEventId === id ? null : id);
+  const userProfession = user?.organization || 'Software Engineer & Ecosystem Builder';
+  const publicShareUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}/profile/${user?.id || 'demo'}`
+    : 'https://sheeba.events';
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(publicShareUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  // Download JPG using HTML5 Canvas drawing
+  const handleDownloadJPG = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1200;
+    canvas.height = 900;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Background
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, 1200, 900);
+
+    // Decorative Top Gradient Bar
+    const gradient = ctx.createLinearGradient(0, 0, 1200, 0);
+    gradient.addColorStop(0, '#f45866');
+    gradient.addColorStop(0.5, '#631a86');
+    gradient.addColorStop(1, '#1e0b97');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 1200, 14);
+
+    // Outer Border
+    ctx.strokeStyle = '#e5e7eb';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(30, 30, 1140, 840);
+
+    // Header Branding
+    ctx.fillStyle = '#0e0622';
+    ctx.font = 'bold 24px Lora, Georgia, serif';
+    ctx.fillText('SHEEBA', 60, 80);
+
+    ctx.fillStyle = '#a2666f';
+    ctx.font = 'bold 11px Nunito, sans-serif';
+    ctx.fillText('VERIFIED EVENT INFRASTRUCTURE & CREDENTIALS', 60, 100);
+
+    // Divider Line
+    ctx.strokeStyle = '#4f0820';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(60, 120);
+    ctx.lineTo(1140, 120);
+    ctx.stroke();
+
+    // Attendee Info
+    ctx.fillStyle = '#0e0622';
+    ctx.font = 'bold 36px Lora, Georgia, serif';
+    ctx.fillText(user?.name || 'Abebe Kebede', 60, 180);
+
+    ctx.fillStyle = '#6b7280';
+    ctx.font = '500 18px Nunito, sans-serif';
+    ctx.fillText(userProfession, 60, 215);
+
+    ctx.fillStyle = '#2A7B5F';
+    ctx.font = 'bold 14px Nunito, sans-serif';
+    ctx.fillText(`✓ Verified Attendee • Member since ${user?.memberSince || '2026'}`, 60, 245);
+
+    // Section Title
+    ctx.fillStyle = '#0e0622';
+    ctx.font = 'bold 22px Lora, Georgia, serif';
+    ctx.fillText('OFFICIAL EVENT ATTENDANCE & BADGES', 60, 310);
+
+    // Badges / Events List
+    const displayItems = tickets.slice(0, 5);
+    let yPos = 360;
+
+    displayItems.forEach((item, index) => {
+      // Card row background (#d4c5d6)
+      ctx.fillStyle = index % 2 === 0 ? '#d4c5d6' : '#ded1df';
+      ctx.fillRect(60, yPos - 30, 1080, 60);
+
+      ctx.strokeStyle = '#c3b0c5';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(60, yPos - 30, 1080, 60);
+
+      // Badge Category Tag
+      ctx.fillStyle = '#4f0820';
+      ctx.font = 'bold 15px Nunito, sans-serif';
+      ctx.fillText(item.eventType.toUpperCase(), 80, yPos + 7);
+
+      // Title
+      ctx.fillStyle = '#0e0622';
+      ctx.font = 'bold 17px Lora, Georgia, serif';
+      ctx.fillText(item.eventTitle, 230, yPos + 7);
+
+      // Meta
+      ctx.fillStyle = '#4f0820';
+      ctx.font = 'bold 14px Nunito, sans-serif';
+      ctx.fillText(`${item.eventType.toUpperCase()} • ${item.eventDate}`, 650, yPos + 7);
+
+      // Verified Check
+      ctx.fillStyle = '#1b4332';
+      ctx.font = 'bold 14px Nunito, sans-serif';
+      ctx.fillText('VERIFIED ATTENDED ✓', 960, yPos + 7);
+
+      yPos += 72;
+    });
+
+    // Footer
+    ctx.strokeStyle = '#e5e7eb';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(60, 810);
+    ctx.lineTo(1140, 810);
+    ctx.stroke();
+
+    ctx.fillStyle = '#9ca3af';
+    ctx.font = '13px Nunito, sans-serif';
+    ctx.fillText('Cryptographically signed by Sheeba Event Infrastructure • Verifiable at sheeba.events', 60, 840);
+    ctx.fillText(`Generated on ${new Date().toLocaleDateString('en-US', { dateStyle: 'long' })}`, 900, 840);
+
+    // Download trigger
+    const link = document.createElement('a');
+    link.download = `${(user?.name || 'sheeba-attendee').toLowerCase().replace(/\s+/g, '-')}-record.jpg`;
+    link.href = canvas.toDataURL('image/jpeg', 0.95);
+    link.click();
+  };
+
+  const handleDownloadPDF = () => {
+    window.print();
+  };
+
+  const handleShareLinkedIn = () => {
+    const text = encodeURIComponent(
+      `Excited to share my verified event attendance record and developer badges on Sheeba! Check out my official credentials: ${publicShareUrl}`
+    );
+    window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(publicShareUrl)}&text=${text}`, '_blank');
+  };
+
+  const handleShareTwitter = () => {
+    const text = encodeURIComponent(
+      `Verified attendance & permanent credentials from Ethiopia's developer ecosystem on @SheebaEvents 🏆✨\n\nCheck out my record: ${publicShareUrl}`
+    );
+    window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
+  };
+
+  const handleShareTelegram = () => {
+    const text = encodeURIComponent(
+      `Check out my verified developer attendance record on Sheeba: ${publicShareUrl}`
+    );
+    window.open(`https://t.me/share/url?url=${encodeURIComponent(publicShareUrl)}&text=${text}`, '_blank');
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-10 pb-20">
-      {/* 1. Formal Attendee Credential Intro */}
-      <div className="space-y-3">
-        <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 border-b border-gray-100 pb-4">
-          <div>
-            <h1 className="font-serif text-3xl sm:text-4xl font-bold text-sheeba-dark">
+    <div className="max-w-6xl mx-auto space-y-6 pb-20">
+      {/* 1. Attendee Profile Header (Unboxed, Pure Information) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+        <div className="flex items-start sm:items-center gap-4 sm:gap-5">
+          <img
+            src={user?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80'}
+            alt={user?.name}
+            className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover border-2 border-sheeba-purple/30 shadow-xs shrink-0"
+          />
+          <div className="space-y-1">
+            <h1 className="font-serif text-3xl sm:text-4xl font-bold text-sheeba-dark leading-tight">
               {user?.name || 'Abebe Kebede'}
             </h1>
-            <p className="text-sm text-gray-500 font-light mt-0.5">
-              Verified Event Participation Record • Member since {user?.memberSince || 'August 2026'}
+            <p className="text-sm sm:text-base text-gray-600 font-light">
+              {userProfession}
             </p>
-          </div>
-          <div className="flex items-center gap-2 text-xs text-sheeba-purple font-medium">
-            <ShieldCheck className="w-4 h-4 text-[#2A7B5F]" />
-            <span>Official Sheeba Credential ID: {user?.id ? user.id.slice(0, 8) : 'SHB-8921'}</span>
-          </div>
-        </div>
-
-        {/* Clean Numerical Stats - Free of loud box clutter */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 pt-2">
-          <div>
-            <span className="text-xs uppercase tracking-wider font-semibold text-gray-400">Total Turnout</span>
-            <p className="font-serif text-3xl font-bold text-sheeba-dark mt-0.5">{stats.totalEventsAttended}</p>
-            <span className="text-xs text-gray-500 font-light">Verified Events</span>
-          </div>
-          <div>
-            <span className="text-xs uppercase tracking-wider font-semibold text-gray-400">Meetups 🤝</span>
-            <p className="font-serif text-3xl font-bold text-sheeba-purple mt-0.5">{stats.meetupsCount}</p>
-            <span className="text-xs text-gray-500 font-light">Evenings Attended</span>
-          </div>
-          <div>
-            <span className="text-xs uppercase tracking-wider font-semibold text-gray-400">Workshops 🛠️</span>
-            <p className="font-serif text-3xl font-bold text-sheeba-rose mt-0.5">{stats.workshopsCount}</p>
-            <span className="text-xs text-gray-500 font-light">Hands-on Labs</span>
-          </div>
-          <div>
-            <span className="text-xs uppercase tracking-wider font-semibold text-gray-400">Hackathons 💻</span>
-            <p className="font-serif text-3xl font-bold text-sheeba-pink mt-0.5">{stats.hackathonsCount}</p>
-            <span className="text-xs text-gray-500 font-light">Prototypes Built</span>
+            {user?.bio && (
+              <p className="text-xs text-gray-500 font-light max-w-xl leading-relaxed">
+                {user.bio}
+              </p>
+            )}
+            <div className="flex flex-wrap items-center gap-3 text-xs text-gray-400 font-light pt-0.5">
+              <span>{user?.email}</span>
+              <span>•</span>
+              <span className="text-[#2A7B5F] font-semibold flex items-center gap-1">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                Verified Attendee
+              </span>
+              <span>•</span>
+              <span>Member since {user?.memberSince || '2026'}</span>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* 2. Verified Badges Shelf */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="font-serif text-xl font-bold text-sheeba-dark flex items-center gap-2">
-            <Award className="w-5 h-5 text-sheeba-purple" />
-            Verified Credential Badges
-          </h2>
-          {user?.id && (
-            <Link
-              to={`/profile/${user.id}`}
-              className="text-xs font-semibold text-sheeba-purple hover:underline inline-flex items-center gap-1"
-            >
-              <span>Public Credential Link</span>
-              <ExternalLink className="w-3 h-3" />
-            </Link>
-          )}
-        </div>
-
-        {badges.length === 0 && !loading ? (
-          <div className="py-6 text-center text-sm text-gray-500 font-light border border-dashed border-gray-200 rounded-2xl">
-            No badges awarded yet. Check in at upcoming events to unlock permanent participation badges.
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            {badges.map((b) => (
-              <div
-                key={b.id}
-                className="p-4 rounded-2xl border border-gray-200/80 bg-white hover:border-sheeba-purple transition-all duration-200 space-y-1.5"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="font-serif font-bold text-sm text-sheeba-dark">{b.badgeLabel}</span>
-                  <span className="w-2 h-2 rounded-full bg-sheeba-pink"></span>
-                </div>
-                <p className="text-xs text-sheeba-rose font-medium truncate">{b.eventTitle}</p>
-                <p className="text-[11px] text-gray-400 font-light">Issued by {b.issuerName}</p>
-              </div>
-            ))}
-          </div>
-        )}
+      {/* 2. Swishing Line with sharp tapered ends in #4f0820 */}
+      <div className="w-full flex items-center justify-center my-6">
+        <svg className="w-full h-1.5 text-[#4f0820]" viewBox="0 0 1000 6" preserveAspectRatio="none">
+          <path d="M0,3 Q500,6 1000,3 Q500,0 0,3 Z" fill="currentColor" />
+        </svg>
       </div>
 
-      {/* 3. The Core Event Attendance Showcase (One Long Formal List Box) */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
+      {/* 3. The Core Event Attendance Showcase */}
+      <div className="space-y-4 pt-1">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>
-            <h2 className="font-serif text-xl sm:text-2xl font-bold text-sheeba-dark">
+            <h2 className="font-serif text-2xl sm:text-3xl font-bold text-sheeba-dark">
               Event Attendance Record
             </h2>
-            <p className="text-xs text-gray-500 font-light mt-0.5">
-              Comprehensive list of hackathons, workshops, and meetups you registered and checked in for. Click any row for details.
+            <p className="text-xs sm:text-sm text-gray-500 font-light mt-0.5">
+              Official verifiable log of participation across Ethiopian developer events, workshops, and hackathons.
             </p>
           </div>
-          <Link
-            to="/app/events"
-            className="text-xs font-semibold text-sheeba-purple hover:underline"
-          >
-            View All Tickets ({tickets.length}) →
-          </Link>
+
+          {/* Export Action & Dynamic Entry Counter */}
+          <div className="flex flex-col items-start sm:items-end gap-1 shrink-0">
+            <button
+              type="button"
+              onClick={() => setIsExportOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-gray-300 text-black text-xs sm:text-sm font-semibold hover:bg-gray-50 shadow-2xs transition-all duration-200 cursor-pointer active:scale-98"
+            >
+              <Download className="w-4 h-4 text-sheeba-pink" />
+              <span>Export</span>
+            </button>
+            <span className="text-[11px] font-semibold text-gray-500 px-0.5">
+              {tickets.length} verified entries
+            </span>
+          </div>
         </div>
 
-        {/* Single Unified Event Table Container */}
-        <div className="border border-gray-200 rounded-2xl overflow-hidden bg-white shadow-xs divide-y divide-gray-100">
+        {/* List of Events - Colored in #d4c5d6 with 3-4px gap between rows */}
+        <div className="space-y-3 pt-2">
           {loading ? (
-            <div className="p-8 text-center text-sm text-gray-400 animate-pulse font-light">
+            <div className="p-12 text-center text-sm text-gray-400 animate-pulse font-light border border-gray-100 rounded-2xl">
               Loading verified attendance records...
             </div>
           ) : tickets.length === 0 ? (
-            <div className="p-12 text-center space-y-3">
+            <div className="p-12 text-center border border-dashed border-gray-200 rounded-2xl space-y-3">
               <p className="font-serif text-base font-bold text-sheeba-dark">No event records found</p>
               <p className="text-xs text-gray-500 font-light max-w-sm mx-auto">
                 Discover upcoming hackathons and meetups on Sheeba to start building your verified event timeline.
@@ -189,120 +294,237 @@ export const AttendeeDashboardPage: React.FC = () => {
             </div>
           ) : (
             tickets.map((t) => {
-              const isExpanded = expandedEventId === t.id;
-              const emoji = getEventEmoji(t.eventType);
+              const badgeImg = getBadgeImage(t.eventType);
               const isCheckedIn = t.status === 'Checked in';
 
               return (
-                <div key={t.id} className="transition-colors hover:bg-gray-50/70">
-                  {/* Summary Row */}
-                  <div
-                    onClick={() => toggleExpand(t.id)}
-                    className="p-4 sm:p-5 flex items-center justify-between gap-4 cursor-pointer select-none"
-                  >
-                    {/* Left: Emoji + Title + Organizer */}
+                /* Note to User: Event Card background color is set below (bg-[#d4c5d6]) */
+                <div
+                  key={t.id}
+                  className="p-5 rounded-2xl bg-[#d4c5d6] border border-[#c3b0c5] shadow-2xs hover:shadow-xs space-y-3 transition-all duration-200"
+                >
+                  {/* Top Row: Badge Photo + Title + Status */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="flex items-center gap-4 min-w-0">
-                      <span
-                        className="text-3xl sm:text-4xl shrink-0 transition-transform group-hover:scale-110"
-                        title={t.eventType}
-                      >
-                        {emoji}
-                      </span>
-                      <div className="min-w-0 space-y-0.5">
-                        <h3 className="font-serif font-bold text-base sm:text-lg text-sheeba-dark truncate">
+                      <img
+                        src={badgeImg}
+                        alt={`${t.eventType} Badge`}
+                        className="w-12 h-12 sm:w-14 sm:h-14 object-contain shrink-0 mix-blend-multiply transition-transform hover:scale-105"
+                      />
+                      <div className="min-w-0">
+                        <h3 className="font-serif font-bold text-base sm:text-lg text-[#0e0622] truncate">
                           {t.eventTitle}
                         </h3>
-                        <p className="text-xs text-gray-500 font-light flex items-center gap-2">
-                          <span className="capitalize text-sheeba-rose font-medium">{t.eventType}</span>
-                          <span>•</span>
-                          <span>{t.eventDate}</span>
+                        <p className="text-xs text-[#4f0820] font-semibold capitalize mt-0.5">
+                          {t.eventType} • Official Sheeba Verified Event
                         </p>
                       </div>
                     </div>
 
-                    {/* Middle/Right: Location + Status */}
-                    <div className="flex items-center gap-4 sm:gap-6 shrink-0">
-                      <div className="hidden md:flex flex-col text-right">
-                        <span className="text-xs text-gray-700 font-medium truncate max-w-[200px]">
-                          {t.eventLocation.split(',')[0]}
+                    <div className="flex items-center gap-3 shrink-0">
+                      {isCheckedIn ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/70 text-xs font-bold text-[#1b4332]">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          Verified Attended
                         </span>
-                        <span className="text-[11px] text-gray-400 font-light">{t.eventTime}</span>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        {isCheckedIn ? (
-                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-[#2A7B5F]">
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                            Verified Attended
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-sheeba-purple">
-                            <QrCode className="w-3.5 h-3.5" />
-                            Active Pass
-                          </span>
-                        )}
-
-                        <div className="text-gray-400 p-1">
-                          {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                        </div>
-                      </div>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/70 text-xs font-bold text-sheeba-purple">
+                          <QrCode className="w-3.5 h-3.5" />
+                          Active Pass
+                        </span>
+                      )}
                     </div>
                   </div>
 
-                  {/* Expanded Detail Panel */}
-                  {isExpanded && (
-                    <div className="px-5 pb-6 pt-2 bg-[#fbf9fc] border-t border-gray-100 text-xs space-y-4 animate-fade-in">
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
-                        <div className="space-y-1">
-                          <span className="text-[11px] uppercase tracking-wider font-semibold text-gray-400 flex items-center gap-1">
-                            <Calendar className="w-3 h-3" /> Date & Schedule
-                          </span>
-                          <p className="font-semibold text-sheeba-dark">{t.eventDate}</p>
-                          <p className="text-gray-500 font-light flex items-center gap-1">
-                            <Clock className="w-3 h-3" /> {t.eventTime}
-                          </p>
-                        </div>
-
-                        <div className="space-y-1">
-                          <span className="text-[11px] uppercase tracking-wider font-semibold text-gray-400 flex items-center gap-1">
-                            <MapPin className="w-3 h-3" /> Venue & Location
-                          </span>
-                          <p className="font-semibold text-sheeba-dark">{t.eventLocation}</p>
-                          <p className="text-gray-500 font-light">Addis Ababa, Ethiopia</p>
-                        </div>
-
-                        <div className="space-y-1">
-                          <span className="text-[11px] uppercase tracking-wider font-semibold text-gray-400 flex items-center gap-1">
-                            <ShieldCheck className="w-3 h-3" /> Pass Credential
-                          </span>
-                          <p className="font-mono text-xs font-semibold text-sheeba-dark">Pass #{t.id}</p>
-                          <p className="text-gray-500 font-light">
-                            Status: <strong className={isCheckedIn ? 'text-[#2A7B5F]' : 'text-sheeba-purple'}>{t.status}</strong>
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Action Shortcuts */}
-                      <div className="pt-3 border-t border-gray-200/60 flex items-center justify-between">
-                        <span className="text-[11px] text-gray-400 font-light">
-                          Signed cryptographic pass code: <code className="font-mono text-[10px] text-gray-600">{t.qrToken.slice(0, 16)}...</code>
-                        </span>
-                        <Link
-                          to={`/app/ticket/${t.eventId}`}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-gray-200 text-sheeba-dark hover:bg-gray-50 font-semibold text-xs transition-colors shadow-2xs"
-                        >
-                          <QrCode className="w-3.5 h-3.5 text-sheeba-pink" />
-                          <span>Open Full QR Ticket Pass</span>
-                        </Link>
-                      </div>
+                  {/* Details Always Visible directly without dropdown click */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-black/10 text-xs text-gray-800">
+                    <div className="space-y-0.5">
+                      <span className="text-[11px] uppercase tracking-wider font-bold text-gray-600 flex items-center gap-1">
+                        <Calendar className="w-3 h-3 text-[#4f0820]" /> Schedule
+                      </span>
+                      <p className="font-bold text-[#0e0622]">{t.eventDate}</p>
+                      <p className="text-gray-600 font-light flex items-center gap-1">
+                        <Clock className="w-3 h-3 text-gray-500" /> {t.eventTime}
+                      </p>
                     </div>
-                  )}
+
+                    <div className="space-y-0.5">
+                      <span className="text-[11px] uppercase tracking-wider font-bold text-gray-600 flex items-center gap-1">
+                        <MapPin className="w-3 h-3 text-[#4f0820]" /> Venue
+                      </span>
+                      <p className="font-bold text-[#0e0622]">{t.eventLocation}</p>
+                      <p className="text-gray-600 font-light">Addis Ababa, Ethiopia</p>
+                    </div>
+
+                    <div className="space-y-0.5">
+                      <span className="text-[11px] uppercase tracking-wider font-bold text-gray-600 flex items-center gap-1">
+                        <ShieldCheck className="w-3 h-3 text-[#1b4332]" /> Pass Credential
+                      </span>
+                      <p className="font-mono text-xs font-bold text-[#0e0622]">Pass #{t.id}</p>
+                      <Link
+                        to={`/app/ticket/${t.eventId}`}
+                        className="inline-flex items-center gap-1 text-[#4f0820] hover:text-black font-bold text-xs pt-0.5 underline"
+                      >
+                        <QrCode className="w-3 h-3 text-sheeba-pink" />
+                        <span>View Dynamic QR Pass →</span>
+                      </Link>
+                    </div>
+                  </div>
                 </div>
               );
             })
           )}
         </div>
       </div>
+
+      {/* 4. Export & Social Sharing Modal with Compact Card and Black Button Text */}
+      {isExportOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4">
+          <div
+            onClick={() => setIsExportOpen(false)}
+            className="fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity"
+          />
+
+          <div className="relative bg-white rounded-3xl max-w-xl w-full p-6 sm:p-7 shadow-2xl border border-gray-100 z-10 space-y-5">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <Share2 className="w-5 h-5 text-[#4f0820]" />
+                <h3 className="font-serif font-bold text-lg text-sheeba-dark">Export & Share Record</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsExportOpen(false)}
+                className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Real Compact Shareable Badge Card (Dedicated unboxed rows with elegant serif fonts) */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-[#fdfafb] border border-[#e8d5d9] space-y-3.5 shadow-2xs">
+              <div className="flex items-center justify-between pb-2 border-b border-[#e8d5d9]">
+                <div className="flex items-center gap-3">
+                  <img
+                    src={user?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80'}
+                    alt={user?.name}
+                    className="w-11 h-11 rounded-full object-cover border border-[#4f0820]/30 shadow-2xs"
+                  />
+                  <div>
+                    <h4 className="font-serif font-bold text-base text-sheeba-dark leading-tight">{user?.name}</h4>
+                    <p className="text-xs text-gray-600 font-light">{userProfession}</p>
+                  </div>
+                </div>
+                <span className="text-[10px] uppercase font-bold text-[#1b4332] bg-[#1b4332]/10 px-2 py-0.5 rounded-md flex items-center gap-1">
+                  <ShieldCheck className="w-3 h-3" /> Verified
+                </span>
+              </div>
+
+              {/* Each Verified Event in its Own Elegant Unboxed Row */}
+              <div className="space-y-2.5 pt-1">
+                <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400 block">
+                  Official Verified Badges ({tickets.length})
+                </span>
+                <div className="space-y-2">
+                  {tickets.map((t) => (
+                    <div key={t.id} className="flex items-start gap-2.5 text-xs">
+                      <img
+                        src={getBadgeImage(t.eventType)}
+                        alt={`${t.eventType} Badge`}
+                        className="w-7 h-7 object-contain shrink-0 mix-blend-multiply mt-0.5"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="font-serif font-bold text-[13px] text-sheeba-dark leading-tight">
+                          {t.eventTitle}
+                        </p>
+                        <p className="text-[11px] text-gray-500 font-light mt-0.5">
+                          {t.eventDate} • {t.eventLocation}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Download Actions (Black text on both buttons) */}
+            <div className="space-y-2">
+              <span className="text-xs uppercase tracking-wider font-semibold text-gray-400">Download Formats</span>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={handleDownloadJPG}
+                  className="flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-white border border-gray-300 text-black text-xs sm:text-sm font-semibold hover:bg-gray-50 transition-colors shadow-2xs cursor-pointer"
+                >
+                  <Download className="w-4 h-4 text-sheeba-pink" />
+                  <span>Download JPG</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDownloadPDF}
+                  className="flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-white border border-gray-300 text-black text-xs sm:text-sm font-semibold hover:bg-gray-50 transition-colors shadow-2xs cursor-pointer"
+                >
+                  <Download className="w-4 h-4 text-sheeba-rose" />
+                  <span>Download PDF / Print</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Social Share Buttons */}
+            <div className="space-y-2 pt-1">
+              <span className="text-xs uppercase tracking-wider font-semibold text-gray-400">Share Directly</span>
+              <div className="grid grid-cols-3 gap-2.5">
+                <button
+                  type="button"
+                  onClick={handleShareLinkedIn}
+                  className="flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-[#0077b5] text-white text-xs font-semibold hover:opacity-90 transition-opacity cursor-pointer"
+                >
+                  <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                    <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.46 10.9v8.37H9.2V10.9H6.46M7.83 6.64a1.64 1.64 0 1 0 0 3.28 1.64 1.64 0 0 0 0-3.28z" />
+                  </svg>
+                  <span>LinkedIn</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleShareTwitter}
+                  className="flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-black text-white text-xs font-semibold hover:opacity-90 transition-opacity cursor-pointer"
+                >
+                  <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                  </svg>
+                  <span>X / Twitter</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleShareTelegram}
+                  className="flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-[#229ED9] text-white text-xs font-semibold hover:opacity-90 transition-opacity cursor-pointer"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>Telegram</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Copy Share Link */}
+            <div className="pt-2 border-t border-gray-100 flex items-center gap-2">
+              <input
+                type="text"
+                readOnly
+                value={publicShareUrl}
+                className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-mono text-gray-600 focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={handleCopyLink}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-sheeba-dark text-xs font-semibold transition-colors cursor-pointer"
+              >
+                {copied ? <Check className="w-3.5 h-3.5 text-[#2A7B5F]" /> : <Copy className="w-3.5 h-3.5" />}
+                <span>{copied ? 'Copied!' : 'Copy Link'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -17,6 +17,7 @@ import { PublicSearchPage } from '../pages/public/PublicSearchPage';
 
 // Attendee Pages
 import { AttendeeDashboardPage } from '../pages/attendee/DashboardPage';
+import { RecordPage } from '../pages/attendee/RecordPage';
 import { MyEventsPage } from '../pages/attendee/MyEventsPage';
 import { TicketPage } from '../pages/attendee/TicketPage';
 import { ProfilePage } from '../pages/attendee/ProfilePage';
@@ -61,6 +62,7 @@ export const router = createBrowserRouter([
         element: <AttendeeLayout />,
         children: [
           { index: true, element: <AttendeeDashboardPage /> },
+          { path: 'record', element: <RecordPage /> },
           { path: 'events', element: <MyEventsPage /> },
           { path: 'ticket/:eventId', element: <TicketPage /> },
           { path: 'profile', element: <ProfilePage /> },

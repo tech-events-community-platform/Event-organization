@@ -3,7 +3,7 @@ import { Outlet, Link, useLocation } from 'react-router-dom';
 import { Navbar } from '../components/layout/Navbar';
 import { Footer } from '../components/layout/Footer';
 import { AttendeeDrawer } from '../components/attendee/AttendeeDrawer';
-import { LayoutDashboard, Ticket, Clock, Menu } from 'lucide-react';
+import { LayoutDashboard, Award, Ticket, Clock, Menu } from 'lucide-react';
 
 export const AttendeeLayout: React.FC = () => {
   const location = useLocation();
@@ -18,14 +18,28 @@ export const AttendeeLayout: React.FC = () => {
     <div className="min-h-screen flex flex-col bg-white">
       <Navbar onOpenAttendeeDrawer={() => setIsDrawerOpen(true)} />
 
-      {/* Clean 3-Tab Formal Attendee Subnav */}
+      {/* Subnav with Unboxed Tools on Left, Centered 4-Tab Navigation */}
       <div className="bg-white border-b border-gray-100 sticky top-16 z-30 shadow-2xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between">
-            <div className="flex space-x-6 sm:space-x-8 overflow-x-auto scrollbar-none py-3 text-sm font-medium">
+          <div className="flex items-center justify-between py-2.5">
+            {/* Left: Tools Button - Unboxed with Hamburger Menu Icon */}
+            <div className="w-24 sm:w-32 flex justify-start">
+              <button
+                type="button"
+                onClick={() => setIsDrawerOpen(true)}
+                className="inline-flex items-center gap-2 text-xs font-semibold text-gray-700 hover:text-sheeba-purple transition-colors cursor-pointer py-1 px-0.5 group"
+                title="Open Tools"
+              >
+                <Menu className="w-4 h-4 text-gray-600 group-hover:text-sheeba-purple transition-colors" />
+                <span>Tools</span>
+              </button>
+            </div>
+
+            {/* Middle: Centered Navigation Tabs */}
+            <div className="flex-1 flex justify-center space-x-6 sm:space-x-10 overflow-x-auto scrollbar-none py-1 text-sm font-medium">
               <Link
                 to="/app"
-                className={`flex items-center gap-2 pb-2 -mb-3 border-b-2 transition-all whitespace-nowrap ${
+                className={`flex items-center gap-2 pb-2 -mb-2 border-b-2 transition-all whitespace-nowrap ${
                   isTabActive('/app') && location.pathname === '/app'
                     ? 'border-sheeba-purple text-sheeba-dark font-bold'
                     : 'border-transparent text-gray-500 hover:text-sheeba-dark'
@@ -36,8 +50,20 @@ export const AttendeeLayout: React.FC = () => {
               </Link>
 
               <Link
+                to="/app/record"
+                className={`flex items-center gap-2 pb-2 -mb-2 border-b-2 transition-all whitespace-nowrap ${
+                  isTabActive('/app/record')
+                    ? 'border-sheeba-purple text-sheeba-dark font-bold'
+                    : 'border-transparent text-gray-500 hover:text-sheeba-dark'
+                }`}
+              >
+                <Award className="w-4 h-4" />
+                <span>Record</span>
+              </Link>
+
+              <Link
                 to="/app/events"
-                className={`flex items-center gap-2 pb-2 -mb-3 border-b-2 transition-all whitespace-nowrap ${
+                className={`flex items-center gap-2 pb-2 -mb-2 border-b-2 transition-all whitespace-nowrap ${
                   isTabActive('/app/events') || isTabActive('/app/ticket')
                     ? 'border-sheeba-purple text-sheeba-dark font-bold'
                     : 'border-transparent text-gray-500 hover:text-sheeba-dark'
@@ -49,7 +75,7 @@ export const AttendeeLayout: React.FC = () => {
 
               <Link
                 to="/app/profile/attendance"
-                className={`flex items-center gap-2 pb-2 -mb-3 border-b-2 transition-all whitespace-nowrap ${
+                className={`flex items-center gap-2 pb-2 -mb-2 border-b-2 transition-all whitespace-nowrap ${
                   isTabActive('/app/profile/attendance')
                     ? 'border-sheeba-purple text-sheeba-dark font-bold'
                     : 'border-transparent text-gray-500 hover:text-sheeba-dark'
@@ -60,15 +86,8 @@ export const AttendeeLayout: React.FC = () => {
               </Link>
             </div>
 
-            {/* Quick Drawer Opener Button on Subnav right */}
-            <button
-              type="button"
-              onClick={() => setIsDrawerOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-600 hover:text-sheeba-dark hover:bg-gray-50 border border-gray-200/80 transition-colors cursor-pointer"
-            >
-              <Menu className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Account & Tools</span>
-            </button>
+            {/* Right: Balancer spacer */}
+            <div className="w-24 sm:w-32 hidden sm:flex justify-end"></div>
           </div>
         </div>
       </div>
@@ -78,7 +97,7 @@ export const AttendeeLayout: React.FC = () => {
         <Outlet />
       </main>
 
-      {/* Sliding Sidebar Drawer */}
+      {/* Sliding Sidebar Drawer (Slides from Left) */}
       <AttendeeDrawer isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} />
 
       <Footer />

@@ -10,7 +10,6 @@ import {
   Building,
   CheckCircle2,
   AlertCircle,
-  Sparkles,
 } from 'lucide-react';
 import type { UserRole } from '../../types/user';
 
@@ -90,10 +89,10 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-md mx-auto py-12 px-4 space-y-6">
+    <div className="max-w-md mx-auto pt-24 sm:pt-32 pb-16 px-4 space-y-6">
       {/* Header */}
-      <div className="text-center space-y-2">
-        <h1 className="font-serif text-3xl sm:text-4xl font-bold text-sheeba-dark">
+      <div className="text-center space-y-2 pt-2">
+        <h1 className="font-serif text-2xl sm:text-3xl font-bold text-sheeba-dark">
           {authMode === 'LOGIN' ? 'Sign in to Sheeba' : 'Create Sheeba Account'}
         </h1>
         <p className="text-xs sm:text-sm text-gray-500 font-light">
@@ -275,8 +274,7 @@ export const LoginPage: React.FC = () => {
       {/* Fast Demo Access Quick-links */}
       <div className="bg-[#F4EFEB] p-4 rounded-2xl border border-[#E8DDD7] space-y-2.5">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-bold text-[#2D1F23] flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-[#FFA686]" />
+          <span className="text-xs font-bold text-[#2D1F23]">
             Instant Demo Account Sign-In
           </span>
           <Badge variant="tertiary">Quick Test</Badge>

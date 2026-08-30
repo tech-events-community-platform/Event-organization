@@ -52,7 +52,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAttendeeDrawer }) => {
           {/* Brand Logo */}
           <Link to="/" className="flex items-center gap-2.5 group">
             <img
-              src="/sheeba-logo.png"
+              src="/logo.jpg"
               alt="Sheeba Logo"
               className="h-10 sm:h-12 w-auto object-contain transition-transform group-hover:scale-105"
             />
