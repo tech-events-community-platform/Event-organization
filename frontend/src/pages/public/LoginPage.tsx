@@ -4,7 +4,6 @@ import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import {
-  Award,
   Lock,
   Mail,
   User,
@@ -39,7 +38,7 @@ export const LoginPage: React.FC = () => {
     setSuccessMsg(null);
 
     if (authMode === 'REGISTER' && !isAgeAttested) {
-      setErrorMsg('You must confirm you are 18 years of age or older to register on Sheba.');
+      setErrorMsg('You must confirm you are 18 years of age or older to register on Sheeba.');
       return;
     }
 
@@ -94,13 +93,10 @@ export const LoginPage: React.FC = () => {
     <div className="max-w-md mx-auto py-12 px-4 space-y-6">
       {/* Header */}
       <div className="text-center space-y-2">
-        <div className="w-12 h-12 rounded-2xl bg-[#63474D] flex items-center justify-center text-[#FFA686] mx-auto shadow-xs">
-          <Award className="w-6 h-6" />
-        </div>
-        <h1 className="font-serif text-3xl font-extrabold text-[#2D1F23]">
-          {authMode === 'LOGIN' ? 'Sign in to Sheba' : 'Create Sheba Account'}
+        <h1 className="font-serif text-3xl sm:text-4xl font-bold text-sheeba-dark">
+          {authMode === 'LOGIN' ? 'Sign in to Sheeba' : 'Create Sheeba Account'}
         </h1>
-        <p className="text-xs text-[#756366]">
+        <p className="text-xs sm:text-sm text-gray-500 font-light">
           One account, one role. Verifiable attendance and credentials for Ethiopia.
         </p>
       </div>
@@ -256,7 +252,7 @@ export const LoginPage: React.FC = () => {
                   className="mt-0.5 rounded text-[#63474D] focus:ring-[#63474D]"
                 />
                 <span>
-                  I confirm that I am <strong>18 years of age or older</strong>, and agree to Sheba&apos;s Terms of Service and Privacy Policy.
+                  I confirm that I am <strong>18 years of age or older</strong>, and agree to Sheeba&apos;s Terms of Service and Privacy Policy.
                 </span>
               </label>
             </div>

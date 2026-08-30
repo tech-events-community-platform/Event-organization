@@ -1,14 +1,11 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import {
   Award,
-  Search,
   Menu,
   X,
-  LogIn,
   Settings,
   PlusCircle,
   Ticket,
@@ -16,7 +13,11 @@ import {
   Compass,
 } from 'lucide-react';
 
-export const Navbar: React.FC = () => {
+interface NavbarProps {
+  onOpenAttendeeDrawer?: () => void;
+}
+
+export const Navbar: React.FC<NavbarProps> = ({ onOpenAttendeeDrawer }) => {
   const { user, role, isAuthenticated, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
@@ -32,88 +33,78 @@ export const Navbar: React.FC = () => {
     navigate('/login');
   };
 
+  const scrollToSection = (sectionId: string) => {
+    setIsMobileMenuOpen(false);
+    if (location.pathname === '/') {
+      const el = document.getElementById(sectionId);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth' });
+        return;
+      }
+    }
+    navigate(`/#${sectionId}`);
+  };
+
   return (
-    <header className="sticky top-0 z-40 bg-[#FAF7F5]/90 backdrop-blur-md border-b border-[#E8DDD7]">
+    <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-gray-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Brand Logo */}
-          <Link to="/" className="flex items-center gap-3 group">
-            <div className="w-9 h-9 rounded-xl bg-[#63474D] flex items-center justify-center text-white shadow-xs group-hover:bg-[#523a3f] transition-colors">
-              <Award className="w-5 h-5 text-[#FFA686]" />
-            </div>
+          <Link to="/" className="flex items-center gap-2.5 group">
+            <img
+              src="/sheeba-logo.png"
+              alt="Sheeba Logo"
+              className="h-10 sm:h-12 w-auto object-contain transition-transform group-hover:scale-105"
+            />
             <div className="flex flex-col">
-              <span className="font-serif font-bold text-xl tracking-tight text-[#2D1F23] flex items-center gap-1.5">
-                SHEEBA
-                <span className="w-1.5 h-1.5 rounded-full bg-[#FFA686]"></span>
+              <span className="font-serif font-bold text-xl tracking-tight text-sheeba-dark leading-none">
+                Sheeba
               </span>
-              <span className="text-[10px] font-sans font-semibold text-[#756366] -mt-1 tracking-wider uppercase">
-                Attendance, verified.
+              <span className="text-[8.5px] font-sans font-bold text-sheeba-rose tracking-[0.18em] uppercase mt-0.5">
+                EVENT INFRASTRUCTURE
               </span>
             </div>
           </Link>
 
           {/* Desktop Navigation Links */}
-          <nav className="hidden md:flex items-center gap-2">
+          <nav className="hidden md:flex items-center gap-1 lg:gap-3">
             {!isAuthenticated && (
-              <Link
-                to="/search"
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors ${
-                  isActive('/search')
-                    ? 'bg-[#63474D]/10 text-[#63474D]'
-                    : 'text-[#756366] hover:text-[#2D1F23] hover:bg-[#E8DDD7]/40'
-                }`}
-              >
-                <Search className="w-3.5 h-3.5" />
-                Search Profiles & Events
-              </Link>
-            )}
-
-            {isAuthenticated && role === 'ATTENDEE' && (
               <>
-                <Link
-                  to="/app"
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors ${
-                    location.pathname === '/app'
-                      ? 'bg-[#63474D]/10 text-[#63474D]'
-                      : 'text-[#756366] hover:text-[#2D1F23] hover:bg-[#E8DDD7]/40'
-                  }`}
+                <button
+                  type="button"
+                  onClick={() => scrollToSection('features')}
+                  className="px-3 py-1.5 text-sm font-medium text-[#4B5563] hover:text-[#111827] transition-colors cursor-pointer rounded-lg hover:bg-black/5"
                 >
-                  <Home className="w-3.5 h-3.5" />
-                  Attendee Hub
-                </Link>
-                <Link
-                  to="/search"
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors ${
-                    isActive('/search')
-                      ? 'bg-[#63474D]/10 text-[#63474D]'
-                      : 'text-[#756366] hover:text-[#2D1F23] hover:bg-[#E8DDD7]/40'
-                  }`}
+                  Features
+                </button>
+                <button
+                  type="button"
+                  onClick={() => scrollToSection('how-it-works')}
+                  className="px-3 py-1.5 text-sm font-medium text-[#4B5563] hover:text-[#111827] transition-colors cursor-pointer rounded-lg hover:bg-black/5"
                 >
-                  <Compass className="w-3.5 h-3.5" />
-                  Events
-                </Link>
-                <Link
-                  to="/app/events"
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors ${
-                    isActive('/app/events') || isActive('/app/ticket')
-                      ? 'bg-[#63474D]/10 text-[#63474D]'
-                      : 'text-[#756366] hover:text-[#2D1F23] hover:bg-[#E8DDD7]/40'
-                  }`}
+                  How It Works
+                </button>
+                <button
+                  type="button"
+                  onClick={() => scrollToSection('interactive-demo')}
+                  className="px-3 py-1.5 text-sm font-medium text-[#4B5563] hover:text-[#111827] transition-colors cursor-pointer rounded-lg hover:bg-black/5"
                 >
-                  <Ticket className="w-3.5 h-3.5" />
-                  My Events
-                </Link>
-                <Link
-                  to="/app/profile"
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors ${
-                    isActive('/app/profile')
-                      ? 'bg-[#63474D]/10 text-[#63474D]'
-                      : 'text-[#756366] hover:text-[#2D1F23] hover:bg-[#E8DDD7]/40'
-                  }`}
+                  Interactive Demo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => scrollToSection('audiences')}
+                  className="px-3 py-1.5 text-sm font-medium text-[#4B5563] hover:text-[#111827] transition-colors cursor-pointer rounded-lg hover:bg-black/5"
                 >
-                  <Award className="w-3.5 h-3.5" />
-                  My Badges & Profile
-                </Link>
+                  Audiences
+                </button>
+                <button
+                  type="button"
+                  onClick={() => scrollToSection('team')}
+                  className="px-3 py-1.5 text-sm font-medium text-[#4B5563] hover:text-[#111827] transition-colors cursor-pointer rounded-lg hover:bg-black/5"
+                >
+                  Team
+                </button>
               </>
             )}
 
@@ -123,8 +114,8 @@ export const Navbar: React.FC = () => {
                   to="/organizer"
                   className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
                     isActive('/organizer') && !location.pathname.includes('/create')
-                      ? 'bg-[#63474D]/10 text-[#63474D]'
-                      : 'text-[#756366] hover:text-[#2D1F23] hover:bg-[#E8DDD7]/40'
+                      ? 'bg-sheeba-purple/10 text-sheeba-purple'
+                      : 'text-gray-600 hover:text-sheeba-dark hover:bg-gray-100'
                   }`}
                 >
                   Events Dashboard
@@ -133,8 +124,8 @@ export const Navbar: React.FC = () => {
                   to="/organizer/events/create"
                   className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors ${
                     isActive('/organizer/events/create')
-                      ? 'bg-[#63474D] text-white'
-                      : 'text-[#63474D] bg-[#63474D]/10 hover:bg-[#63474D]/20'
+                      ? 'bg-sheeba-purple text-white'
+                      : 'text-sheeba-purple bg-sheeba-purple/10 hover:bg-sheeba-purple/20'
                   }`}
                 >
                   <PlusCircle className="w-3.5 h-3.5" />
@@ -148,8 +139,8 @@ export const Navbar: React.FC = () => {
                 to="/admin"
                 className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
                   isActive('/admin')
-                    ? 'bg-[#63474D]/10 text-[#63474D]'
-                    : 'text-[#756366] hover:text-[#2D1F23] hover:bg-[#E8DDD7]/40'
+                    ? 'bg-sheeba-purple/10 text-sheeba-purple'
+                    : 'text-gray-600 hover:text-sheeba-dark hover:bg-gray-100'
                 }`}
               >
                 Admin Oversight
@@ -161,52 +152,64 @@ export const Navbar: React.FC = () => {
           <div className="hidden md:flex items-center gap-3">
             {isAuthenticated ? (
               <div className="flex items-center gap-3">
-                <Badge
-                  variant={
-                    role === 'ADMIN'
-                      ? 'primary'
-                      : role === 'ORGANIZER'
-                      ? 'secondary'
-                      : 'tertiary'
-                  }
-                  className="font-semibold px-3 py-1 text-xs"
-                >
-                  {role === 'ADMIN'
-                    ? 'Admin'
-                    : role === 'ORGANIZER'
-                    ? 'Organizer'
-                    : 'Attendee'}
-                </Badge>
+                {role !== 'ATTENDEE' && (
+                  <Badge
+                    variant={role === 'ADMIN' ? 'primary' : 'secondary'}
+                    className="font-semibold px-3 py-1 text-xs"
+                  >
+                    {role === 'ADMIN' ? 'Admin' : 'Organizer'}
+                  </Badge>
+                )}
 
-                <Link
-                  to={role === 'ORGANIZER' ? '/organizer/settings' : role === 'ADMIN' ? '/admin/profile' : '/app/settings'}
-                  className="flex items-center gap-2 pl-2 pr-3 py-1 rounded-full hover:bg-[#E8DDD7]/40 transition-colors border border-[#E8DDD7]"
-                  title="Account Settings"
-                >
-                  <img
-                    src={user?.avatarUrl}
-                    alt={user?.name}
-                    className="w-7 h-7 rounded-full object-cover border border-[#D6A184]"
-                  />
-                  <span className="text-xs font-semibold text-[#2D1F23]">
-                    {user?.name}
-                  </span>
-                  <Settings className="w-3.5 h-3.5 text-[#756366]" />
-                </Link>
+                {role === 'ATTENDEE' && onOpenAttendeeDrawer ? (
+                  <button
+                    type="button"
+                    onClick={onOpenAttendeeDrawer}
+                    className="flex items-center gap-2 pl-1.5 pr-3 py-1 rounded-full hover:bg-gray-50 transition-colors border border-gray-200/80 cursor-pointer"
+                    title="Open Account & Settings"
+                  >
+                    <img
+                      src={user?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80'}
+                      alt={user?.name}
+                      className="w-7 h-7 rounded-full object-cover border border-sheeba-rose/40"
+                    />
+                    <span className="text-xs font-semibold text-sheeba-dark">
+                      {user?.name}
+                    </span>
+                    <Settings className="w-3.5 h-3.5 text-gray-500" />
+                  </button>
+                ) : (
+                  <Link
+                    to={role === 'ORGANIZER' ? '/organizer/settings' : role === 'ADMIN' ? '/admin/profile' : '/app/settings'}
+                    className="flex items-center gap-2 pl-1.5 pr-3 py-1 rounded-full hover:bg-gray-50 transition-colors border border-gray-200/80"
+                    title="Account Settings"
+                  >
+                    <img
+                      src={user?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80'}
+                      alt={user?.name}
+                      className="w-7 h-7 rounded-full object-cover border border-sheeba-rose/40"
+                    />
+                    <span className="text-xs font-semibold text-sheeba-dark">
+                      {user?.name}
+                    </span>
+                    <Settings className="w-3.5 h-3.5 text-gray-500" />
+                  </Link>
+                )}
 
                 <button
                   onClick={handleLogout}
-                  className="px-2.5 py-1 text-xs font-semibold text-[#B91C1C] hover:bg-red-50 rounded-lg transition-colors"
+                  className="px-2.5 py-1 text-xs font-semibold text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
                 >
                   Log out
                 </button>
               </div>
             ) : (
               <div className="flex items-center gap-2">
-                <Link to="/login">
-                  <Button size="sm" variant="primary" icon={<LogIn className="w-3.5 h-3.5" />}>
-                    Sign In
-                  </Button>
+                <Link
+                  to="/contact"
+                  className="inline-flex items-center justify-center px-5 py-2 rounded-xl bg-[#bba8bd] border border-gray-200/80 text-white text-sm font-semibold shadow-xs hover:bg-[#ad97af] transition-all duration-150 active:scale-[0.98]"
+                >
+                  Sign Up
                 </Link>
               </div>
             )}
@@ -228,16 +231,45 @@ export const Navbar: React.FC = () => {
       {isMobileMenuOpen && (
         <div className="md:hidden border-t border-[#E8DDD7] bg-[#FAF7F5] px-4 pt-3 pb-6 space-y-3 animate-fade-in shadow-md">
           <nav className="flex flex-col space-y-1">
-            <Link
-              to="/search"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="px-3 py-2 rounded-lg text-sm font-semibold text-[#2D1F23] hover:bg-white flex items-center gap-2"
-            >
-              <Search className="w-4 h-4 text-[#63474D]" />
-              Search Profiles & Events
-            </Link>
-
-            {isAuthenticated ? (
+            {!isAuthenticated ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => scrollToSection('features')}
+                  className="px-3 py-2 text-left rounded-lg text-sm font-medium text-[#4B5563] hover:text-[#111827] hover:bg-white transition-colors"
+                >
+                  Features
+                </button>
+                <button
+                  type="button"
+                  onClick={() => scrollToSection('how-it-works')}
+                  className="px-3 py-2 text-left rounded-lg text-sm font-medium text-[#4B5563] hover:text-[#111827] hover:bg-white transition-colors"
+                >
+                  How It Works
+                </button>
+                <button
+                  type="button"
+                  onClick={() => scrollToSection('interactive-demo')}
+                  className="px-3 py-2 text-left rounded-lg text-sm font-medium text-[#4B5563] hover:text-[#111827] hover:bg-white transition-colors"
+                >
+                  Interactive Demo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => scrollToSection('audiences')}
+                  className="px-3 py-2 text-left rounded-lg text-sm font-medium text-[#4B5563] hover:text-[#111827] hover:bg-white transition-colors"
+                >
+                  Audiences
+                </button>
+                <button
+                  type="button"
+                  onClick={() => scrollToSection('team')}
+                  className="px-3 py-2 text-left rounded-lg text-sm font-medium text-[#4B5563] hover:text-[#111827] hover:bg-white transition-colors"
+                >
+                  Team
+                </button>
+              </>
+            ) : (
               <>
                 {role === 'ATTENDEE' && (
                   <>
@@ -318,14 +350,6 @@ export const Navbar: React.FC = () => {
                   </Link>
                 )}
               </>
-            ) : (
-              <Link
-                to="/login"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="px-3 py-2 rounded-lg text-sm font-bold text-[#63474D]"
-              >
-                Sign In / Register
-              </Link>
             )}
           </nav>
 
@@ -354,10 +378,12 @@ export const Navbar: React.FC = () => {
                 </button>
               </div>
             ) : (
-              <Link to="/login" onClick={() => setIsMobileMenuOpen(false)}>
-                <Button fullWidth variant="primary" icon={<LogIn className="w-4 h-4" />}>
-                  Sign In
-                </Button>
+              <Link
+                to="/login"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="w-full inline-flex items-center justify-center px-5 py-2.5 rounded-full bg-[#591C6D] hover:bg-[#49145A] text-white text-sm font-semibold shadow-xs"
+              >
+                Sign Up
               </Link>
             )}
           </div>
