@@ -1,0 +1,219 @@
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
+import type { Event } from '../../types/event';
+import { Badge } from '../ui/Badge';
+import {
+  X,
+  Calendar,
+  MapPin,
+  Users,
+  QrCode,
+  Award,
+  DollarSign,
+  BarChart3,
+  ExternalLink,
+  Copy,
+  Check,
+  ShieldCheck,
+} from 'lucide-react';
+
+interface EventDetailModalProps {
+  event: Event | null;
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, isOpen, onClose }) => {
+  const [copied, setCopied] = useState(false);
+
+  if (!isOpen || !event) return null;
+
+  const publicUrl = `${window.location.origin}/e/${event.shareLinkToken}`;
+  const fillRate = event.capacity > 0 ? Math.round((event.registeredCount / event.capacity) * 100) : 100;
+  const turnoutRate = event.registeredCount > 0 ? Math.round((event.checkedInCount / event.registeredCount) * 100) : 0;
+  const grossRevenue = event.isPaid ? event.registeredCount * event.ticketPrice : 0;
+  const remainingSpots = Math.max(0, event.capacity - event.registeredCount);
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(publicUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div
+        onClick={onClose}
+        className="fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity"
+      />
+
+      {/* Modal Card */}
+      <div className="relative bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-gray-100 z-10 space-y-6">
+        {/* Header */}
+        <div className="flex items-start justify-between gap-4 pb-4 border-b border-gray-100">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <Badge variant="primary" className="uppercase font-mono text-[10px]">
+                {event.type}
+              </Badge>
+              <Badge variant={event.status === 'open' ? 'success' : 'gray'}>
+                {event.status === 'open' ? 'Registration Active' : event.status}
+              </Badge>
+              <span className="text-xs font-bold text-[#C84B18]">
+                {event.isPaid ? `${event.ticketPrice} ETB` : 'FREE'}
+              </span>
+            </div>
+            <h2 className="font-serif font-bold text-xl sm:text-2xl text-sheeba-dark leading-tight pt-1">
+              {event.title}
+            </h2>
+            <p className="text-xs text-gray-500 font-light">
+              Organized by {event.organizerName} • Event ID: <span className="font-mono">{event.id}</span>
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Master Comprehensive Event Table */}
+        <div className="space-y-3">
+          <div className="border border-gray-200 rounded-2xl overflow-hidden bg-white shadow-2xs">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-[#fcfafc] border-b border-gray-200 text-gray-700 font-bold uppercase tracking-wider text-[11px]">
+                <tr>
+                  <th className="py-3 px-4">Operational Dimension</th>
+                  <th className="py-3 px-4">Current Status & Metric</th>
+                  <th className="py-3 px-4 text-right">Ecosystem Notes</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                <tr className="hover:bg-gray-50/70">
+                  <td className="py-3 px-4 font-semibold text-sheeba-dark flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-sheeba-purple" /> Schedule & Time
+                  </td>
+                  <td className="py-3 px-4 font-medium text-gray-800">
+                    {event.date} • {event.time || `${event.startTime} - ${event.endTime}`}
+                  </td>
+                  <td className="py-3 px-4 text-right text-gray-400 font-light">
+                    Single-Day Session
+                  </td>
+                </tr>
+
+                <tr className="hover:bg-gray-50/70">
+                  <td className="py-3 px-4 font-semibold text-sheeba-dark flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-sheeba-purple" /> Venue & Hall
+                  </td>
+                  <td className="py-3 px-4 font-medium text-gray-800">
+                    {event.venueName || event.location}
+                  </td>
+                  <td className="py-3 px-4 text-right text-gray-400 font-light">
+                    Addis Ababa, Ethiopia
+                  </td>
+                </tr>
+
+                <tr className="hover:bg-gray-50/70">
+                  <td className="py-3 px-4 font-semibold text-sheeba-dark flex items-center gap-1.5">
+                    <Users className="w-3.5 h-3.5 text-sheeba-purple" /> Registration Capacity
+                  </td>
+                  <td className="py-3 px-4">
+                    <span className="font-bold text-sheeba-dark">{event.registeredCount}</span>
+                    <span className="text-gray-400"> / {event.capacity} spots ({fillRate}% full)</span>
+                  </td>
+                  <td className="py-3 px-4 text-right font-medium text-[#2A7B5F]">
+                    {remainingSpots > 0 ? `${remainingSpots} spots remaining` : 'Capacity Reached'}
+                  </td>
+                </tr>
+
+                <tr className="hover:bg-gray-50/70">
+                  <td className="py-3 px-4 font-semibold text-sheeba-dark flex items-center gap-1.5">
+                    <QrCode className="w-3.5 h-3.5 text-[#2A7B5F]" /> Door Scanned Turnout
+                  </td>
+                  <td className="py-3 px-4">
+                    <span className="font-bold text-[#2A7B5F]">{event.checkedInCount} checked in</span>
+                    <span className="text-gray-400"> ({turnoutRate}% verified)</span>
+                  </td>
+                  <td className="py-3 px-4 text-right text-gray-400 font-light">
+                    Door Scanner Active
+                  </td>
+                </tr>
+
+                <tr className="hover:bg-gray-50/70">
+                  <td className="py-3 px-4 font-semibold text-sheeba-dark flex items-center gap-1.5">
+                    <DollarSign className="w-3.5 h-3.5 text-[#C84B18]" /> Ticketing & Revenue
+                  </td>
+                  <td className="py-3 px-4 font-bold text-sheeba-dark">
+                    {event.isPaid ? `${grossRevenue.toLocaleString()} ETB` : 'Free Community Event'}
+                  </td>
+                  <td className="py-3 px-4 text-right text-gray-400 font-light">
+                    {event.isPaid ? 'Chapa Direct Payout' : 'Zero Ticket Fee'}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Share Link Row */}
+        <div className="p-3.5 rounded-2xl bg-gray-50 border border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-xs text-gray-600 font-light truncate w-full sm:w-auto">
+            <ShieldCheck className="w-4 h-4 text-[#2A7B5F] shrink-0" />
+            <span className="truncate font-mono text-[11px]">{publicUrl}</span>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto justify-end">
+            <button
+              type="button"
+              onClick={handleCopyLink}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-gray-200 hover:bg-gray-100 text-sheeba-dark text-xs font-semibold transition-colors cursor-pointer"
+            >
+              {copied ? <Check className="w-3.5 h-3.5 text-[#2A7B5F]" /> : <Copy className="w-3.5 h-3.5 text-[#C84B18]" />}
+              <span>{copied ? 'Copied' : 'Copy Link'}</span>
+            </button>
+            <Link
+              to={`/e/${event.shareLinkToken}`}
+              target="_blank"
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-sheeba-purple text-white text-xs font-semibold hover:bg-sheeba-indigo transition-colors"
+            >
+              <span>Public Form</span>
+              <ExternalLink className="w-3 h-3" />
+            </Link>
+          </div>
+        </div>
+
+        {/* Actions Grid */}
+        <div className="grid grid-cols-3 gap-2.5 pt-1">
+          <Link
+            to={`/organizer/events/${event.id}/scanner`}
+            onClick={onClose}
+            className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-white border border-gray-200 hover:border-[#C84B18] text-[#C84B18] text-xs font-semibold transition-colors shadow-2xs text-center"
+          >
+            <QrCode className="w-3.5 h-3.5" />
+            <span>Check-in Console</span>
+          </Link>
+          <Link
+            to={`/organizer/events/${event.id}/attendees`}
+            onClick={onClose}
+            className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-white border border-gray-200 hover:border-[#C84B18] text-[#C84B18] text-xs font-semibold transition-colors shadow-2xs text-center"
+          >
+            <Award className="w-3.5 h-3.5" />
+            <span>Manage Badges</span>
+          </Link>
+          <Link
+            to={`/organizer/reports/${event.id}`}
+            onClick={onClose}
+            className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-white border border-gray-200 hover:border-[#C84B18] text-[#C84B18] text-xs font-semibold transition-colors shadow-2xs text-center"
+          >
+            <BarChart3 className="w-3.5 h-3.5" />
+            <span>Event Report</span>
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+};

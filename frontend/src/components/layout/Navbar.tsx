@@ -7,7 +7,6 @@ import {
   Menu,
   X,
   Settings,
-  PlusCircle,
   Ticket,
   Home,
   Compass,
@@ -108,32 +107,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAttendeeDrawer }) => {
               </>
             )}
 
-            {isAuthenticated && role === 'ORGANIZER' && (
-              <>
-                <Link
-                  to="/organizer"
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
-                    isActive('/organizer') && !location.pathname.includes('/create')
-                      ? 'bg-sheeba-purple/10 text-sheeba-purple'
-                      : 'text-gray-600 hover:text-sheeba-dark hover:bg-gray-100'
-                  }`}
-                >
-                  Events Dashboard
-                </Link>
-                <Link
-                  to="/organizer/events/create"
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors ${
-                    isActive('/organizer/events/create')
-                      ? 'bg-sheeba-purple text-white'
-                      : 'text-sheeba-purple bg-sheeba-purple/10 hover:bg-sheeba-purple/20'
-                  }`}
-                >
-                  <PlusCircle className="w-3.5 h-3.5" />
-                  Create Event
-                </Link>
-              </>
-            )}
-
             {isAuthenticated && role === 'ADMIN' && (
               <Link
                 to="/admin"
@@ -152,12 +125,12 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAttendeeDrawer }) => {
           <div className="hidden md:flex items-center gap-3">
             {isAuthenticated ? (
               <div className="flex items-center gap-3">
-                {role !== 'ATTENDEE' && (
+                {role === 'ADMIN' && (
                   <Badge
-                    variant={role === 'ADMIN' ? 'primary' : 'secondary'}
+                    variant="primary"
                     className="font-semibold px-3 py-1 text-xs"
                   >
-                    {role === 'ADMIN' ? 'Admin' : 'Organizer'}
+                    Admin
                   </Badge>
                 )}
 
