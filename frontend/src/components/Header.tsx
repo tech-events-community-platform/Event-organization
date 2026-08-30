@@ -42,9 +42,9 @@ export default function Header() {
           {/* Brand Logo */}
           <Link to="/" className="flex items-center gap-3.5 group">
             <img
-              src="/sheeba-logo.png"
+              src="/logo.jpg"
               alt="Sheeba Logo"
-              className="h-12 sm:h-14 w-auto object-contain group-hover:scale-105 transition-transform duration-200"
+              className="h-10 sm:h-12 w-auto object-contain group-hover:scale-105 transition-transform duration-200"
             />
             <div className="flex flex-col">
               <span className="font-serif text-2xl font-bold tracking-tight text-sheeba-dark group-hover:text-sheeba-purple transition-colors">

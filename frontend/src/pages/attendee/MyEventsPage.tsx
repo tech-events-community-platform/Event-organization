@@ -21,7 +21,7 @@ export const MyEventsPage: React.FC = () => {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [allEvents, setAllEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'Upcoming' | 'Explore' | 'Attended'>('Upcoming');
+  const [activeTab, setActiveTab] = useState<'Tickets' | 'Explore'>('Tickets');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -42,55 +42,40 @@ export const MyEventsPage: React.FC = () => {
     fetchData();
   }, [user]);
 
-  const upcomingTickets = tickets.filter((t) => t.status === 'Valid');
-  const attendedTickets = tickets.filter((t) => t.status === 'Checked in' || t.status === 'Expired');
-
   return (
-    <div className="space-y-6 max-w-4xl mx-auto pb-16">
+    <div className="space-y-6 max-w-5xl mx-auto pb-16">
       <div className="space-y-1">
-        <Badge variant="primary">Attendee Events & Passes</Badge>
-        <h1 className="font-serif text-2xl sm:text-3xl font-extrabold text-[#2D1F23]">
-          My Events & Discovery
+        <h1 className="font-serif text-2xl sm:text-3xl font-extrabold text-sheeba-dark">
+          Tickets & Registered Passes
         </h1>
-        <p className="text-xs text-[#756366]">
-          View your active door passes, explore upcoming events, and browse past attended history.
+        <p className="text-xs text-gray-500 font-light">
+          Manage your event tickets, dynamic QR passes, and registration statuses.
         </p>
       </div>
 
-      {/* Tabs */}
-      <div className="flex border-b border-[#E8DDD7] gap-4 sm:gap-6 overflow-x-auto">
+      {/* 2 Clean Tabs (Tickets & Explore) */}
+      <div className="flex border-b border-gray-200 gap-6 overflow-x-auto">
         <button
-          onClick={() => setActiveTab('Upcoming')}
-          className={`pb-3 text-xs sm:text-sm font-bold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
-            activeTab === 'Upcoming'
-              ? 'border-[#63474D] text-[#63474D]'
-              : 'border-transparent text-[#756366] hover:text-[#2D1F23]'
+          onClick={() => setActiveTab('Tickets')}
+          className={`pb-3 text-xs sm:text-sm font-bold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
+            activeTab === 'Tickets'
+              ? 'border-sheeba-purple text-sheeba-purple'
+              : 'border-transparent text-gray-500 hover:text-sheeba-dark'
           }`}
         >
           <TicketIcon className="w-4 h-4" />
-          Active Passes ({upcomingTickets.length})
+          <span>My Tickets ({tickets.length})</span>
         </button>
         <button
           onClick={() => setActiveTab('Explore')}
-          className={`pb-3 text-xs sm:text-sm font-bold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
+          className={`pb-3 text-xs sm:text-sm font-bold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
             activeTab === 'Explore'
-              ? 'border-[#63474D] text-[#63474D]'
-              : 'border-transparent text-[#756366] hover:text-[#2D1F23]'
+              ? 'border-sheeba-purple text-sheeba-purple'
+              : 'border-transparent text-gray-500 hover:text-sheeba-dark'
           }`}
         >
           <Compass className="w-4 h-4" />
-          Explore Events ({allEvents.length})
-        </button>
-        <button
-          onClick={() => setActiveTab('Attended')}
-          className={`pb-3 text-xs sm:text-sm font-bold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
-            activeTab === 'Attended'
-              ? 'border-[#63474D] text-[#63474D]'
-              : 'border-transparent text-[#756366] hover:text-[#2D1F23]'
-          }`}
-        >
-          <ShieldCheck className="w-4 h-4" />
-          Past Attended ({attendedTickets.length})
+          <span>Explore Events ({allEvents.length})</span>
         </button>
       </div>
 
@@ -98,52 +83,52 @@ export const MyEventsPage: React.FC = () => {
       {loading ? (
         <div className="space-y-4 animate-pulse">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-28 bg-[#E8DDD7]/50 rounded-2xl"></div>
+            <div key={i} className="h-28 bg-gray-100 rounded-2xl"></div>
           ))}
         </div>
       ) : activeTab === 'Explore' ? (
         /* Explore All Added Events */
         <div className="space-y-4">
           {allEvents.length === 0 ? (
-            <div className="bg-white rounded-3xl p-10 text-center border border-[#E8DDD7] space-y-3 shadow-xs">
-              <Compass className="w-10 h-10 text-[#AA767C] mx-auto" />
-              <h3 className="font-serif text-base font-bold text-[#2D1F23]">No Events Available</h3>
-              <p className="text-xs text-[#756366]">Check back soon for new workshops, meetups, and hackathons.</p>
+            <div className="bg-white rounded-3xl p-10 text-center border border-gray-200 space-y-3 shadow-xs">
+              <Compass className="w-10 h-10 text-sheeba-rose mx-auto" />
+              <h3 className="font-serif text-base font-bold text-sheeba-dark">No Events Available</h3>
+              <p className="text-xs text-gray-500 font-light">Check back soon for new workshops, meetups, and hackathons.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {allEvents.map((ev) => (
                 <div
                   key={ev.id}
-                  className="bg-white p-5 rounded-3xl border border-[#E8DDD7] hover:border-[#63474D] transition-all shadow-xs space-y-3 flex flex-col justify-between"
+                  className="bg-white p-5 rounded-2xl border border-gray-200 hover:border-sheeba-purple transition-all shadow-xs space-y-3 flex flex-col justify-between"
                 >
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <Badge variant="primary" className="uppercase font-mono text-[10px]">
                         {ev.type}
                       </Badge>
-                      <span className="text-xs font-bold text-[#63474D]">
+                      <span className="text-xs font-bold text-sheeba-purple">
                         {ev.isPaid ? `${ev.ticketPrice} ETB` : 'FREE'}
                       </span>
                     </div>
 
-                    <h3 className="font-serif font-bold text-base text-[#2D1F23]">{ev.title}</h3>
-                    <p className="text-xs font-semibold text-[#AA767C]">Hosted by {ev.organizerName}</p>
+                    <h3 className="font-serif font-bold text-base text-sheeba-dark">{ev.title}</h3>
+                    <p className="text-xs font-semibold text-sheeba-rose">Hosted by {ev.organizerName}</p>
 
-                    <div className="space-y-1 text-xs text-[#756366] pt-1">
+                    <div className="space-y-1 text-xs text-gray-600 font-light pt-1">
                       <div className="flex items-center gap-1.5">
-                        <Calendar className="w-3.5 h-3.5 text-[#63474D]" />
+                        <Calendar className="w-3.5 h-3.5 text-sheeba-purple" />
                         <span>{ev.date} • {ev.time || `${ev.startTime} - ${ev.endTime}`}</span>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <MapPin className="w-3.5 h-3.5 text-[#63474D]" />
+                        <MapPin className="w-3.5 h-3.5 text-sheeba-purple" />
                         <span className="truncate">{ev.venueName || ev.location}</span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="pt-2 border-t border-[#E8DDD7] flex items-center justify-between">
-                    <span className="text-[11px] text-[#756366]">
+                  <div className="pt-2 border-t border-gray-100 flex items-center justify-between">
+                    <span className="text-[11px] text-gray-400 font-light">
                       {ev.registeredCount} / {ev.capacity} spots
                     </span>
                     <Link to={`/e/${ev.shareLinkToken}`}>
@@ -157,15 +142,13 @@ export const MyEventsPage: React.FC = () => {
             </div>
           )}
         </div>
-      ) : (activeTab === 'Upcoming' ? upcomingTickets : attendedTickets).length === 0 ? (
-        <div className="bg-white rounded-3xl p-10 text-center border border-[#E8DDD7] space-y-3 shadow-xs">
-          <TicketIcon className="w-10 h-10 text-[#AA767C] mx-auto" />
-          <h3 className="font-serif text-base font-bold text-[#2D1F23]">
-            {activeTab === 'Upcoming'
-              ? "You don't have any active event passes."
-              : 'No past ticket records found.'}
+      ) : tickets.length === 0 ? (
+        <div className="bg-white rounded-3xl p-10 text-center border border-gray-200 space-y-3 shadow-xs">
+          <TicketIcon className="w-10 h-10 text-sheeba-rose mx-auto" />
+          <h3 className="font-serif text-base font-bold text-sheeba-dark">
+            You don't have any registered event passes.
           </h3>
-          <p className="text-xs text-[#756366]">
+          <p className="text-xs text-gray-500 font-light">
             Browse all upcoming hackathons, workshops, or meetups to register.
           </p>
           <Button
@@ -178,13 +161,13 @@ export const MyEventsPage: React.FC = () => {
           </Button>
         </div>
       ) : (
-        <div className="space-y-4">
-          {(activeTab === 'Upcoming' ? upcomingTickets : attendedTickets).map((ticket) => (
+        <div className="space-y-3">
+          {tickets.map((ticket) => (
             <div
               key={ticket.id}
-              className="bg-white rounded-3xl p-6 border border-[#E8DDD7] shadow-xs hover:border-[#63474D] transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+              className="bg-white rounded-2xl p-5 border border-gray-200 shadow-2xs hover:border-sheeba-purple transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
             >
-              <div className="space-y-2 flex-1 min-w-0">
+              <div className="space-y-1.5 flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <Badge
                     variant={ticket.status === 'Valid' ? 'success' : 'gray'}
@@ -192,26 +175,26 @@ export const MyEventsPage: React.FC = () => {
                   >
                     {ticket.status}
                   </Badge>
-                  <span className="font-mono text-[10px] text-[#756366]">PASS: {ticket.id}</span>
+                  <span className="font-mono text-[10px] text-gray-400">PASS: {ticket.id}</span>
                 </div>
 
-                <h3 className="font-serif font-bold text-base text-[#2D1F23] truncate">
+                <h3 className="font-serif font-bold text-base text-sheeba-dark truncate">
                   {ticket.eventTitle}
                 </h3>
 
-                <div className="flex flex-wrap items-center gap-4 text-xs text-[#756366]">
+                <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500 font-light">
                   <span className="flex items-center gap-1">
-                    <Calendar className="w-3.5 h-3.5 text-[#63474D]" />
+                    <Calendar className="w-3.5 h-3.5 text-sheeba-purple" />
                     {ticket.eventDate} • {ticket.eventTime}
                   </span>
                   <span className="flex items-center gap-1">
-                    <MapPin className="w-3.5 h-3.5 text-[#63474D]" />
+                    <MapPin className="w-3.5 h-3.5 text-sheeba-purple" />
                     {ticket.eventLocation}
                   </span>
                 </div>
               </div>
 
-              <div className="w-full sm:w-auto pt-2 sm:pt-0">
+              <div className="w-full sm:w-auto pt-2 sm:pt-0 shrink-0">
                 <Link to={`/app/ticket/${ticket.eventId}`}>
                   <Button variant="accent" size="sm" fullWidth icon={<QrCode className="w-4 h-4" />}>
                     Open Pass View
