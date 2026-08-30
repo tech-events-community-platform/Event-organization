@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import type { Event } from '../../types/event';
@@ -9,7 +9,6 @@ import { Button } from '../../components/ui/Button';
 import {
   CheckCircle2,
   AlertTriangle,
-  ArrowLeft,
   Camera,
   RotateCcw,
   ShieldCheck,
@@ -92,13 +91,6 @@ export const ScannerPage: React.FC = () => {
 
   return (
     <div className="max-w-xl mx-auto space-y-6 pb-20">
-      <Link
-        to={`/organizer`}
-        className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#63474D] hover:underline"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Back to Organizer Dashboard
-      </Link>
 
       <div className="text-center space-y-2">
         <Badge variant="accent" icon={<ShieldCheck className="w-3.5 h-3.5" />}>

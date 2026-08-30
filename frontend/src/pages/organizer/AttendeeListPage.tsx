@@ -9,10 +9,9 @@ import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import {
   Search,
-  ArrowLeft,
+  Award,
   CheckCircle2,
   QrCode,
-  Award,
   CheckSquare,
   Square,
   Sparkles,
@@ -93,13 +92,6 @@ export const AttendeeListPage: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-20">
-      <Link
-        to={`/organizer`}
-        className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#63474D] hover:underline"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Back to Dashboard
-      </Link>
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>

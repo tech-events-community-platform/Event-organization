@@ -9,7 +9,6 @@ import {
   MapPin,
   QrCode,
   BarChart3,
-  ArrowLeft,
   Award,
 } from 'lucide-react';
 
@@ -54,13 +53,6 @@ export const EventDashboardPage: React.FC = () => {
 
   return (
     <div className="space-y-8 pb-16 max-w-4xl mx-auto">
-      <Link
-        to="/organizer/events"
-        className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#63474D] hover:underline"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Back to Event List
-      </Link>
 
       {/* Header Banner */}
       <div className="bg-[#63474D] text-white p-6 sm:p-8 rounded-3xl space-y-4 shadow-sm">

@@ -20,27 +20,29 @@ export const OrganizerSidebar: React.FC = () => {
     { label: 'Overview', path: '/organizer', icon: LayoutDashboard },
     { label: 'My Events', path: '/organizer/events', icon: Calendar },
     { label: 'Create Event', path: '/organizer/events/create', icon: PlusCircle },
-    { label: 'Sponsor Reports', path: '/organizer/events/evt_react_workshop_2026/report', icon: BarChart3 },
+    { label: 'Reports', path: '/organizer/reports', icon: BarChart3 },
     { label: 'Account & Data Export', path: '/organizer/settings', icon: Settings },
   ];
 
   const isActive = (path: string) => {
     if (path === '/organizer') return location.pathname === '/organizer';
+    if (path === '/organizer/events') return location.pathname === '/organizer/events';
+    if (path === '/organizer/events/create') return location.pathname === '/organizer/events/create';
+    if (path === '/organizer/reports') {
+      return location.pathname.startsWith('/organizer/reports') || location.pathname.includes('/report');
+    }
     return location.pathname.startsWith(path);
   };
 
   return (
     <aside className="w-64 bg-[#63474D] text-white flex flex-col justify-between hidden md:flex min-h-[calc(100vh-4rem)] border-r border-[#AA767C]/40">
       <div className="p-4 space-y-6">
-        {/* Console Header */}
-        <div className="bg-[#523a3f] rounded-xl p-3 border border-[#FFA686]/30 space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-[#FFA686] animate-pulse"></span>
-            <span className="text-xs font-semibold uppercase tracking-wider text-[#FFA686]">
-              Organizer Console
-            </span>
-          </div>
-          <p className="text-xs font-medium text-white truncate">{user?.organization || 'GDG Addis'}</p>
+        {/* Organizer Community Name Header (Unboxed, Simple Name) */}
+        <div className="px-3 py-2 border-b border-[#AA767C]/40">
+          <h2 className="font-serif font-bold text-lg text-white tracking-tight">
+            {user?.organization || 'GDG Addis'}
+          </h2>
+          <p className="text-[11px] text-[#FFA686] font-medium">Verified Community Organizer</p>
         </div>
 
         {/* Navigation */}
@@ -85,7 +87,7 @@ export const OrganizerSidebar: React.FC = () => {
               logout();
               navigate('/login');
             }}
-            className="p-1.5 text-red-200 hover:text-white hover:bg-red-900/40 rounded-lg transition-colors"
+            className="p-1.5 text-red-200 hover:text-white hover:bg-red-900/40 rounded-lg transition-colors cursor-pointer"
             title="Log out"
           >
             <LogOut className="w-4 h-4" />

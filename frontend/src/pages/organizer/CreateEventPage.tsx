@@ -6,7 +6,6 @@ import type { EventType, RegistrationQuestion } from '../../types/event';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import {
-  ArrowLeft,
   CheckCircle2,
   Sparkles,
   Plus,
@@ -185,13 +184,6 @@ export const CreateEventPage: React.FC = () => {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 pb-20">
-      <Link
-        to="/organizer"
-        className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#63474D] hover:underline"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Back to Dashboard
-      </Link>
 
       <div className="space-y-1">
         <Badge variant="primary">Single-Day Event Setup</Badge>

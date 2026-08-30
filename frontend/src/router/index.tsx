@@ -86,6 +86,8 @@ export const router = createBrowserRouter([
           { path: 'events/:id/attendees', element: <AttendeeListPage /> },
           { path: 'events/:id/scanner', element: <ScannerPage /> },
           { path: 'events/:id/report', element: <ReportPage /> },
+          { path: 'reports', element: <ReportPage /> },
+          { path: 'reports/:id', element: <ReportPage /> },
           { path: 'settings', element: <AccountSettingsPage /> },
         ],
       },
