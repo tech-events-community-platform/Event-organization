@@ -5,6 +5,7 @@ import {
   LayoutDashboard,
   Calendar,
   PlusCircle,
+  Award,
   BarChart3,
   LogOut,
   Settings,
@@ -20,6 +21,7 @@ export const OrganizerSidebar: React.FC = () => {
     { label: 'Overview', path: '/organizer', icon: LayoutDashboard },
     { label: 'My Events', path: '/organizer/events', icon: Calendar },
     { label: 'Create Event', path: '/organizer/events/create', icon: PlusCircle },
+    { label: 'Give / Approve Badges', path: '/organizer/badges', icon: Award },
     { label: 'Reports', path: '/organizer/reports', icon: BarChart3 },
     { label: 'Account & Data Export', path: '/organizer/settings', icon: Settings },
   ];
@@ -28,6 +30,9 @@ export const OrganizerSidebar: React.FC = () => {
     if (path === '/organizer') return location.pathname === '/organizer';
     if (path === '/organizer/events') return location.pathname === '/organizer/events';
     if (path === '/organizer/events/create') return location.pathname === '/organizer/events/create';
+    if (path === '/organizer/badges') {
+      return location.pathname.startsWith('/organizer/badges') || location.pathname.includes('/attendees');
+    }
     if (path === '/organizer/reports') {
       return location.pathname.startsWith('/organizer/reports') || location.pathname.includes('/report');
     }
