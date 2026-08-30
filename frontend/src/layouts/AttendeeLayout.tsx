@@ -1,11 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { Navbar } from '../components/layout/Navbar';
 import { Footer } from '../components/layout/Footer';
-import { Home, Calendar, QrCode, User, ShieldCheck, Compass } from 'lucide-react';
+import { AttendeeDrawer } from '../components/attendee/AttendeeDrawer';
+import { LayoutDashboard, Ticket, Clock, Menu } from 'lucide-react';
 
 export const AttendeeLayout: React.FC = () => {
   const location = useLocation();
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   const isTabActive = (path: string) => {
     if (path === '/app') return location.pathname === '/app';
@@ -13,86 +15,71 @@ export const AttendeeLayout: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F7F8F5]">
-      <Navbar />
+    <div className="min-h-screen flex flex-col bg-white">
+      <Navbar onOpenAttendeeDrawer={() => setIsDrawerOpen(true)} />
 
-      {/* Mobile-first top subnav bar */}
-      <div className="bg-white border-b border-gray-200/80 sticky top-16 z-30 shadow-2xs">
+      {/* Clean 3-Tab Formal Attendee Subnav */}
+      <div className="bg-white border-b border-gray-100 sticky top-16 z-30 shadow-2xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex space-x-6 overflow-x-auto scrollbar-none py-2 text-xs font-semibold">
-            <Link
-              to="/app"
-              className={`flex items-center gap-1.5 py-1.5 px-3 rounded-lg transition-colors whitespace-nowrap ${
-                isTabActive('/app') && location.pathname === '/app'
-                  ? 'bg-[#63474D] text-white'
-                  : 'text-[#66736E] hover:text-[#17211E] hover:bg-gray-100'
-              }`}
+          <div className="flex items-center justify-between">
+            <div className="flex space-x-6 sm:space-x-8 overflow-x-auto scrollbar-none py-3 text-sm font-medium">
+              <Link
+                to="/app"
+                className={`flex items-center gap-2 pb-2 -mb-3 border-b-2 transition-all whitespace-nowrap ${
+                  isTabActive('/app') && location.pathname === '/app'
+                    ? 'border-sheeba-purple text-sheeba-dark font-bold'
+                    : 'border-transparent text-gray-500 hover:text-sheeba-dark'
+                }`}
+              >
+                <LayoutDashboard className="w-4 h-4" />
+                <span>Dashboard</span>
+              </Link>
+
+              <Link
+                to="/app/events"
+                className={`flex items-center gap-2 pb-2 -mb-3 border-b-2 transition-all whitespace-nowrap ${
+                  isTabActive('/app/events') || isTabActive('/app/ticket')
+                    ? 'border-sheeba-purple text-sheeba-dark font-bold'
+                    : 'border-transparent text-gray-500 hover:text-sheeba-dark'
+                }`}
+              >
+                <Ticket className="w-4 h-4" />
+                <span>Tickets</span>
+              </Link>
+
+              <Link
+                to="/app/profile/attendance"
+                className={`flex items-center gap-2 pb-2 -mb-3 border-b-2 transition-all whitespace-nowrap ${
+                  isTabActive('/app/profile/attendance')
+                    ? 'border-sheeba-purple text-sheeba-dark font-bold'
+                    : 'border-transparent text-gray-500 hover:text-sheeba-dark'
+                }`}
+              >
+                <Clock className="w-4 h-4" />
+                <span>Attendance Timeline</span>
+              </Link>
+            </div>
+
+            {/* Quick Drawer Opener Button on Subnav right */}
+            <button
+              type="button"
+              onClick={() => setIsDrawerOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-600 hover:text-sheeba-dark hover:bg-gray-50 border border-gray-200/80 transition-colors cursor-pointer"
             >
-              <Home className="w-3.5 h-3.5" />
-              <span>Attendee Hub</span>
-            </Link>
-            <Link
-              to="/search"
-              className={`flex items-center gap-1.5 py-1.5 px-3 rounded-lg transition-colors whitespace-nowrap ${
-                isTabActive('/search')
-                  ? 'bg-[#63474D] text-white'
-                  : 'text-[#66736E] hover:text-[#17211E] hover:bg-gray-100'
-              }`}
-            >
-              <Compass className="w-3.5 h-3.5" />
-              <span>Events</span>
-            </Link>
-            <Link
-              to="/app/events"
-              className={`flex items-center gap-1.5 py-1.5 px-3 rounded-lg transition-colors whitespace-nowrap ${
-                isTabActive('/app/events')
-                  ? 'bg-[#63474D] text-white'
-                  : 'text-[#66736E] hover:text-[#17211E] hover:bg-gray-100'
-              }`}
-            >
-              <Calendar className="w-3.5 h-3.5" />
-              <span>My Events</span>
-            </Link>
-            <Link
-              to="/app/ticket/evt_react_workshop_2026"
-              className={`flex items-center gap-1.5 py-1.5 px-3 rounded-lg transition-colors whitespace-nowrap ${
-                isTabActive('/app/ticket')
-                  ? 'bg-[#63474D] text-white'
-                  : 'text-[#66736E] hover:text-[#17211E] hover:bg-gray-100'
-              }`}
-            >
-              <QrCode className="w-3.5 h-3.5 text-[#FFA686]" />
-              <span>QR Ticket Pass</span>
-            </Link>
-            <Link
-              to="/app/profile"
-              className={`flex items-center gap-1.5 py-1.5 px-3 rounded-lg transition-colors whitespace-nowrap ${
-                isTabActive('/app/profile') && location.pathname !== '/app/profile/attendance'
-                  ? 'bg-[#63474D] text-white'
-                  : 'text-[#66736E] hover:text-[#17211E] hover:bg-gray-100'
-              }`}
-            >
-              <User className="w-3.5 h-3.5" />
-              <span>Profile</span>
-            </Link>
-            <Link
-              to="/app/profile/attendance"
-              className={`flex items-center gap-1.5 py-1.5 px-3 rounded-lg transition-colors whitespace-nowrap ${
-                isTabActive('/app/profile/attendance')
-                  ? 'bg-[#63474D] text-white'
-                  : 'text-[#66736E] hover:text-[#17211E] hover:bg-gray-100'
-              }`}
-            >
-              <ShieldCheck className="w-3.5 h-3.5 text-[#FFA686]" />
-              <span>Verified Attendance</span>
-            </Link>
+              <Menu className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Account & Tools</span>
+            </button>
           </div>
         </div>
       </div>
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      {/* Main Content Area */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 bg-white">
         <Outlet />
       </main>
+
+      {/* Sliding Sidebar Drawer */}
+      <AttendeeDrawer isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} />
 
       <Footer />
     </div>

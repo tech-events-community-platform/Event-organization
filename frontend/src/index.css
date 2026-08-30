@@ -1,43 +1,67 @@
 @import "tailwindcss";
 
 @theme {
-  --color-sheba-primary: #63474D;
-  --color-sheba-secondary: #AA767C;
-  --color-sheba-tertiary: #D6A184;
-  --color-sheba-accent: #FFA686;
-  --color-sheba-light: #FEC196;
-  
-  --color-sheba-bg: #FAF7F5;
-  --color-sheba-surface: #FFFFFF;
-  --color-sheba-surface-alt: #F4EFEB;
-  --color-sheba-text: #2D1F23;
-  --color-sheba-muted: #756366;
-  --color-sheba-border: #E8DDD7;
-  
+  --color-sheba-coral: #f49390;
+  --color-sheba-rose: #a2666f;
+  --color-sheba-pink: #f45866;
+  --color-sheba-indigo: #1e0b97;
+  --color-sheba-purple: #631a86;
+  --color-sheba-dark: #0e0622;
+  --color-sheba-surface: #fbf9fc;
+  --color-sheba-muted: #6b7280;
+
+  --color-sheba-primary: #631a86;
+  --color-sheba-secondary: #a2666f;
+  --color-sheba-tertiary: #f49390;
+  --color-sheba-accent: #f45866;
+  --color-sheba-light: #fbf9fc;
+  --color-sheba-bg: #ffffff;
+  --color-sheba-border: #e5e7eb;
+
   --color-sheba-success: #2A7B5F;
   --color-sheba-warning: #D97706;
   --color-sheba-error: #B91C1C;
 
+  --font-sans: 'Nunito', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-serif: 'Lora', Georgia, serif;
-  --font-sans: 'Nunito', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
 }
 
 @layer base {
-  :root {
+  html {
+    scroll-behavior: smooth;
     color-scheme: light;
   }
-  
   body {
-    background-color: #FAF7F5;
-    color: #2D1F23;
     font-family: var(--font-sans);
+    color: #1f2937;
+    background-color: #ffffff;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    min-height: 100vh;
+    overflow-x: hidden;
   }
+  ::selection {
+    background-color: #631a86;
+    color: #ffffff;
+  }
+}
 
-  h1, h2, h3, .font-display, .font-serif {
-    font-family: var(--font-serif);
+@layer utilities {
+  .text-gradient {
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+    background-image: linear-gradient(135deg, #f45866 0%, #631a86 50%, #1e0b97 100%);
+  }
+  .text-gradient-coral {
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+    background-image: linear-gradient(135deg, #f49390 0%, #f45866 50%, #631a86 100%);
+  }
+  .bg-sheeba-gradient {
+    background: linear-gradient(135deg, #f49390 0%, #a2666f 25%, #631a86 75%, #1e0b97 100%);
   }
 }
 
@@ -47,33 +71,12 @@
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #FAF7F5;
+  background: #fcfafc;
 }
 ::-webkit-scrollbar-thumb {
-  background: #D6A184;
+  background: #a2666f;
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #AA767C;
-}
-
-/* Minimalist container utilities */
-.sheba-section {
-  background: transparent;
-}
-
-.sheba-paper {
-  background: #FFFFFF;
-  border-bottom: 1px solid #E8DDD7;
-}
-
-/* Print utilities for sponsor reports */
-@media print {
-  body {
-    background: #ffffff !important;
-    color: #000000 !important;
-  }
-  .no-print {
-    display: none !important;
-  }
+  background: #631a86;
 }
