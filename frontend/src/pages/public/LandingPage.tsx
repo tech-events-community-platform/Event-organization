@@ -21,6 +21,7 @@ export const LandingPage: React.FC = () => {
       {/* 1. HERO SECTION */}
       <Hero />
 
+<<<<<<< HEAD
       {/* 2. INTERACTIVE DEMO: DOOR CHECK-IN & AUTOMATIC BADGE ISSUANCE */}
       <section id="demo" className="max-w-5xl mx-auto px-4 sm:px-6 scroll-mt-24">
         <FadeIn direction="up">
@@ -29,6 +30,87 @@ export const LandingPage: React.FC = () => {
               <div>
                 <span className="text-xs font-mono text-gray-500">sheba.et/organizer/scanner</span>
                 <h2 className="font-serif font-bold text-2xl text-sheeba-dark">Door Check-In & Automatic Badge Issuance</h2>
+=======
+        <h1 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-extrabold text-[#2D1F23] tracking-tight leading-[1.15]">
+          Attendance, <span className="text-[#63474D] italic">verified.</span>
+        </h1>
+
+        <p className="font-sans text-base sm:text-lg text-[#756366] max-w-2xl mx-auto leading-relaxed">
+          Sheba turns event attendance into verifiable organizer badges for attendees, and clean, sponsor-ready proof for community organizers in Ethiopia.
+        </p>
+
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+          <Link to="/register" className="w-full sm:w-auto">
+            <Button size="lg" variant="primary" fullWidth icon={<ArrowRight className="w-5 h-5" />}>
+              Get Started / Register
+            </Button>
+          </Link>
+          <Link to="/login" className="w-full sm:w-auto">
+            <Button size="lg" variant="outline" fullWidth>
+              Sign In
+            </Button>
+          </Link>
+          <Link to="/search" className="w-full sm:w-auto">
+            <Button size="lg" variant="secondary" fullWidth icon={<Search className="w-5 h-5" />}>
+              Explore Events
+            </Button>
+          </Link>
+        </div>
+
+        {/* Value Proposition Pills */}
+        <div className="pt-6 grid grid-cols-1 sm:grid-cols-3 gap-4 text-left max-w-4xl mx-auto">
+          <div className="p-5 rounded-2xl bg-white border border-[#E8DDD7] space-y-2 shadow-xs">
+            <div className="w-8 h-8 rounded-lg bg-[#63474D]/10 flex items-center justify-center text-[#63474D]">
+              <QrCode className="w-4 h-4" />
+            </div>
+            <h3 className="font-serif font-bold text-sm text-[#2D1F23]">Shareable Link & Dynamic QR</h3>
+            <p className="text-xs text-[#756366]">
+              Publish events with custom question forms. Attendee QR passes dynamically update without reissuance.
+            </p>
+          </div>
+
+          <div className="p-5 rounded-2xl bg-white border border-[#E8DDD7] space-y-2 shadow-xs">
+            <div className="w-8 h-8 rounded-lg bg-[#AA767C]/15 flex items-center justify-center text-[#AA767C]">
+              <Award className="w-4 h-4" />
+            </div>
+            <h3 className="font-serif font-bold text-sm text-[#2D1F23]">Organizer-Issued Badges</h3>
+            <p className="text-xs text-[#756366]">
+              Attended, Participant, Winner, and Speaker badges live permanently on verifiable public profiles.
+            </p>
+          </div>
+
+          <div className="p-5 rounded-2xl bg-white border border-[#E8DDD7] space-y-2 shadow-xs">
+            <div className="w-8 h-8 rounded-lg bg-[#D6A184]/20 flex items-center justify-center text-[#63474D]">
+              <FileSpreadsheet className="w-4 h-4" />
+            </div>
+            <h3 className="font-serif font-bold text-sm text-[#2D1F23]">Sponsor-Ready Reports</h3>
+            <p className="text-xs text-[#756366]">
+              Export verified metrics, check-in velocity, and badge distributions with 1-click PDF reports.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Interactive Check-in & Badge Issuance Simulation */}
+      <section className="max-w-4xl mx-auto px-4 sm:px-6">
+        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#E8DDD7] shadow-md space-y-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pb-4 border-b border-[#E8DDD7]">
+            <div>
+              <span className="text-xs font-mono text-[#756366]">sheba.et/organizer/scanner</span>
+              <h2 className="font-serif font-bold text-lg text-[#2D1F23]">Door Check-In & Automatic Badge Issuance</h2>
+            </div>
+            <Badge variant="primary" icon={<ShieldCheck className="w-3 h-3" />}>
+              Live Infrastructure Demo
+            </Badge>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+            {/* 1. Dynamic QR Ticket */}
+            <div className="bg-[#FAF7F5] p-5 rounded-2xl border border-[#E8DDD7] space-y-3">
+              <div className="flex items-center justify-between text-xs font-semibold text-[#63474D]">
+                <span>PASS #SHB-8921</span>
+                <span className="text-[#2A7B5F] font-bold">VALID</span>
+>>>>>>> 04b4e5f (feat remove the demos)
               </div>
               <Badge variant="primary" icon={<ShieldCheck className="w-3.5 h-3.5" />}>
                 Live Infrastructure Demo

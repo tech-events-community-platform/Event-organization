@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { api } from '../../services/api';
 import type { User } from '../../types/user';
 import type { BadgeAward } from '../../types/attendance';
-import { mockAttendeeUser } from '../../data/mockUsers';
+import { requestApi } from '../../services/api';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import {
@@ -29,12 +29,16 @@ export const PublicProfilePage: React.FC = () => {
     const fetchProfile = async () => {
       setLoading(true);
       try {
-        const targetUser = mockAttendeeUser;
-        setProfileUser(targetUser);
-        const userBadges = await api.badges.getAttendeeBadges(targetUser.id);
-        setBadges(userBadges);
+        if (id) {
+          const res = await requestApi(`/users/${id}/public`);
+          if (res.data) {
+            setProfileUser(res.data);
+            const userBadges = await api.badges.getAttendeeBadges(id);
+            setBadges(userBadges);
+          }
+        }
       } catch (e) {
-        console.error(e);
+        console.error('Failed to load profile:', e);
       } finally {
         setLoading(false);
       }

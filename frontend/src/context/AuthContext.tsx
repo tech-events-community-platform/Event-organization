@@ -1,7 +1,12 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { User, UserRole } from '../types/user';
 import { api, getAuthToken } from '../services/api';
-import { mockAttendeeUser, mockOrganizerUser, mockAdminUser } from '../data/mockUsers';
+
+export interface RegisterResult {
+  user: User;
+  isPendingApproval?: boolean;
+  message?: string;
+}
 
 interface AuthContextType {
   user: User | null;
@@ -16,9 +21,9 @@ interface AuthContextType {
     role?: UserRole;
     organization?: string;
     phone?: string;
-  }) => Promise<User>;
+    bio?: string;
+  }) => Promise<RegisterResult>;
   logout: () => Promise<void>;
-  loginAsDemoUser: (demoRole: UserRole) => void;
   refreshUser: () => Promise<void>;
 }
 
@@ -85,13 +90,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     role?: UserRole;
     organization?: string;
     phone?: string;
-  }): Promise<User> => {
+    bio?: string;
+  }): Promise<RegisterResult> => {
     setIsLoading(true);
     try {
       const res = await api.auth.register(userData);
-      setUser(res.user);
-      localStorage.setItem('sheba_auth_user', JSON.stringify(res.user));
-      return res.user;
+      if (!res.isPendingApproval && res.user) {
+        setUser(res.user);
+        localStorage.setItem('sheba_auth_user', JSON.stringify(res.user));
+      }
+      return {
+        user: res.user,
+        isPendingApproval: res.isPendingApproval,
+        message: res.message,
+      };
     } finally {
       setIsLoading(false);
     }
@@ -109,19 +121,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const loginAsDemoUser = (demoRole: UserRole) => {
-    let targetUser: User;
-    if (demoRole === 'ORGANIZER') {
-      targetUser = mockOrganizerUser;
-    } else if (demoRole === 'ADMIN') {
-      targetUser = mockAdminUser;
-    } else {
-      targetUser = mockAttendeeUser;
-    }
-    setUser(targetUser);
-    localStorage.setItem('sheba_auth_user', JSON.stringify(targetUser));
-  };
-
   return (
     <AuthContext.Provider
       value={{
@@ -132,7 +131,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         register,
         logout,
-        loginAsDemoUser,
         refreshUser,
       }}
     >

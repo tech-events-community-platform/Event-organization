@@ -2,6 +2,7 @@ import { Request } from 'express';
 
 export type UserRole = 'attendee' | 'organizer' | 'admin';
 export type ProfileVisibility = 'public' | 'private';
+export type ApprovalStatus = 'pending' | 'approved' | 'rejected';
 
 export interface IUser {
   id: string;
@@ -16,6 +17,7 @@ export interface IUser {
   visibility: ProfileVisibility;
   member_since: string;
   is_active: boolean;
+  approval_status: ApprovalStatus;
   created_at: Date;
   updated_at: Date;
   // Computed stats

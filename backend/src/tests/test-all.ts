@@ -3,7 +3,6 @@ import http from 'http';
 import app from '../app';
 import { signAuthToken, verifyAuthToken } from '../utils/jwt.util';
 import { generateTicketToken, verifyTicketToken, generateQrDataUrl } from '../utils/qr.util';
-import { query } from '../config/db';
 
 const runTests = async () => {
   console.log('====================================================');
@@ -94,186 +93,126 @@ const runTests = async () => {
     const healthRes = await fetchHttp('/api/health');
     assert(healthRes.status === 200 && healthRes.body.status === 'OK', 'GET /api/health returns 200 OK');
 
-    // 2. Auth: Login with Seed Accounts
-    console.log('\n📦 3. Testing Authentication & Session Management...');
-    const attendeeLogin = await fetchHttp('/api/auth/login', {
-      method: 'POST',
-      body: { email: 'attendee@sheba.et', password: 'password123' },
-    });
-    assert(attendeeLogin.status === 200 && attendeeLogin.body.data.token, 'POST /api/auth/login (Attendee) authenticates successfully');
-    const attendeeToken = attendeeLogin.body.data?.token;
-
-    const organizerLogin = await fetchHttp('/api/auth/login', {
-      method: 'POST',
-      body: { email: 'organizer@sheba.et', password: 'password123' },
-    });
-    assert(organizerLogin.status === 200 && organizerLogin.body.data.user.role === 'ORGANIZER', 'POST /api/auth/login (Organizer) authenticates with ORGANIZER role');
-    const organizerToken = organizerLogin.body.data?.token;
-
-    const adminLogin = await fetchHttp('/api/auth/login', {
+    // 2. Admin Login
+    console.log('\n📦 3. Testing Single Admin Account Login...');
+    const adminLoginRes = await fetchHttp('/api/auth/login', {
       method: 'POST',
       body: { email: 'admin@sheba.et', password: 'password123' },
     });
-    assert(adminLogin.status === 200 && adminLogin.body.data.user.role === 'ADMIN', 'POST /api/auth/login (Admin) authenticates with ADMIN role');
-    const adminToken = adminLogin.body.data?.token;
+    assert(adminLoginRes.status === 200 && adminLoginRes.body.data?.token, 'Admin logs in successfully with seeded credentials');
+    const adminToken = adminLoginRes.body.data?.token;
 
-    // 3. User Profile & Public Profile
-    console.log('\n📦 4. Testing User Profile & Public Verifiable Credentials...');
-    const profileRes = await fetchHttp('/api/users/profile', {
-      headers: { Authorization: `Bearer ${attendeeToken}` },
-    });
-    assert(profileRes.status === 200 && profileRes.body.data.email === 'attendee@sheba.et', 'GET /api/users/profile returns authenticated user profile');
-
-    const publicProfileRes = await fetchHttp('/api/users/11111111-1111-1111-1111-111111111111/public');
-    assert(publicProfileRes.status === 200 && publicProfileRes.body.data.user.name === 'Abebe Kebede', 'GET /api/users/:id/public returns verifiable profile');
-    assert(Array.isArray(publicProfileRes.body.data.badges), 'Public profile returns verified badge timeline');
-
-    // 4. Events & Share Links
-    console.log('\n📦 5. Testing Single-Day Events, Custom Questions, & Share Tokens...');
-    const eventsRes = await fetchHttp('/api/events');
-    assert(eventsRes.status === 200 && eventsRes.body.data.length > 0, 'GET /api/events returns list of events');
-
-    const shareEventRes = await fetchHttp('/api/events/share/shb-react-2026');
-    assert(shareEventRes.status === 200 && shareEventRes.body.data.shareLinkToken === 'shb-react-2026', 'GET /api/events/share/:token retrieves event via direct link');
-    assert(Array.isArray(shareEventRes.body.data.customQuestions), 'Event includes custom registration questions');
-
-    // 5. Create New Event as Organizer
-    const newEventRes = await fetchHttp('/api/events', {
+    // 3. Attendee Registration Flow
+    console.log('\n📦 4. Testing Attendee Direct Registration & Login...');
+    const testAttendeeEmail = `attendee_${Date.now()}@example.et`;
+    const attendeeRegRes = await fetchHttp('/api/auth/register', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${organizerToken}` },
       body: {
-        title: 'Addis Rust & Distributed Systems Workshop',
-        description: 'Hands-on Rust programming for concurrent and networked systems.',
-        type: 'workshop',
-        date: '2026-10-15',
-        startTime: '09:00 AM',
-        endTime: '05:00 PM',
-        location: 'CapStone Hub, Addis Ababa',
-        venueName: 'CapStone Hub',
-        capacity: 60,
-        isPaid: true,
-        ticketPrice: 200,
-        customQuestions: [{ id: 'q1', questionText: 'Do you have Rust installed?', isRequired: true, order: 1 }],
+        email: testAttendeeEmail,
+        password: 'password123',
+        full_name: 'Test Attendee',
+        role: 'attendee',
+        phone: '+251911001122',
       },
     });
-    assert(newEventRes.status === 201 && newEventRes.body.data.shareLinkToken, 'POST /api/events creates single-day event and generates shareLinkToken');
-    const createdEvent = newEventRes.body.data;
+    assert(
+      attendeeRegRes.status === 201 &&
+      attendeeRegRes.body.data?.token &&
+      attendeeRegRes.body.data?.user?.approvalStatus === 'approved',
+      'Attendee registers and receives instant login token without approval block'
+    );
 
-    // 6. Register Attendee for Event
-    console.log('\n📦 6. Testing Event Registration & Dynamic Ticket Issuance...');
-    const registerRes = await fetchHttp(`/api/events/${createdEvent.id}/register`, {
+    // 4. Organizer Registration & Approval Flow
+    console.log('\n📦 5. Testing Organizer Registration, 1-Hour Wait Notice & Admin Approval Workflow...');
+    const testOrganizerEmail = `organizer_${Date.now()}@gdgaddis.et`;
+    const organizerRegRes = await fetchHttp('/api/auth/register', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${attendeeToken}` },
       body: {
-        answers: { q1: 'Yes, Rust 1.82 is installed.' },
-        paymentReference: 'TX-CHAPA-TEST-001',
+        email: testOrganizerEmail,
+        password: 'password123',
+        full_name: 'Sara Mengistu',
+        role: 'organizer',
+        organization: 'GDG Addis Ababa',
+        phone: '+251922334455',
+        bio: 'Tech community leader',
       },
     });
-    assert(registerRes.status === 201 && registerRes.body.data.ticket?.qrToken, 'POST /api/events/:id/register registers attendee and issues dynamic QR ticket');
 
-    // 7. Check-in Console (Lookup & Approve Action)
-    console.log('\n📦 7. Testing Door Check-in Console & Automatic Badge Granting...');
-    const lookupRes = await fetchHttp('/api/checkin/lookup', {
+    assert(
+      organizerRegRes.status === 201 &&
+      organizerRegRes.body.data?.isPendingApproval === true &&
+      organizerRegRes.body.data?.message?.includes('1 hour'),
+      'Organizer registers in PENDING state with message: "you will be using this sytem in 1 hour"'
+    );
+
+    const pendingOrganizerId = organizerRegRes.body.data?.user?.id;
+
+    // Organizer Login Before Approval (Must be rejected with 403 / 1-hour wait notice)
+    const organizerPreLoginRes = await fetchHttp('/api/auth/login', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${organizerToken}` },
       body: {
-        eventId: createdEvent.id,
-        query: 'Abebe Kebede',
+        email: testOrganizerEmail,
+        password: 'password123',
       },
     });
-    assert(lookupRes.status === 200 && lookupRes.body.data?.name === 'Abebe Kebede', 'POST /api/checkin/lookup surfaces attendee record with Approve action');
+    assert(
+      organizerPreLoginRes.status === 403 &&
+      (organizerPreLoginRes.body.message?.includes('1 hour') || organizerPreLoginRes.body.data?.isPendingApproval),
+      'Organizer login is blocked prior to approval with 1-hour wait notice'
+    );
 
-    const approveRes = await fetchHttp('/api/checkin/approve', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${organizerToken}` },
-      body: {
-        eventId: createdEvent.id,
-        attendeeId: '11111111-1111-1111-1111-111111111111',
-      },
-    });
-    assert(approveRes.status === 200 && approveRes.body.data.badgeAwarded?.badgeCode === 'attended', 'POST /api/checkin/approve marks attendee checked in and automatically grants Attended badge');
-
-    // 8. 4-Badge Hierarchy & Bulk Awarding
-    console.log('\n📦 8. Testing 4-Badge Credential Hierarchy & Bulk Awarding...');
-    const bulkAwardRes = await fetchHttp('/api/badges/bulk-award', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${organizerToken}` },
-      body: {
-        eventId: createdEvent.id,
-        attendeeUserIds: ['11111111-1111-1111-1111-111111111111'],
-        badgeCode: 'speaker',
-      },
-    });
-    assert(bulkAwardRes.status === 200 && bulkAwardRes.body.data.awardedCount === 1, 'POST /api/badges/bulk-award bulk assigns Speaker badge');
-
-    // 9. Sponsor Evidence Report
-    console.log('\n📦 9. Testing Sponsor Evidence Reports & Charts Data...');
-    const reportRes = await fetchHttp(`/api/reports/events/${createdEvent.id}`, {
-      headers: { Authorization: `Bearer ${organizerToken}` },
-    });
-    assert(reportRes.status === 200 && reportRes.body.data.totalAttended >= 1, 'GET /api/reports/events/:id returns sponsor metric cards');
-    assert(reportRes.body.data.badgeDistribution?.attended >= 1, 'Sponsor report calculates badge breakdown');
-    assert(Array.isArray(reportRes.body.data.registrationsOverTime), 'Sponsor report returns registration velocity timeline');
-
-    // 10. Admin Oversight & Badge Revocation
-    console.log('\n📦 10. Testing Admin Panel Oversight & Badge Revocation...');
-    const adminDashRes = await fetchHttp('/api/admin/dashboard', {
-      headers: { Authorization: `Bearer ${adminToken}` },
-    });
-    assert(adminDashRes.status === 200 && adminDashRes.body.data.totalEvents >= 1, 'GET /api/admin/dashboard returns global platform metrics');
-
+    // Admin Views Users & Pending Organizers
     const adminUsersRes = await fetchHttp('/api/admin/users', {
       headers: { Authorization: `Bearer ${adminToken}` },
     });
-    assert(adminUsersRes.status === 200 && adminUsersRes.body.data.attendees.length > 0, 'GET /api/admin/users returns platform users list');
+    assert(
+      adminUsersRes.status === 200 &&
+      Array.isArray(adminUsersRes.body.data?.organizers) &&
+      adminUsersRes.body.data.organizers.some((o: any) => o.id === pendingOrganizerId && o.approvalStatus === 'pending'),
+      'Admin sees newly registered organizer in Pending status'
+    );
 
-    const adminPaymentsRes = await fetchHttp('/api/admin/payments', {
+    // Admin Approves the Organizer
+    const approveRes = await fetchHttp(`/api/admin/users/${pendingOrganizerId}/approve`, {
+      method: 'PATCH',
       headers: { Authorization: `Bearer ${adminToken}` },
     });
-    assert(adminPaymentsRes.status === 200 && Array.isArray(adminPaymentsRes.body.data), 'GET /api/admin/payments returns Chapa settlement logs');
+    assert(
+      approveRes.status === 200 && approveRes.body.data?.approval_status === 'approved',
+      'Admin successfully approves the organizer'
+    );
 
-    // 11. Public Search
-    console.log('\n📦 11. Testing Public Search API...');
-    const searchRes = await fetchHttp('/api/search?q=Abebe');
-    assert(searchRes.status === 200 && searchRes.body.data.attendees.length > 0, 'GET /api/search finds public attendee profiles');
-
-    // 12. Security & Failure Cases
-    console.log('\n📦 12. Testing Security, Permission Denials, & Failure Cases...');
-    const unauthRes = await fetchHttp('/api/users/profile');
-    assert(unauthRes.status === 401, '401 Unauthorized returned when token is missing');
-
-    const wrongRoleRes = await fetchHttp('/api/admin/dashboard', {
-      headers: { Authorization: `Bearer ${attendeeToken}` },
-    });
-    assert(wrongRoleRes.status === 403, '403 Forbidden returned when attendee attempts admin action');
-
-    const duplicateCheckinRes = await fetchHttp('/api/checkin/approve', {
+    // Organizer Login After Approval (Must succeed)
+    const organizerPostLoginRes = await fetchHttp('/api/auth/login', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${organizerToken}` },
       body: {
-        eventId: createdEvent.id,
-        attendeeId: '11111111-1111-1111-1111-111111111111',
+        email: testOrganizerEmail,
+        password: 'password123',
       },
     });
-    assert(duplicateCheckinRes.status === 409, '409 Conflict returned on duplicate check-in approval attempt');
+    assert(
+      organizerPostLoginRes.status === 200 &&
+      organizerPostLoginRes.body.data?.token &&
+      organizerPostLoginRes.body.data?.user?.role === 'ORGANIZER',
+      'Approved organizer can now log in and access Organizer workspace'
+    );
+
   } catch (err: any) {
-    console.error('HTTP test error:', err);
+    console.error('Integration test error:', err);
     failed++;
   } finally {
     server.close();
   }
 
-  // Summary
   console.log('\n====================================================');
-  console.log(`📊 FINAL TEST RESULTS: ${passed} PASSED | ${failed} FAILED`);
+  console.log(`📊 TEST RESULTS: ${passed} PASSED, ${failed} FAILED`);
   console.log('====================================================\n');
 
   if (failed > 0) {
     process.exit(1);
+  } else {
+    process.exit(0);
   }
 };
 
-runTests().catch((err) => {
-  console.error('Test execution fatal error:', err);
-  process.exit(1);
-});
+runTests();

@@ -6,9 +6,9 @@ const pool = new Pool({
   ssl: ENV.DATABASE_URL.includes('neon.tech') || ENV.NODE_ENV === 'production'
     ? { rejectUnauthorized: false }
     : undefined,
-  max: 20,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 10000,
+  max: 10,
+  idleTimeoutMillis: 60000,
+  connectionTimeoutMillis: 30000,
 });
 
 pool.on('error', (err) => {

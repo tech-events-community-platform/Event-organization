@@ -7,16 +7,26 @@ export class EventService {
     const isPaid = Boolean(row.is_paid);
     const ticketPrice = parseFloat(row.ticket_price || '0');
 
+    let formattedDate = '2026-09-20';
+    if (row.event_date) {
+      try {
+        const d = new Date(row.event_date);
+        formattedDate = d.toISOString().split('T')[0];
+      } catch {
+        formattedDate = String(row.event_date);
+      }
+    }
+
     return {
       id: row.id,
       organizerId: row.organizer_id,
-      organizerName: row.organizer_name || 'GDG Addis',
+      organizerName: row.organizer_organization || row.organization || row.organizer_name || 'Organizer',
       organizerEmail: row.organizer_email || '',
       title: row.title,
       description: row.description,
       type: (row.event_type || 'workshop') as EventType,
       category: row.category || 'Tech',
-      date: row.event_date ? new Date(row.event_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '2026',
+      date: formattedDate,
       rawDate: row.event_date,
       startTime: row.start_time || '09:00 AM',
       endTime: row.end_time || '05:00 PM',
@@ -104,7 +114,16 @@ export class EventService {
       ]
     );
 
-    return this.formatEvent(result.rows[0]);
+    const insertedEvent = result.rows[0];
+    const userRes = await query('SELECT full_name, organization, email FROM users WHERE id = $1', [organizerId]);
+    const userRow = userRes.rows[0] || {};
+
+    return this.formatEvent({
+      ...insertedEvent,
+      organizer_name: userRow.full_name,
+      organizer_organization: userRow.organization,
+      organizer_email: userRow.email,
+    });
   }
 
   static async getEvents(filters: {

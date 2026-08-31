@@ -21,6 +21,26 @@ export class AdminController {
     }
   }
 
+  static async approveOrganizer(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = req.params.id as string;
+      const updated = await AdminService.approveOrganizer(id);
+      return sendSuccess(res, updated, 'Organizer approved and activated successfully.');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async rejectOrganizer(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = req.params.id as string;
+      const updated = await AdminService.rejectOrganizer(id);
+      return sendSuccess(res, updated, 'Organizer registration rejected.');
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async toggleUserStatus(req: Request, res: Response, next: NextFunction) {
     try {
       const id = req.params.id as string;

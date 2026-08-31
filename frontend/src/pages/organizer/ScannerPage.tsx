@@ -27,15 +27,19 @@ export const ScannerPage: React.FC = () => {
   const [surfacedAttendee, setSurfacedAttendee] = useState<AttendeeRosterItem | null>(null);
   const [isApproving, setIsApproving] = useState(false);
   const [approvalResult, setApprovalResult] = useState<{
-    badge: BadgeAward;
-    rosterItem: AttendeeRosterItem;
+    badge?: BadgeAward;
+    rosterItem?: AttendeeRosterItem;
   } | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    if (id) {
-      api.events.getById(id).then((e) => setEvent(e || null));
-    }
+    const fetchEvent = async () => {
+      if (id) {
+        const ev = await api.events.getById(id);
+        setEvent(ev || null);
+      }
+    };
+    fetchEvent();
   }, [id]);
 
   const handleLookup = async (queryText: string) => {
@@ -68,13 +72,17 @@ export const ScannerPage: React.FC = () => {
       const res = await api.checkin.approveCheckIn({
         eventId: id,
         attendeeRosterId: surfacedAttendee.id,
-        approvedByOrganizerId: user?.id || 'demo-organizer-001',
+        approvedByOrganizerId: user?.id || 'org-lead',
       });
-      setApprovalResult({
-        badge: res.badgeAwarded,
-        rosterItem: res.rosterItem,
-      });
-      setSurfacedAttendee(null);
+      if (res.success) {
+        setApprovalResult({
+          badge: res.badgeAwarded,
+          rosterItem: res.rosterItem || surfacedAttendee,
+        });
+        setSurfacedAttendee(null);
+      } else {
+        setErrorMsg(res.message);
+      }
     } catch (e: any) {
       setErrorMsg(e.message || 'Check-in approval failed.');
     } finally {
@@ -245,16 +253,16 @@ export const ScannerPage: React.FC = () => {
               Check-In Approved!
             </h3>
             <p className="text-xs text-[#2D1F23]">
-              <strong>{approvalResult.rosterItem.name}</strong> checked in successfully at {approvalResult.rosterItem.checkInTime}.
+              <strong>{approvalResult.rosterItem?.name || 'Attendee'}</strong> checked in successfully at {approvalResult.rosterItem?.checkInTime || 'now'}.
             </p>
           </div>
 
           <div className="p-4 bg-white rounded-2xl border border-[#E8DDD7] text-left text-xs space-y-1">
             <div className="flex items-center gap-2 text-[#63474D] font-bold">
               <Award className="w-4 h-4 text-[#FFA686]" />
-              <span>Automatic Badge Granted: "{approvalResult.badge.badgeLabel}"</span>
+              <span>Automatic Badge Granted: &quot;{approvalResult.badge?.badgeLabel || 'Attended'}&quot;</span>
             </div>
-            <p className="text-[11px] text-[#756366]">Given by {approvalResult.badge.issuerName}</p>
+            <p className="text-[11px] text-[#756366]">Given by {approvalResult.badge?.issuerName || 'Organizer'}</p>
           </div>
 
           <Button onClick={handleReset} variant="primary" size="sm" icon={<RotateCcw className="w-4 h-4" />}>

@@ -4,10 +4,12 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-  "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
-  "build": "tsc && copyfiles -u 2 src/db/schema.sql dist/db",
-  "start": "node dist/server.js",
-  "test": "ts-node src/tests/test-all.ts"
+    "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
+    "build": "tsc && copyfiles -u 2 src/db/schema.sql dist/db",
+    "start": "node dist/server.js",
+    "db:migrate": "ts-node src/db/migrate.ts",
+    "db:seed": "ts-node src/db/seed.ts",
+    "test": "ts-node src/tests/test-all.ts"
   },
   "keywords": [],
   "author": "",

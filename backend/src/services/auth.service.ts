@@ -16,6 +16,8 @@ export class AuthService {
       organization: user.organization || undefined,
       phone: user.phone || undefined,
       bio: user.bio || undefined,
+      isActive: user.is_active !== false,
+      approvalStatus: user.approval_status || (user.role?.toLowerCase() === 'organizer' ? 'pending' : 'approved'),
       stats: stats || {
         meetupsCount: 0,
         workshopsCount: 0,
@@ -55,7 +57,7 @@ export class AuthService {
     phone?: string;
     bio?: string;
     organization?: string;
-  }): Promise<{ user: any; token: string }> {
+  }): Promise<{ user: any; token: string; isPendingApproval?: boolean; message?: string }> {
     const {
       email,
       password,
@@ -66,6 +68,9 @@ export class AuthService {
     } = data;
 
     const normalizedRole = (data.role || 'attendee').toLowerCase();
+    const isOrganizer = normalizedRole === 'organizer';
+    const initialApprovalStatus = isOrganizer ? 'pending' : 'approved';
+    const initialIsActive = !isOrganizer;
 
     // Check existing email
     const existing = await query<IUser>(
@@ -84,13 +89,26 @@ export class AuthService {
     const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(full_name)}&background=63474D&color=fff`;
 
     const result = await query<IUser>(
-      `INSERT INTO users (email, password_hash, full_name, role, phone, bio, organization, avatar_url, visibility, member_since)
-       VALUES (LOWER($1), $2, $3, $4, $5, $6, $7, $8, 'public', 'August 2026')
-       RETURNING id, email, full_name, role, phone, bio, organization, avatar_url, visibility, member_since, created_at, updated_at`,
-      [email, passwordHash, full_name, normalizedRole, phone, bio, organization, avatarUrl]
+      `INSERT INTO users (email, password_hash, full_name, role, phone, bio, organization, avatar_url, visibility, member_since, is_active, approval_status)
+       VALUES (LOWER($1), $2, $3, $4, $5, $6, $7, $8, 'public', 'August 2026', $9, $10)
+       RETURNING id, email, full_name, role, phone, bio, organization, avatar_url, visibility, member_since, is_active, approval_status, created_at, updated_at`,
+      [email, passwordHash, full_name, normalizedRole, phone, bio, organization, avatarUrl, initialIsActive, initialApprovalStatus]
     );
 
     const rawUser = result.rows[0];
+
+    // If organizer: registration goes to pending approval queue
+    if (isOrganizer) {
+      const user = this.formatUserResponse(rawUser);
+      return {
+        user,
+        token: '',
+        isPendingApproval: true,
+        message: 'you will be using this sytem in 1 hour',
+      };
+    }
+
+    // Attendee: immediate active login token
     const token = signAuthToken({
       userId: rawUser.id,
       email: rawUser.email,
@@ -99,7 +117,7 @@ export class AuthService {
     });
 
     const user = this.formatUserResponse(rawUser);
-    return { user, token };
+    return { user, token, isPendingApproval: false };
   }
 
   static async loginUser(data: {
@@ -109,7 +127,7 @@ export class AuthService {
     const { email, password } = data;
 
     const result = await query<IUser>(
-      `SELECT id, email, password_hash, full_name, role, phone, bio, organization, avatar_url, visibility, member_since, created_at, updated_at
+      `SELECT id, email, password_hash, full_name, role, phone, bio, organization, avatar_url, visibility, member_since, is_active, approval_status, created_at, updated_at
        FROM users WHERE LOWER(email) = LOWER($1)`,
       [email]
     );
@@ -129,6 +147,24 @@ export class AuthService {
       throw err;
     }
 
+    const userRole = (rawUser.role || '').toLowerCase();
+    const isPending = rawUser.approval_status === 'pending' || rawUser.approval_status === 'rejected';
+
+    // Organizer pending approval check
+    if (userRole === 'organizer' && (isPending || !rawUser.is_active)) {
+      const err: any = new Error('you will be using this sytem in 1 hour');
+      err.statusCode = 403;
+      err.isPendingApproval = true;
+      err.approvalStatus = rawUser.approval_status || 'pending';
+      throw err;
+    }
+
+    if (!rawUser.is_active && userRole !== 'organizer') {
+      const err: any = new Error('Your account has been deactivated. Please contact support.');
+      err.statusCode = 403;
+      throw err;
+    }
+
     const stats = await this.computeUserStats(rawUser.id);
     const token = signAuthToken({
       userId: rawUser.id,
@@ -143,7 +179,7 @@ export class AuthService {
 
   static async getCurrentUser(userId: string): Promise<any> {
     const result = await query<IUser>(
-      `SELECT id, email, full_name, role, phone, bio, organization, avatar_url, visibility, member_since, created_at, updated_at
+      `SELECT id, email, full_name, role, phone, bio, organization, avatar_url, visibility, member_since, is_active, approval_status, created_at, updated_at
        FROM users WHERE id = $1`,
       [userId]
     );

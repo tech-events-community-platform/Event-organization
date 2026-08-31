@@ -1,39 +1,33 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/ui/Button';
-import { Badge } from '../../components/ui/Badge';
 import {
   Lock,
   Mail,
-  User,
-  Building,
-  CheckCircle2,
   AlertCircle,
+<<<<<<< HEAD
+=======
+  Clock,
+  ArrowLeft,
+>>>>>>> 04b4e5f (feat remove the demos)
 } from 'lucide-react';
-import type { UserRole } from '../../types/user';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const { login, register, loginAsDemoUser } = useAuth();
+  const { login } = useAuth();
 
-  const [authMode, setAuthMode] = useState<'LOGIN' | 'REGISTER'>('LOGIN');
-  const [selectedRole, setSelectedRole] = useState<UserRole>('ATTENDEE');
-
-  // Form Fields
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [fullName, setFullName] = useState('');
-  const [organization, setOrganization] = useState('');
-  const [isAgeAttested, setIsAgeAttested] = useState(false);
 
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [isPendingNotice, setIsPendingNotice] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
+<<<<<<< HEAD
     setSuccessMsg(null);
 
     if (authMode === 'REGISTER' && !isAgeAttested) {
@@ -41,54 +35,41 @@ export const LoginPage: React.FC = () => {
       return;
     }
 
+=======
+    setIsPendingNotice(false);
+>>>>>>> 04b4e5f (feat remove the demos)
     setIsLoading(true);
 
     try {
-      if (authMode === 'LOGIN') {
-        const loggedUser = await login(email, password);
-        if (loggedUser.role === 'ORGANIZER') {
-          navigate('/organizer');
-        } else if (loggedUser.role === 'ADMIN') {
-          navigate('/admin');
-        } else {
-          navigate('/app/events');
-        }
+      const loggedUser = await login(email.trim(), password);
+      if (loggedUser.role === 'ORGANIZER') {
+        navigate('/organizer');
+      } else if (loggedUser.role === 'ADMIN') {
+        navigate('/admin');
       } else {
-        const registeredUser = await register({
-          email,
-          password,
-          full_name: fullName,
-          role: selectedRole,
-          organization: selectedRole === 'ORGANIZER' ? organization : undefined,
-        });
-        setSuccessMsg('Account created successfully! Verification email dispatched.');
-        setTimeout(() => {
-          if (registeredUser.role === 'ORGANIZER') {
-            navigate('/organizer');
-          } else {
-            navigate('/app/events');
-          }
-        }, 1200);
+        navigate('/app/events');
       }
     } catch (err: any) {
-      setErrorMsg(err.message || 'Authentication failed. Please verify your credentials.');
+      const message = err.message || 'Authentication failed. Please verify your credentials.';
+      
+      // Check if organizer is pending approval
+      if (
+        err.isPendingApproval ||
+        message.toLowerCase().includes('1 hour') ||
+        message.toLowerCase().includes('pending')
+      ) {
+        setIsPendingNotice(true);
+        setErrorMsg('you will be using this sytem in 1 hour');
+      } else {
+        setErrorMsg(message);
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleDemoLogin = (role: UserRole) => {
-    loginAsDemoUser(role);
-    if (role === 'ORGANIZER') {
-      navigate('/organizer');
-    } else if (role === 'ADMIN') {
-      navigate('/admin');
-    } else {
-      navigate('/app/events');
-    }
-  };
-
   return (
+<<<<<<< HEAD
     <div className="max-w-md mx-auto pt-24 sm:pt-32 pb-16 px-4 space-y-6">
       {/* Header */}
       <div className="text-center space-y-2 pt-2">
@@ -97,120 +78,69 @@ export const LoginPage: React.FC = () => {
         </h1>
         <p className="text-xs sm:text-sm text-gray-500 font-light">
           One account, one role. Verifiable attendance and credentials for Ethiopia.
+=======
+    <div className="max-w-md mx-auto py-12 px-4 space-y-6">
+      {/* Back to Home Button */}
+      <div className="flex items-center justify-start">
+        <Link
+          to="/"
+          className="inline-flex items-center gap-2 text-xs font-semibold text-[#756366] hover:text-[#2D1F23] bg-white hover:bg-[#FAF7F5] px-3.5 py-1.5 rounded-full border border-[#E8DDD7] transition-all shadow-xs"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span>Back to Home</span>
+        </Link>
+      </div>
+
+      {/* Header */}
+      <div className="text-center space-y-2">
+        <div className="w-12 h-12 rounded-2xl bg-[#63474D] flex items-center justify-center text-[#FFA686] mx-auto shadow-sm">
+          <Award className="w-6 h-6" />
+        </div>
+        <h1 className="font-serif text-3xl font-extrabold text-[#2D1F23]">
+          Sign in to Sheba
+        </h1>
+        <p className="text-xs text-[#756366]">
+          Verifiable attendance credentials and community tech events in Ethiopia.
+>>>>>>> 04b4e5f (feat remove the demos)
         </p>
       </div>
 
-      {/* Role Selector Tabs */}
-      <div className="flex bg-[#F4EFEB] p-1 rounded-xl border border-[#E8DDD7]">
-        <button
-          type="button"
-          onClick={() => setSelectedRole('ATTENDEE')}
-          className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
-            selectedRole === 'ATTENDEE'
-              ? 'bg-[#63474D] text-white shadow-xs'
-              : 'text-[#756366] hover:text-[#2D1F23]'
-          }`}
-        >
-          Attendee Account
-        </button>
-        <button
-          type="button"
-          onClick={() => setSelectedRole('ORGANIZER')}
-          className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
-            selectedRole === 'ORGANIZER'
-              ? 'bg-[#63474D] text-white shadow-xs'
-              : 'text-[#756366] hover:text-[#2D1F23]'
-          }`}
-        >
-          Organizer Account
-        </button>
-      </div>
-
-      {/* Mode Switch (Sign in vs Register) */}
-      <div className="flex border-b border-[#E8DDD7] text-xs font-bold text-center">
-        <button
-          type="button"
-          onClick={() => {
-            setAuthMode('LOGIN');
-            setErrorMsg(null);
-          }}
-          className={`flex-1 pb-2 border-b-2 transition-colors ${
-            authMode === 'LOGIN'
-              ? 'border-[#63474D] text-[#63474D]'
-              : 'border-transparent text-[#756366] hover:text-[#2D1F23]'
-          }`}
-        >
-          Sign In
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setAuthMode('REGISTER');
-            setErrorMsg(null);
-          }}
-          className={`flex-1 pb-2 border-b-2 transition-colors ${
-            authMode === 'REGISTER'
-              ? 'border-[#63474D] text-[#63474D]'
-              : 'border-transparent text-[#756366] hover:text-[#2D1F23]'
-          }`}
-        >
-          Register New Account
-        </button>
-      </div>
-
       {/* Form Card */}
-      <div className="bg-white p-6 rounded-3xl border border-[#E8DDD7] shadow-xs space-y-4">
-        {errorMsg && (
+      <div className="bg-white p-6 rounded-3xl border border-[#E8DDD7] shadow-sm space-y-4">
+        {/* Pending Approval Notice Banner */}
+        {isPendingNotice && (
+          <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-900 space-y-2.5">
+            <div className="flex items-center gap-2 font-bold">
+              <Clock className="w-4 h-4 text-amber-700 animate-pulse" />
+              <span>Organizer Approval Pending</span>
+            </div>
+            <p className="text-[11px] text-amber-800">
+              Your organizer registration has been received and is in the Admin verification queue.
+            </p>
+            <p className="font-extrabold text-xs text-[#63474D]">
+              you will be using this sytem in 1 hour
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              fullWidth
+              onClick={() => navigate('/pending-approval', { state: { email } })}
+              className="mt-1"
+            >
+              View Approval Status Screen
+            </Button>
+          </div>
+        )}
+
+        {errorMsg && !isPendingNotice && (
           <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-start gap-2">
             <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
             <span>{errorMsg}</span>
           </div>
         )}
 
-        {successMsg && (
-          <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-700 flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4" />
-            <span>{successMsg}</span>
-          </div>
-        )}
-
         <form onSubmit={handleSubmit} className="space-y-3.5">
-          {authMode === 'REGISTER' && (
-            <div>
-              <label className="block text-xs font-bold text-[#2D1F23] mb-1">Full Name</label>
-              <div className="relative">
-                <User className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#756366]" />
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Abebe Kebede"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  className="w-full pl-10 pr-3 py-2 bg-[#FAF7F5] border border-[#E8DDD7] rounded-xl text-xs text-[#2D1F23] focus:outline-none focus:ring-2 focus:ring-[#63474D]"
-                />
-              </div>
-            </div>
-          )}
-
-          {authMode === 'REGISTER' && selectedRole === 'ORGANIZER' && (
-            <div>
-              <label className="block text-xs font-bold text-[#2D1F23] mb-1">
-                Community or Organization Name
-              </label>
-              <div className="relative">
-                <Building className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#756366]" />
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. GDG Addis, ALX Tech Community"
-                  value={organization}
-                  onChange={(e) => setOrganization(e.target.value)}
-                  className="w-full pl-10 pr-3 py-2 bg-[#FAF7F5] border border-[#E8DDD7] rounded-xl text-xs text-[#2D1F23] focus:outline-none focus:ring-2 focus:ring-[#63474D]"
-                />
-              </div>
-            </div>
-          )}
-
           <div>
             <label className="block text-xs font-bold text-[#2D1F23] mb-1">Email Address</label>
             <div className="relative">
@@ -221,7 +151,7 @@ export const LoginPage: React.FC = () => {
                 placeholder="name@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-10 pr-3 py-2 bg-[#FAF7F5] border border-[#E8DDD7] rounded-xl text-xs text-[#2D1F23] focus:outline-none focus:ring-2 focus:ring-[#63474D]"
+                className="w-full pl-10 pr-3 py-2.5 bg-[#FAF7F5] border border-[#E8DDD7] rounded-xl text-xs text-[#2D1F23] focus:outline-none focus:ring-2 focus:ring-[#63474D]"
               />
             </div>
           </div>
@@ -236,11 +166,12 @@ export const LoginPage: React.FC = () => {
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-10 pr-3 py-2 bg-[#FAF7F5] border border-[#E8DDD7] rounded-xl text-xs text-[#2D1F23] focus:outline-none focus:ring-2 focus:ring-[#63474D]"
+                className="w-full pl-10 pr-3 py-2.5 bg-[#FAF7F5] border border-[#E8DDD7] rounded-xl text-xs text-[#2D1F23] focus:outline-none focus:ring-2 focus:ring-[#63474D]"
               />
             </div>
           </div>
 
+<<<<<<< HEAD
           {authMode === 'REGISTER' && (
             <div className="pt-1">
               <label className="flex items-start gap-2.5 cursor-pointer text-xs text-[#756366]">
@@ -257,20 +188,20 @@ export const LoginPage: React.FC = () => {
             </div>
           )}
 
+=======
+>>>>>>> 04b4e5f (feat remove the demos)
           <Button
             type="submit"
             fullWidth
             variant="primary"
             isLoading={isLoading}
-            className="mt-2"
+            className="mt-2 py-3"
           >
-            {authMode === 'LOGIN'
-              ? `Sign In as ${selectedRole === 'ORGANIZER' ? 'Organizer' : 'Attendee'}`
-              : `Register as ${selectedRole === 'ORGANIZER' ? 'Organizer' : 'Attendee'}`}
+            Sign In
           </Button>
         </form>
-      </div>
 
+<<<<<<< HEAD
       {/* Fast Demo Access Quick-links */}
       <div className="bg-[#F4EFEB] p-4 rounded-2xl border border-[#E8DDD7] space-y-2.5">
         <div className="flex items-center justify-between">
@@ -302,6 +233,13 @@ export const LoginPage: React.FC = () => {
           >
             Admin
           </button>
+=======
+        <div className="pt-3 text-center border-t border-[#E8DDD7] text-xs text-[#756366]">
+          Don't have an account?{' '}
+          <Link to="/register" className="font-bold text-[#63474D] hover:underline">
+            Register as Attendee or Organizer
+          </Link>
+>>>>>>> 04b4e5f (feat remove the demos)
         </div>
       </div>
     </div>

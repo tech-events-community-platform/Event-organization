@@ -24,7 +24,7 @@ export const TicketPage: React.FC = () => {
 
         if (user) {
           const tickets = await api.registration.getAttendeeTickets(user.id);
-          const found = tickets.find((t) => t.eventId === eventId);
+          const found = tickets.find((t: Ticket) => t.eventId === eventId);
           setTicket(found || tickets[0] || null);
         }
       }

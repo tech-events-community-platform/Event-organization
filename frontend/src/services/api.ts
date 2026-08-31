@@ -2,11 +2,6 @@ import type { Event, EventType } from '../types/event';
 import type { Ticket } from '../types/ticket';
 import type { BadgeAward, BadgeCode, SponsorReportData, AttendeeRosterItem } from '../types/attendance';
 import type { User, UserRole, ProfileVisibility } from '../types/user';
-import { mockEvents } from '../data/mockEvents';
-import { mockTickets } from '../data/mockTickets';
-import { mockBadgeAwards, mockAttendeesRoster, mockSponsorReport } from '../data/mockAttendance';
-import { mockAttendeeUser, mockOrganizerUser, mockAdminUser } from '../data/mockUsers';
-import { mockPaymentIssues } from '../data/mockAdminData';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -22,18 +17,18 @@ export const removeAuthToken = (): void => {
   localStorage.removeItem('sheba_auth_token');
 };
 
-// In-memory & local-storage state holders for rich client-side interactivity & offline resilience
+// In-memory & local-storage state holders
 const loadInitialEvents = (): Event[] => {
   try {
     const saved = localStorage.getItem('sheba_events_store');
     if (saved) {
       const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (Array.isArray(parsed)) return parsed;
     }
   } catch (e) {
     console.error('Failed to parse saved events:', e);
   }
-  return [...mockEvents];
+  return [];
 };
 
 let eventsStore: Event[] = loadInitialEvents();
@@ -44,11 +39,10 @@ const saveEventsStore = () => {
     console.error('Failed to save events:', e);
   }
 };
-let ticketsStore: Ticket[] = [...mockTickets];
-let badgeAwardsStore: BadgeAward[] = [...mockBadgeAwards];
-let attendeeRosterStore: Record<string, AttendeeRosterItem[]> = {
-  evt_react_workshop_2026: [...mockAttendeesRoster],
-};
+
+let ticketsStore: Ticket[] = [];
+let badgeAwardsStore: BadgeAward[] = [];
+let attendeeRosterStore: Record<string, AttendeeRosterItem[]> = {};
 
 export async function requestApi<T = any>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const token = getAuthToken();
@@ -85,6 +79,7 @@ export async function requestApi<T = any>(endpoint: string, options: RequestInit
     const errorObj: any = new Error(errorMsg);
     errorObj.status = response.status;
     errorObj.data = data;
+    errorObj.isPendingApproval = data?.isPendingApproval || response.status === 403;
     throw errorObj;
   }
 
@@ -95,27 +90,18 @@ export const api = {
   // Authentication
   auth: {
     login: async (creds: { email: string; password: string }): Promise<{ user: User; token: string }> => {
-      try {
-        const res = await requestApi('/auth/login', {
-          method: 'POST',
-          body: JSON.stringify(creds),
-        });
-        if (res.data?.token) setAuthToken(res.data.token);
-        return {
-          user: res.data.user,
-          token: res.data.token,
-        };
-      } catch (err) {
-        // Fallback for seamless demo
-        let matchedUser = mockAttendeeUser;
-        if (creds.email.includes('organizer') || creds.email.includes('sara')) {
-          matchedUser = mockOrganizerUser;
-        } else if (creds.email.includes('admin') || creds.email.includes('hanan')) {
-          matchedUser = mockAdminUser;
-        }
-        setAuthToken('demo-jwt-token');
-        return { user: matchedUser, token: 'demo-jwt-token' };
+      const res = await requestApi('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify(creds),
+      });
+
+      if (res.data?.token) {
+        setAuthToken(res.data.token);
       }
+      return {
+        user: res.data.user,
+        token: res.data.token,
+      };
     },
 
     register: async (data: {
@@ -125,39 +111,23 @@ export const api = {
       role?: UserRole;
       organization?: string;
       phone?: string;
-    }): Promise<{ user: User; token: string }> => {
-      try {
-        const res = await requestApi('/auth/register', {
-          method: 'POST',
-          body: JSON.stringify(data),
-        });
-        if (res.data?.token) setAuthToken(res.data.token);
-        return {
-          user: res.data.user,
-          token: res.data.token,
-        };
-      } catch (err) {
-        const role = data.role || 'ATTENDEE';
-        const newUser: User = {
-          id: `usr_${Date.now()}`,
-          name: data.full_name,
-          email: data.email,
-          role,
-          avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(data.full_name)}&background=63474D&color=fff`,
-          memberSince: 'August 2026',
-          visibility: 'public',
-          organization: data.organization,
-          phone: data.phone,
-          stats: {
-            meetupsCount: 0,
-            workshopsCount: 0,
-            hackathonsCount: 0,
-            totalEventsAttended: 0,
-          },
-        };
-        setAuthToken('demo-jwt-token');
-        return { user: newUser, token: 'demo-jwt-token' };
+      bio?: string;
+    }): Promise<{ user: User; token?: string; isPendingApproval?: boolean; message?: string }> => {
+      const res = await requestApi('/auth/register', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+
+      if (res.data?.token) {
+        setAuthToken(res.data.token);
       }
+
+      return {
+        user: res.data.user,
+        token: res.data.token,
+        isPendingApproval: res.data.isPendingApproval || false,
+        message: res.data.message || res.message,
+      };
     },
 
     getMe: async (): Promise<User | null> => {
@@ -172,37 +142,99 @@ export const api = {
 
     logout: async (): Promise<void> => {
       removeAuthToken();
+      try {
+        await requestApi('/auth/logout', { method: 'POST' });
+      } catch {
+        // ignore
+      }
     },
   },
 
   // Events API
   events: {
-    getAll: async (): Promise<Event[]> => {
+    getAll: async (organizerId?: string): Promise<Event[]> => {
+      try {
+        const queryParam = organizerId ? `?organizerId=${encodeURIComponent(organizerId)}` : '';
+        const res = await requestApi(`/events${queryParam}`);
+        if (res.data && Array.isArray(res.data)) {
+          if (!organizerId) {
+            eventsStore = res.data;
+            saveEventsStore();
+          }
+          return res.data;
+        }
+      } catch (e) {
+        console.warn('Backend event fetch fallback:', e);
+      }
+      if (organizerId) {
+        return eventsStore.filter((e) => e.organizerId === organizerId);
+      }
       return [...eventsStore];
     },
 
     getById: async (id: string): Promise<Event | null> => {
+      try {
+        const res = await requestApi(`/events/${id}`);
+        if (res.data) return res.data;
+      } catch {
+        // fallback
+      }
       const ev = eventsStore.find((e) => e.id === id);
       return ev || null;
     },
 
     getByShareToken: async (token: string): Promise<Event | null> => {
+      try {
+        const res = await requestApi(`/events/share/${token}`);
+        if (res.data) return res.data;
+      } catch {
+        // fallback
+      }
       const ev = eventsStore.find((e) => e.shareLinkToken === token || e.id === token);
       return ev || null;
     },
 
     create: async (data: Partial<Event>): Promise<Event> => {
+      try {
+        const res = await requestApi('/events', {
+          method: 'POST',
+          body: JSON.stringify({
+            title: data.title,
+            description: data.description,
+            type: data.type || 'workshop',
+            date: data.date,
+            startTime: data.startTime || '09:00 AM',
+            endTime: data.endTime || '05:00 PM',
+            location: data.location,
+            venueName: data.venueName || data.location,
+            capacity: Number(data.capacity) || 100,
+            isPaid: Boolean(data.isPaid),
+            ticketPrice: Number(data.ticketPrice) || 0,
+            currency: 'ETB',
+            customQuestions: data.customQuestions || [],
+            bannerUrl: data.bannerUrl,
+          }),
+        });
+        if (res.data) {
+          eventsStore.unshift(res.data);
+          saveEventsStore();
+          return res.data;
+        }
+      } catch (e) {
+        console.warn('Backend event creation fallback:', e);
+      }
+
       const newEvent: Event = {
         id: `evt_${Date.now()}`,
-        organizerId: data.organizerId || 'demo-organizer-001',
-        organizerName: data.organizerName || 'GDG Addis',
+        organizerId: data.organizerId || 'org-current',
+        organizerName: data.organizerName || 'Organizer',
         title: data.title || 'Untitled Event',
         description: data.description || '',
-        type: (data.type as EventType) || 'meetup',
+        type: (data.type as EventType) || 'workshop',
         date: data.date || new Date().toISOString().split('T')[0],
-        startTime: data.startTime || '02:00 PM',
+        startTime: data.startTime || '09:00 AM',
         endTime: data.endTime || '05:00 PM',
-        time: data.time || `${data.startTime || '02:00 PM'} - ${data.endTime || '05:00 PM'} EAT`,
+        time: data.time || `${data.startTime || '09:00 AM'} - ${data.endTime || '05:00 PM'} EAT`,
         location: data.location || 'Addis Ababa',
         venueName: data.venueName || data.location || 'Addis Ababa Tech Hub',
         capacity: Number(data.capacity) || 100,
@@ -239,7 +271,7 @@ export const api = {
     },
   },
 
-  // Registration & Ticketing (Public & Attendee)
+  // Registration & Ticketing
   registration: {
     registerForEvent: async (params: {
       eventId: string;
@@ -254,7 +286,6 @@ export const api = {
         throw new Error('Event capacity has been reached.');
       }
 
-      // Check if event is paid and needs Chapa payment
       if (event.isPaid && !params.paymentReference) {
         return {
           ticket: null as any,
@@ -263,7 +294,6 @@ export const api = {
         };
       }
 
-      // Increment registered count
       event.registeredCount += 1;
       if (event.registeredCount >= event.capacity) {
         event.status = 'closed';
@@ -272,7 +302,6 @@ export const api = {
       const ticketId = `SHB-${Math.floor(1000 + Math.random() * 9000)}-2026`;
       const signedQrToken = `shb_signed_${params.eventId}_${params.attendee.id}_${Date.now()}`;
 
-      // Expiry is end of day after event
       const eventDateObj = new Date(event.date);
       const nextDay = new Date(eventDateObj);
       nextDay.setDate(nextDay.getDate() + 1);
@@ -300,11 +329,10 @@ export const api = {
 
       ticketsStore.unshift(newTicket);
 
-      // Add to attendee roster
       if (!attendeeRosterStore[event.id]) {
         attendeeRosterStore[event.id] = [];
       }
-      attendeeRosterStore[event.id].unshift({
+      attendeeRosterStore[event.id].push({
         id: `roster_${Date.now()}`,
         registrationId: newTicket.registrationId,
         attendeeId: params.attendee.id,
@@ -313,93 +341,226 @@ export const api = {
         registrationDate: new Date().toISOString().split('T')[0],
         status: 'Registered',
         badges: [],
-        answers: params.answers,
       });
 
       return { ticket: newTicket, isPaymentRequired: false };
     },
 
+    getMyTickets: async (attendeeId: string): Promise<Ticket[]> => {
+      try {
+        const res = await requestApi('/users/me/tickets');
+        if (res.data && Array.isArray(res.data)) return res.data;
+      } catch {
+        // fallback
+      }
+      return ticketsStore.filter((t) => t.attendeeId === attendeeId);
+    },
+
     getAttendeeTickets: async (attendeeId: string): Promise<Ticket[]> => {
-      return ticketsStore.filter((t) => t.attendeeId === attendeeId || t.attendeeEmail === attendeeId);
+      return api.registration.getMyTickets(attendeeId);
+    },
+
+    getTicketByEvent: async (eventId: string, attendeeId: string): Promise<Ticket | null> => {
+      return (
+        ticketsStore.find((t) => t.eventId === eventId && t.attendeeId === attendeeId) || null
+      );
+    },
+
+    cancelRegistration: async (ticketId: string): Promise<boolean> => {
+      const ticket = ticketsStore.find((t) => t.id === ticketId);
+      if (ticket) {
+        ticket.status = 'Cancelled';
+        const ev = eventsStore.find((e) => e.id === ticket.eventId);
+        if (ev && ev.registeredCount > 0) {
+          ev.registeredCount -= 1;
+          if (ev.status === 'closed') ev.status = 'open';
+        }
+        return true;
+      }
+      return false;
     },
   },
 
-  // Check-in & Scanner Console (Organizer)
-  checkin: {
-    lookupByTokenOrName: async (eventId: string, queryText: string): Promise<AttendeeRosterItem | null> => {
-      const roster = attendeeRosterStore[eventId] || mockAttendeesRoster;
-      const lower = queryText.toLowerCase().trim();
-      
-      // Match by dynamic QR token
-      const matchedTicket = ticketsStore.find((t) => t.eventId === eventId && t.qrToken === queryText.trim());
-      if (matchedTicket) {
-        const found = roster.find((r) => r.attendeeId === matchedTicket.attendeeId || r.email === matchedTicket.attendeeEmail);
-        if (found) return found;
+  // QR Scanning & Check-in (Organizer)
+  checkIn: {
+    verifyAndCheckInQr: async (params: {
+      qrToken: string;
+      eventId: string;
+      organizerId: string;
+    }): Promise<{
+      success: boolean;
+      message: string;
+      alreadyCheckedIn?: boolean;
+      ticket?: Ticket;
+      rosterItem?: AttendeeRosterItem;
+    }> => {
+      const roster = attendeeRosterStore[params.eventId] || [];
+      const ticket = ticketsStore.find((t) => t.qrToken === params.qrToken);
+      const found = roster.find((r) => r.attendeeId === ticket?.attendeeId) || roster[0];
+
+      if (!ticket && !found) {
+        return {
+          success: false,
+          message: 'Invalid QR Ticket. No active registration matches this digital signature.',
+        };
       }
 
-      // Match by Name or Email
-      const found = roster.find((r) => r.name.toLowerCase().includes(lower) || r.email.toLowerCase().includes(lower));
-      return found || null;
+      if (ticket && ticket.status === 'Checked in') {
+        return {
+          success: false,
+          alreadyCheckedIn: true,
+          message: `Already Checked-In at ${ticket.checkedInAt ? new Date(ticket.checkedInAt).toLocaleTimeString() : 'earlier'}.`,
+          rosterItem: found,
+          ticket,
+        };
+      }
+
+      if (ticket) {
+        ticket.status = 'Checked in';
+        ticket.checkedInAt = new Date().toISOString();
+      }
+
+      if (found) {
+        found.status = 'Checked in';
+        found.checkInTime = new Date().toLocaleTimeString();
+        if (!found.badges.includes('attended')) {
+          found.badges.push('attended');
+        }
+      }
+
+      const ev = eventsStore.find((e) => e.id === params.eventId);
+      if (ev) {
+        ev.checkedInCount = (ev.checkedInCount || 0) + 1;
+      }
+
+      return {
+        success: true,
+        message: `Check-in successful! Welcome, ${ticket?.attendeeName || found?.name || 'Attendee'}.`,
+        rosterItem: found,
+        ticket,
+      };
+    },
+
+    lookupByTokenOrName: async (eventId: string, query: string): Promise<AttendeeRosterItem | null> => {
+      const roster = attendeeRosterStore[eventId] || [];
+      const q = query.toLowerCase().trim();
+      const match = roster.find(
+        (r) =>
+          r.name.toLowerCase().includes(q) ||
+          r.email.toLowerCase().includes(q) ||
+          r.id.toLowerCase().includes(q) ||
+          r.registrationId.toLowerCase().includes(q)
+      );
+      return match || null;
     },
 
     approveCheckIn: async (params: {
       eventId: string;
       attendeeRosterId: string;
       approvedByOrganizerId: string;
-    }): Promise<{ success: boolean; badgeAwarded: BadgeAward; rosterItem: AttendeeRosterItem }> => {
-      const event = eventsStore.find((e) => e.id === params.eventId);
-      const roster = attendeeRosterStore[params.eventId] || mockAttendeesRoster;
+    }): Promise<{ success: boolean; message: string; badgeAwarded?: BadgeAward; rosterItem?: AttendeeRosterItem }> => {
+      const roster = attendeeRosterStore[params.eventId] || [];
       const item = roster.find((r) => r.id === params.attendeeRosterId);
+      if (item) {
+        item.status = 'Checked in';
+        item.checkInTime = new Date().toLocaleTimeString();
+        if (!item.badges.includes('attended')) item.badges.push('attended');
 
-      if (!item) throw new Error('Attendee record not found.');
-      if (item.status === 'Checked in') {
-        throw new Error('Attendee is already checked in.');
+        const ev = eventsStore.find((e) => e.id === params.eventId);
+        if (ev) ev.checkedInCount = (ev.checkedInCount || 0) + 1;
+
+        const badge = await api.badges.awardBadge({
+          eventId: params.eventId,
+          attendeeId: item.attendeeId,
+          badgeCode: 'attended',
+          awardedByOrganizerId: params.approvedByOrganizerId,
+        });
+
+        return {
+          success: true,
+          message: `Approved check-in for ${item.name}!`,
+          badgeAwarded: badge,
+          rosterItem: item,
+        };
       }
+      return { success: false, message: 'Attendee not found in roster.' };
+    },
 
-      const nowTime = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-      item.status = 'Checked in';
-      item.checkInTime = `${nowTime} EAT`;
-      if (!item.badges.includes('attended')) {
-        item.badges.push('attended');
+    verifyToken: async (qrToken: string, eventId: string): Promise<any> => {
+      return api.checkIn.verifyAndCheckInQr({ qrToken, eventId, organizerId: 'current' });
+    },
+
+    manualCheckin: async (attendeeRosterId: string, eventId: string): Promise<boolean> => {
+      return api.checkIn.manualCheckIn({ attendeeRosterId, eventId });
+    },
+
+    manualCheckIn: async (params: {
+      attendeeRosterId: string;
+      eventId: string;
+    }): Promise<boolean> => {
+      const roster = attendeeRosterStore[params.eventId] || [];
+      const item = roster.find((r) => r.id === params.attendeeRosterId || r.attendeeId === params.attendeeRosterId);
+      if (item && item.status !== 'Checked in') {
+        item.status = 'Checked in';
+        item.checkInTime = new Date().toLocaleTimeString();
+        if (!item.badges.includes('attended')) item.badges.push('attended');
+
+        const ev = eventsStore.find((e) => e.id === params.eventId);
+        if (ev) ev.checkedInCount = (ev.checkedInCount || 0) + 1;
+        return true;
       }
+      return false;
+    },
+  },
 
-      if (event) {
-        event.checkedInCount += 1;
-      }
+  // Alias for checkin / scanner
+  get checkin() {
+    return this.checkIn;
+  },
 
-      // Create Attended badge award
-      const badgeAward: BadgeAward = {
-        id: `bdg_awd_${Date.now()}`,
-        badgeCode: 'attended',
-        badgeLabel: 'Attended',
+  // Badge Awards
+  badges: {
+    awardBadge: async (params: {
+      eventId: string;
+      attendeeId: string;
+      badgeCode: BadgeCode;
+      awardedByOrganizerId: string;
+      reason?: string;
+    }): Promise<BadgeAward> => {
+      const badgeLabels: Record<BadgeCode, string> = {
+        attended: 'Attended',
+        participant: 'Participant',
+        winner: 'Winner / Finalist',
+        speaker: 'Keynote Speaker',
+      };
+
+      const newBadge: BadgeAward = {
+        id: `bdg_${Date.now()}`,
+        badgeCode: params.badgeCode,
+        badgeLabel: badgeLabels[params.badgeCode] || 'Attended',
         eventId: params.eventId,
-        eventTitle: event?.title || 'Tech Event',
-        eventType: event?.type || 'meetup',
-        eventDate: event?.date || new Date().toISOString().split('T')[0],
-        eventLocation: event?.location || 'Addis Ababa',
-        attendeeId: item.attendeeId,
-        attendeeName: item.name,
-        attendeeEmail: item.email,
-        issuerName: event?.organizerName || 'Sheeba Event Organizer',
-        awardedBy: params.approvedByOrganizerId,
+        eventTitle: 'Event Badge',
+        eventType: 'workshop',
+        eventDate: new Date().toISOString().split('T')[0],
+        eventLocation: 'Addis Ababa',
+        attendeeId: params.attendeeId,
+        attendeeName: 'Attendee',
+        attendeeEmail: 'attendee@sheba.et',
+        issuerName: 'Event Organizer',
+        awardedBy: params.awardedByOrganizerId,
         awardedAt: new Date().toISOString(),
         revokedAt: null,
       };
 
-      badgeAwardsStore.unshift(badgeAward);
-      return { success: true, badgeAwarded: badgeAward, rosterItem: item };
-    },
-  },
+      badgeAwardsStore.push(newBadge);
 
-  // Badge System (Organizer Bulk Award & Admin Revoke)
-  badges: {
-    getAttendeeBadges: async (attendeeId: string): Promise<BadgeAward[]> => {
-      return badgeAwardsStore.filter((b) => (b.attendeeId === attendeeId || b.attendeeEmail === attendeeId) && !b.revokedAt);
-    },
+      const roster = attendeeRosterStore[params.eventId] || [];
+      const attendee = roster.find((r) => r.attendeeId === params.attendeeId);
+      if (attendee && !attendee.badges.includes(params.badgeCode)) {
+        attendee.badges.push(params.badgeCode);
+      }
 
-    getBadgeById: async (badgeId: string): Promise<BadgeAward | null> => {
-      const b = badgeAwardsStore.find((b) => b.id === badgeId);
-      return b || null;
+      return newBadge;
     },
 
     bulkAwardBadges: async (params: {
@@ -408,191 +569,226 @@ export const api = {
       badgeCode: BadgeCode;
       awardedByOrganizerId: string;
     }): Promise<{ awardedCount: number }> => {
-      const event = eventsStore.find((e) => e.id === params.eventId);
-      const roster = attendeeRosterStore[params.eventId] || mockAttendeesRoster;
       let count = 0;
-
-      const badgeLabels: Record<BadgeCode, string> = {
-        attended: 'Attended',
-        participant: 'Participant',
-        winner: 'Winner',
-        speaker: 'Speaker',
-      };
-
+      const roster = attendeeRosterStore[params.eventId] || [];
       for (const rosterId of params.attendeeRosterIds) {
-        const item = roster.find((r) => r.id === rosterId);
-        if (item) {
-          if (!item.badges.includes(params.badgeCode)) {
-            item.badges.push(params.badgeCode);
-          }
-          const newAward: BadgeAward = {
-            id: `bdg_awd_${Date.now()}_${count}`,
-            badgeCode: params.badgeCode,
-            badgeLabel: badgeLabels[params.badgeCode],
-            eventId: params.eventId,
-            eventTitle: event?.title || 'Tech Event',
-            eventType: event?.type || 'workshop',
-            eventDate: event?.date || new Date().toISOString().split('T')[0],
-            eventLocation: event?.location || 'Addis Ababa',
-            attendeeId: item.attendeeId,
-            attendeeName: item.name,
-            attendeeEmail: item.email,
-            issuerName: event?.organizerName || 'GDG Addis',
-            awardedBy: params.awardedByOrganizerId,
-            awardedAt: new Date().toISOString(),
-            revokedAt: null,
-          };
-          badgeAwardsStore.unshift(newAward);
-          count++;
-        }
+        const item = roster.find((r) => r.id === rosterId || r.attendeeId === rosterId);
+        const attendeeId = item ? item.attendeeId : rosterId;
+        await api.badges.awardBadge({
+          eventId: params.eventId,
+          attendeeId,
+          badgeCode: params.badgeCode,
+          awardedByOrganizerId: params.awardedByOrganizerId,
+        });
+        count++;
       }
-
       return { awardedCount: count };
     },
 
-    adminRevokeBadge: async (badgeAwardId: string): Promise<boolean> => {
-      const award = badgeAwardsStore.find((b) => b.id === badgeAwardId);
+    revokeBadge: async (params: {
+      badgeAwardId: string;
+      reason?: string;
+    }): Promise<boolean> => {
+      const award = badgeAwardsStore.find((b) => b.id === params.badgeAwardId);
       if (award) {
         award.revokedAt = new Date().toISOString();
         return true;
       }
-      throw new Error('Badge award not found.');
+      return false;
+    },
+
+    getAttendeeBadges: async (attendeeId: string): Promise<BadgeAward[]> => {
+      return badgeAwardsStore.filter((b) => b.attendeeId === attendeeId && !b.revokedAt);
     },
 
     getAllBadgeAwards: async (): Promise<BadgeAward[]> => {
       return [...badgeAwardsStore];
     },
-  },
 
-  // Roster & Manage Attendees (Organizer)
-  roster: {
-    getByEventId: async (eventId: string): Promise<AttendeeRosterItem[]> => {
-      return attendeeRosterStore[eventId] || mockAttendeesRoster;
+    getBadgeById: async (badgeId: string): Promise<BadgeAward | null> => {
+      return badgeAwardsStore.find((b) => b.id === badgeId) || null;
+    },
+
+    adminRevokeBadge: async (badgeId: string): Promise<boolean> => {
+      const award = badgeAwardsStore.find((b) => b.id === badgeId);
+      if (award) {
+        award.revokedAt = new Date().toISOString();
+        return true;
+      }
+      return false;
+    },
+
+    getBadgeByVerificationToken: async (token: string): Promise<BadgeAward | null> => {
+      return badgeAwardsStore.find((b) => b.id === token) || null;
     },
   },
 
-  // Reports & Sponsor Evidence (Organizer & Admin)
+  // Roster Alias
+  roster: {
+    getByEventId: async (eventId: string): Promise<AttendeeRosterItem[]> => {
+      return attendeeRosterStore[eventId] || [];
+    },
+    getEventRoster: async (eventId: string): Promise<AttendeeRosterItem[]> => {
+      return attendeeRosterStore[eventId] || [];
+    },
+  },
+
+  // Organizer Reports & Sponsor Reports
   reports: {
+    getAttendeeRoster: async (eventId: string): Promise<AttendeeRosterItem[]> => {
+      return attendeeRosterStore[eventId] || [];
+    },
+
     getEventReport: async (eventId: string): Promise<SponsorReportData> => {
+      return api.reports.getSponsorReport(eventId);
+    },
+
+    getSponsorReport: async (eventId: string): Promise<SponsorReportData> => {
       const event = eventsStore.find((e) => e.id === eventId);
-      const roster = attendeeRosterStore[eventId] || mockAttendeesRoster;
-      const checkedIn = roster.filter((r) => r.status === 'Checked in');
-
-      const attendedCount = checkedIn.filter((r) => r.badges.includes('attended')).length || checkedIn.length;
-      const participantCount = checkedIn.filter((r) => r.badges.includes('participant')).length;
-      const winnerCount = checkedIn.filter((r) => r.badges.includes('winner')).length;
-      const speakerCount = checkedIn.filter((r) => r.badges.includes('speaker')).length;
-
-      const rate = roster.length > 0 ? Number(((checkedIn.length / roster.length) * 100).toFixed(1)) : 0;
+      const roster = attendeeRosterStore[eventId] || [];
+      const totalTurnout = roster.filter((r) => r.status === 'Checked in').length;
+      const turnoutRate = roster.length > 0 ? (totalTurnout / roster.length) * 100 : 0;
 
       return {
         eventId,
-        eventTitle: event?.title || 'React & Modern Web Architecture Workshop',
+        eventTitle: event?.title || 'Tech Event',
         eventType: event?.type || 'workshop',
-        eventDate: event?.date || 'September 12, 2026',
-        eventLocation: event?.location || 'Bole Innovation Hub, Addis Ababa',
-        organizerName: event?.organizerName || 'GDG Addis',
-        totalRegistered: roster.length || 68,
-        totalAttended: checkedIn.length || 58,
-        attendanceRate: rate || 85.3,
+        eventDate: event?.date || new Date().toISOString().split('T')[0],
+        eventLocation: event?.location || 'Addis Ababa',
+        organizerName: event?.organizerName || 'Sheba Organizer',
+        totalRegistered: roster.length,
+        totalAttended: totalTurnout,
+        attendanceRate: parseFloat(turnoutRate.toFixed(1)),
         badgeDistribution: {
-          attended: attendedCount || 58,
-          participant: participantCount || 42,
-          winner: winnerCount || 3,
-          speaker: speakerCount || 4,
+          attended: roster.filter((r) => r.badges.includes('attended')).length,
+          participant: roster.filter((r) => r.badges.includes('participant')).length,
+          winner: roster.filter((r) => r.badges.includes('winner')).length,
+          speaker: roster.filter((r) => r.badges.includes('speaker')).length,
         },
-        registrationsOverTime: mockSponsorReport.registrationsOverTime,
-        hourlyCheckIns: mockSponsorReport.hourlyCheckIns,
+        registrationsOverTime: [],
+        hourlyCheckIns: [],
         attendees: roster,
       };
     },
 
     exportCsv: async (eventId: string): Promise<void> => {
-      const roster = attendeeRosterStore[eventId] || mockAttendeesRoster;
-      const headers = 'Attendee Name,Email,Registration Date,Status,Check-in Time,Badges Awarded\n';
-      const rows = roster
-        .map(
-          (r) =>
-            `"${r.name}","${r.email}","${r.registrationDate}","${r.status}","${r.checkInTime || '—'}","${r.badges.join('; ')}"`
-        )
-        .join('\n');
+      return api.reports.exportSponsorReportCsv(eventId);
+    },
 
-      const blob = new Blob([headers + rows], { type: 'text/csv;charset=utf-8;' });
+    exportSponsorReportCsv: async (eventId: string): Promise<void> => {
+      const roster = attendeeRosterStore[eventId] || [];
+      const headers = ['Attendee Name', 'Email', 'Registered At', 'Checked In', 'Check-In Time', 'Badges'];
+      const rows = roster.map((r) => [
+        `"${r.name}"`,
+        r.email,
+        r.registrationDate,
+        r.status === 'Checked in' ? 'YES' : 'NO',
+        r.checkInTime || 'N/A',
+        `"${r.badges.join(', ')}"`,
+      ]);
+
+      const csvContent = [headers.join(','), ...rows.map((row) => row.join(','))].join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `sheba-event-report-${eventId}.csv`);
+      link.setAttribute('download', `sheba-sponsor-report-${eventId}.csv`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
     },
   },
 
-  // Public Search & Events Directory
+  // Public Search & Discovery
   search: {
-    searchPublic: async (query?: string): Promise<{ attendees: User[]; events: Event[] }> => {
-      const lower = (query || '').toLowerCase().trim();
-      const allAttendees = [mockAttendeeUser];
-
-      if (!lower) {
-        return {
-          attendees: allAttendees,
-          events: [...eventsStore],
-        };
-      }
-
-      const matchedAttendees = allAttendees.filter(
-        (u) => u.name.toLowerCase().includes(lower) || u.email.toLowerCase().includes(lower)
-      );
-
-      const matchedEvents = eventsStore.filter(
-        (e) =>
-          e.title.toLowerCase().includes(lower) ||
-          e.location.toLowerCase().includes(lower) ||
-          e.organizerName.toLowerCase().includes(lower) ||
-          (e.description && e.description.toLowerCase().includes(lower)) ||
-          e.type.toLowerCase().includes(lower)
-      );
+    queryAll: async (term: string) => {
+      const q = term.toLowerCase().trim();
+      const allEvents = await api.events.getAll();
+      const matchedEvents = q
+        ? allEvents.filter(
+            (e) =>
+              e.title.toLowerCase().includes(q) ||
+              e.description.toLowerCase().includes(q) ||
+              e.location.toLowerCase().includes(q) ||
+              (e.organizerName && e.organizerName.toLowerCase().includes(q))
+          )
+        : allEvents;
 
       return {
-        attendees: matchedAttendees,
         events: matchedEvents,
+        attendees: [],
       };
+    },
+
+    searchPublic: async (term: string) => {
+      return api.search.queryAll(term);
     },
   },
 
-  // Account Settings & Data Exports (SRS Section 3.4 & 3.5)
-  account: {
-    updateVisibility: async (userId: string, visibility: ProfileVisibility): Promise<boolean> => {
-      if (mockAttendeeUser.id === userId) {
-        mockAttendeeUser.visibility = visibility;
+  // Attendee GDPR Account Self-Service
+  userAccount: {
+    updateProfile: async (_userId: string, data: Partial<User>): Promise<User> => {
+      const savedUserStr = localStorage.getItem('sheba_auth_user');
+      let userObj = savedUserStr ? JSON.parse(savedUserStr) : null;
+      if (userObj) {
+        userObj = { ...userObj, ...data };
+        localStorage.setItem('sheba_auth_user', JSON.stringify(userObj));
+      }
+      return userObj;
+    },
+
+    updateVisibility: async (_userId: string, visibility: ProfileVisibility): Promise<boolean> => {
+      const savedUserStr = localStorage.getItem('sheba_auth_user');
+      if (savedUserStr) {
+        const userObj = JSON.parse(savedUserStr);
+        userObj.visibility = visibility;
+        localStorage.setItem('sheba_auth_user', JSON.stringify(userObj));
       }
       return true;
     },
 
+    exportFullUserData: async (userId: string, format: 'json' | 'csv'): Promise<void> => {
+      return api.userAccount.exportData(userId, format);
+    },
+
     deleteAccount: async (_userId: string): Promise<boolean> => {
-      removeAuthToken();
-      localStorage.removeItem('sheba_auth_user');
+      try {
+        await requestApi('/users/me', { method: 'DELETE' });
+      } catch {
+        // ignore
+      }
       return true;
     },
 
-    exportFullUserData: async (userId: string, format: 'csv' | 'json'): Promise<void> => {
-      const data = {
-        user: mockAttendeeUser,
-        tickets: ticketsStore.filter((t) => t.attendeeId === userId),
-        badges: badgeAwardsStore.filter((b) => b.attendeeId === userId),
-        exportedAt: new Date().toISOString(),
-      };
-
-      let content = JSON.stringify(data, null, 2);
+    exportData: async (userId: string, format: 'json' | 'csv'): Promise<void> => {
+      let content = '';
       let mimeType = 'application/json';
       let filename = `sheba-data-export-${userId}.json`;
 
-      if (format === 'csv') {
-        content = `Category,Record ID,Title/Name,Date,Details\n` +
-          `User,${mockAttendeeUser.id},"${mockAttendeeUser.name}","${mockAttendeeUser.memberSince}","${mockAttendeeUser.email}"\n` +
-          ticketsStore.map(t => `Ticket,${t.id},"${t.eventTitle}","${t.eventDate}","${t.status}"`).join('\n') + '\n' +
-          badgeAwardsStore.map(b => `Badge,${b.id},"${b.badgeLabel} (${b.eventTitle})","${b.eventDate}","${b.issuerName}"`).join('\n');
+      const userTickets = ticketsStore.filter((t) => t.attendeeId === userId);
+      const userBadges = badgeAwardsStore.filter((b) => b.attendeeId === userId);
+
+      if (format === 'json') {
+        content = JSON.stringify(
+          {
+            userId,
+            tickets: userTickets,
+            badges: userBadges,
+            exportedAt: new Date().toISOString(),
+          },
+          null,
+          2
+        );
+      } else if (format === 'csv') {
+        content =
+          `Category,Record ID,Title/Name,Date,Details\n` +
+          userTickets
+            .map((t) => `Ticket,${t.id},"${t.eventTitle}","${t.eventDate}","${t.status}"`)
+            .join('\n') +
+          '\n' +
+          userBadges
+            .map((b) => `Badge,${b.id},"${b.badgeLabel} (${b.eventTitle})","${b.eventDate}","${b.issuerName}"`)
+            .join('\n');
         mimeType = 'text/csv';
         filename = `sheba-data-export-${userId}.csv`;
       }
@@ -608,8 +804,51 @@ export const api = {
     },
   },
 
-  // Admin Oversight
+  // Alias for userAccount
+  get account() {
+    return this.userAccount;
+  },
+
+  // Admin Oversight & Approvals
   admin: {
-    getPaymentIssues: async () => mockPaymentIssues,
+    getDashboard: async () => {
+      const res = await requestApi('/admin/dashboard');
+      return res.data;
+    },
+
+    getUsers: async () => {
+      const res = await requestApi('/admin/users');
+      return res.data;
+    },
+
+    approveOrganizer: async (userId: string) => {
+      const res = await requestApi(`/admin/users/${userId}/approve`, {
+        method: 'PATCH',
+      });
+      return res.data;
+    },
+
+    rejectOrganizer: async (userId: string) => {
+      const res = await requestApi(`/admin/users/${userId}/reject`, {
+        method: 'PATCH',
+      });
+      return res.data;
+    },
+
+    toggleUserStatus: async (userId: string) => {
+      const res = await requestApi(`/admin/users/${userId}/status`, {
+        method: 'PATCH',
+      });
+      return res.data;
+    },
+
+    getPaymentIssues: async () => {
+      try {
+        const res = await requestApi('/admin/payments');
+        return res.data;
+      } catch {
+        return [];
+      }
+    },
   },
 };

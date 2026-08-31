@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/api';
 import type { Event } from '../../types/event';
 import { Badge } from '../../components/ui/Badge';
@@ -18,6 +19,7 @@ import {
 } from 'lucide-react';
 
 export const EventListPage: React.FC = () => {
+  const { user } = useAuth();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -28,12 +30,12 @@ export const EventListPage: React.FC = () => {
   useEffect(() => {
     const fetchEvents = async () => {
       setLoading(true);
-      const data = await api.events.getAll();
+      const data = await api.events.getAll(user?.id);
       setEvents(data);
       setLoading(false);
     };
     fetchEvents();
-  }, []);
+  }, [user?.id]);
 
   const handleCopyLink = (token: string, e: React.MouseEvent) => {
     e.stopPropagation();

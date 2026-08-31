@@ -10,6 +10,7 @@ import {
   Ticket,
   Home,
   Compass,
+  ArrowLeft,
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -176,13 +177,33 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAttendeeDrawer }) => {
                   Log out
                 </button>
               </div>
-            ) : (
+            ) : !['/login', '/register', '/pending-approval'].includes(location.pathname) ? (
               <div className="flex items-center gap-2">
+<<<<<<< HEAD
                 <Link
                   to="/contact"
                   className="inline-flex items-center justify-center px-5 py-2 rounded-xl bg-[#bba8bd] border border-gray-200/80 text-white text-sm font-semibold shadow-xs hover:bg-[#ad97af] transition-all duration-150 active:scale-[0.98]"
                 >
                   Sign Up
+=======
+                <Link to="/login">
+                  <Button size="sm" variant="outline">
+                    Sign In
+                  </Button>
+>>>>>>> 04b4e5f (feat remove the demos)
+                </Link>
+                <Link to="/register">
+                  <Button size="sm" variant="primary" icon={<LogIn className="w-3.5 h-3.5" />}>
+                    Register
+                  </Button>
+                </Link>
+              </div>
+            ) : (
+              <div className="flex items-center">
+                <Link to="/">
+                  <Button size="sm" variant="outline" icon={<ArrowLeft className="w-3.5 h-3.5" />}>
+                    Back to Home
+                  </Button>
                 </Link>
               </div>
             )}
@@ -350,7 +371,21 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAttendeeDrawer }) => {
                   Sign out
                 </button>
               </div>
+            ) : !['/login', '/register', '/pending-approval'].includes(location.pathname) ? (
+              <div className="grid grid-cols-2 gap-2">
+                <Link to="/login" onClick={() => setIsMobileMenuOpen(false)}>
+                  <Button fullWidth variant="outline">
+                    Sign In
+                  </Button>
+                </Link>
+                <Link to="/register" onClick={() => setIsMobileMenuOpen(false)}>
+                  <Button fullWidth variant="primary" icon={<LogIn className="w-4 h-4" />}>
+                    Register
+                  </Button>
+                </Link>
+              </div>
             ) : (
+<<<<<<< HEAD
               <Link
                 to="/login"
                 onClick={() => setIsMobileMenuOpen(false)}
@@ -358,6 +393,15 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAttendeeDrawer }) => {
               >
                 Sign Up
               </Link>
+=======
+              <div>
+                <Link to="/" onClick={() => setIsMobileMenuOpen(false)}>
+                  <Button fullWidth variant="outline" icon={<ArrowLeft className="w-4 h-4" />}>
+                    Back to Home
+                  </Button>
+                </Link>
+              </div>
+>>>>>>> 04b4e5f (feat remove the demos)
             )}
           </div>
         </div>

@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS users (
     visibility VARCHAR(20) NOT NULL DEFAULT 'public' CHECK (visibility IN ('public', 'private')),
     member_since VARCHAR(50) DEFAULT 'August 2026',
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    approval_status VARCHAR(50) NOT NULL DEFAULT 'approved' CHECK (approval_status IN ('pending', 'approved', 'rejected')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -26,6 +27,7 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS visibility VARCHAR(20) NOT NULL DEFAULT 'public';
 ALTER TABLE users ADD COLUMN IF NOT EXISTS member_since VARCHAR(50) DEFAULT 'August 2026';
 ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS approval_status VARCHAR(50) NOT NULL DEFAULT 'approved';
 
 -- Events Table (Single-day tech events only: hackathon, workshop, meetup)
 CREATE TABLE IF NOT EXISTS events (
