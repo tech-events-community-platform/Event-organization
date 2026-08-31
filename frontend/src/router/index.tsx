@@ -47,12 +47,9 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <LandingPage /> },
       { path: 'login', element: <LoginPage /> },
-<<<<<<< HEAD
-      { path: 'contact', element: <LoginPage /> },
-=======
       { path: 'register', element: <RegisterPage /> },
       { path: 'pending-approval', element: <PendingApprovalPage /> },
->>>>>>> 04b4e5f (feat remove the demos)
+      { path: 'contact', element: <LoginPage /> },
       { path: 'search', element: <PublicSearchPage /> },
       { path: 'e/:token', element: <PublicRegisterPage /> },
       { path: 'events/:id/register', element: <PublicRegisterPage /> },

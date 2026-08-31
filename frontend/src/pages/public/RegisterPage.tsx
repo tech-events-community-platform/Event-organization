@@ -85,18 +85,7 @@ export const RegisterPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-md mx-auto py-10 px-4 space-y-6">
-      {/* Back to Home Button */}
-      <div className="flex items-center justify-start">
-        <Link
-          to="/"
-          className="inline-flex items-center gap-2 text-xs font-semibold text-[#756366] hover:text-[#2D1F23] bg-white hover:bg-[#FAF7F5] px-3.5 py-1.5 rounded-full border border-[#E8DDD7] transition-all shadow-xs"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Back to Home</span>
-        </Link>
-      </div>
-
+    <div className="min-h-[85vh] flex flex-col justify-center max-w-md mx-auto pt-28 sm:pt-32 pb-20 px-4 space-y-6">
       {/* Header */}
       <div className="text-center space-y-2">
         <div className="w-12 h-12 rounded-2xl bg-[#63474D] flex items-center justify-center text-[#FFA686] mx-auto shadow-sm">
@@ -283,11 +272,22 @@ export const RegisterPage: React.FC = () => {
           </Button>
         </form>
 
-        <div className="pt-3 text-center border-t border-[#E8DDD7] text-xs text-[#756366]">
-          Already have an account?{' '}
-          <Link to="/login" className="font-bold text-[#63474D] hover:underline">
-            Sign in here
-          </Link>
+        <div className="pt-3 text-center border-t border-[#E8DDD7] space-y-2">
+          <p className="text-xs text-[#756366]">
+            Already have an account?{' '}
+            <Link to="/login" className="font-bold text-[#63474D] hover:underline">
+              Sign in here
+            </Link>
+          </p>
+          <div>
+            <Link
+              to="/"
+              className="inline-flex items-center gap-1.5 text-xs text-[#756366] hover:text-[#2D1F23] transition-colors"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Back to Home</span>
+            </Link>
+          </div>
         </div>
       </div>
     </div>

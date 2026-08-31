@@ -40,18 +40,7 @@ export const PendingApprovalPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-xl mx-auto py-12 px-4 space-y-6">
-      {/* Back to Home Button */}
-      <div className="flex items-center justify-start">
-        <Link
-          to="/"
-          className="inline-flex items-center gap-2 text-xs font-semibold text-[#756366] hover:text-[#2D1F23] bg-white hover:bg-[#FAF7F5] px-3.5 py-1.5 rounded-full border border-[#E8DDD7] transition-all shadow-xs"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Back to Home</span>
-        </Link>
-      </div>
-
+    <div className="min-h-[85vh] flex flex-col justify-center max-w-xl mx-auto pt-28 sm:pt-32 pb-20 px-4 space-y-6">
       <div className="bg-white p-8 rounded-3xl border border-[#E8DDD7] shadow-sm text-center space-y-6">
         {/* Animated Clock / Status Icon */}
         <div className="relative inline-flex items-center justify-center">
@@ -129,12 +118,23 @@ export const PendingApprovalPage: React.FC = () => {
           </Button>
         </div>
 
-        <div className="pt-4 border-t border-[#E8DDD7] text-xs text-[#756366]">
-          Are you the Platform Administrator?{' '}
-          <Link to="/login" className="font-bold text-[#63474D] hover:underline">
-            Sign in as Admin
-          </Link>{' '}
-          to approve pending organizer requests.
+        <div className="pt-4 border-t border-[#E8DDD7] text-xs text-[#756366] space-y-2">
+          <p>
+            Are you the Platform Administrator?{' '}
+            <Link to="/login" className="font-bold text-[#63474D] hover:underline">
+              Sign in as Admin
+            </Link>{' '}
+            to approve pending organizer requests.
+          </p>
+          <div>
+            <Link
+              to="/"
+              className="inline-flex items-center gap-1.5 text-xs text-[#756366] hover:text-[#2D1F23] transition-colors"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Back to Home</span>
+            </Link>
+          </div>
         </div>
       </div>
     </div>

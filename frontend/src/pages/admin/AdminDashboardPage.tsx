@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { api } from '../../services/api';
 import type { Event } from '../../types/event';
 import type { BadgeAward } from '../../types/attendance';
-import type { PaymentIssueRecord } from '../../data/mockAdminData';
+import type { PaymentIssueRecord } from '../../types/admin';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import {

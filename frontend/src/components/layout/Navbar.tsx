@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Badge } from '../ui/Badge';
+import { Button } from '../ui/Button';
 import {
   Award,
   Menu,
@@ -11,6 +12,7 @@ import {
   Home,
   Compass,
   ArrowLeft,
+  LogIn,
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -111,11 +113,10 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAttendeeDrawer }) => {
             {isAuthenticated && role === 'ADMIN' && (
               <Link
                 to="/admin"
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
-                  isActive('/admin')
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${isActive('/admin')
                     ? 'bg-sheeba-purple/10 text-sheeba-purple'
                     : 'text-gray-600 hover:text-sheeba-dark hover:bg-gray-100'
-                }`}
+                  }`}
               >
                 Admin Oversight
               </Link>
@@ -179,18 +180,10 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAttendeeDrawer }) => {
               </div>
             ) : !['/login', '/register', '/pending-approval'].includes(location.pathname) ? (
               <div className="flex items-center gap-2">
-<<<<<<< HEAD
-                <Link
-                  to="/contact"
-                  className="inline-flex items-center justify-center px-5 py-2 rounded-xl bg-[#bba8bd] border border-gray-200/80 text-white text-sm font-semibold shadow-xs hover:bg-[#ad97af] transition-all duration-150 active:scale-[0.98]"
-                >
-                  Sign Up
-=======
                 <Link to="/login">
                   <Button size="sm" variant="outline">
                     Sign In
                   </Button>
->>>>>>> 04b4e5f (feat remove the demos)
                 </Link>
                 <Link to="/register">
                   <Button size="sm" variant="primary" icon={<LogIn className="w-3.5 h-3.5" />}>
@@ -385,15 +378,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAttendeeDrawer }) => {
                 </Link>
               </div>
             ) : (
-<<<<<<< HEAD
-              <Link
-                to="/login"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="w-full inline-flex items-center justify-center px-5 py-2.5 rounded-full bg-[#591C6D] hover:bg-[#49145A] text-white text-sm font-semibold shadow-xs"
-              >
-                Sign Up
-              </Link>
-=======
               <div>
                 <Link to="/" onClick={() => setIsMobileMenuOpen(false)}>
                   <Button fullWidth variant="outline" icon={<ArrowLeft className="w-4 h-4" />}>
@@ -401,7 +385,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAttendeeDrawer }) => {
                   </Button>
                 </Link>
               </div>
->>>>>>> 04b4e5f (feat remove the demos)
             )}
           </div>
         </div>

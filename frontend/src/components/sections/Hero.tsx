@@ -35,22 +35,28 @@ export default function Hero() {
             </p>
           </FadeIn>
 
-          {/* CTAs - Adjusted size and brought upward */}
+          {/* CTAs */}
           <FadeIn delay={300}>
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3.5 pt-1 -mt-1">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3.5 pt-2">
               <Link
-                to="/contact"
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-[#bba8bd] border border-gray-200/80 text-gray-900 font-semibold hover:bg-[#ad97af] shadow-xs hover:shadow transition-all duration-200 text-sm sm:text-[15px] group"
+                to="/register"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-[#63474D] text-white font-bold hover:bg-[#523a3f] shadow-md hover:shadow-lg transition-all duration-200 text-sm sm:text-base group"
               >
-                <span>Get Started</span>
+                <span>Register (Attendee & Organizer)</span>
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </Link>
+              <Link
+                to="/login"
+                className="inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl bg-white border border-[#E8DDD7] text-[#2D1F23] font-semibold hover:border-[#63474D] hover:text-[#63474D] shadow-xs hover:shadow transition-all duration-200 text-sm sm:text-base"
+              >
+                <span>Sign In</span>
               </Link>
               <a
                 href="#demo"
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-white/90 backdrop-blur-sm border border-gray-200 text-gray-800 font-semibold hover:border-sheeba-purple hover:text-sheeba-purple shadow-xs hover:shadow transition-all duration-200 text-sm sm:text-[15px]"
+                className="inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl bg-white/90 backdrop-blur-sm border border-gray-200 text-gray-700 font-semibold hover:border-sheeba-purple hover:text-sheeba-purple shadow-xs hover:shadow transition-all duration-200 text-sm sm:text-base"
               >
                 <QrCode className="w-4 h-4 text-sheeba-pink" />
-                <span>Try Live Simulator</span>
+                <span>Live Simulator</span>
               </a>
             </div>
           </FadeIn>

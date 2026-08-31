@@ -57,37 +57,73 @@ export default function Header() {
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center gap-8 xl:gap-10">
-            {navLinks.map((link) => (
-              <a
-                key={link.name}
-                href={link.href}
-                className="text-sm font-medium text-gray-700 hover:text-sheeba-purple transition-colors duration-150 relative py-1 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-0.5 after:bg-sheeba-purple hover:after:w-full after:transition-all after:duration-200"
-              >
-                {link.name}
-              </a>
-            ))}
-          </nav>
+          {!['/login', '/register', '/pending-approval'].includes(location.pathname) && (
+            <nav className="hidden lg:flex items-center gap-8 xl:gap-10">
+              {navLinks.map((link) => (
+                <a
+                  key={link.name}
+                  href={link.href}
+                  className="text-sm font-medium text-gray-700 hover:text-sheeba-purple transition-colors duration-150 relative py-1 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-0.5 after:bg-sheeba-purple hover:after:w-full after:transition-all after:duration-200"
+                >
+                  {link.name}
+                </a>
+              ))}
+            </nav>
+          )}
 
           {/* Desktop Right CTA */}
-          <div className="hidden lg:flex items-center">
-            <Link
-              to="/contact"
-              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#bba8bd] border border-gray-200/80 text-white text-sm font-semibold hover:bg-[#ad97af] shadow-xs hover:shadow transition-all duration-200 active:scale-98"
-            >
-              <span>Sign Up</span>
-              <ArrowRight className="w-4 h-4 text-white" />
-            </Link>
+          <div className="hidden lg:flex items-center gap-3">
+            {!['/login', '/register', '/pending-approval'].includes(location.pathname) ? (
+              <>
+                <Link
+                  to="/login"
+                  className="inline-flex items-center px-4 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:text-sheeba-purple hover:bg-gray-100 transition-colors"
+                >
+                  Sign In
+                </Link>
+                <Link
+                  to="/register"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#63474D] text-white text-sm font-bold hover:bg-[#523a3f] shadow-md hover:shadow-lg transition-all duration-200"
+                >
+                  <span>Register</span>
+                  <ArrowRight className="w-4 h-4 text-white" />
+                </Link>
+              </>
+            ) : (
+              <Link
+                to="/"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-300 text-gray-700 text-sm font-semibold hover:bg-gray-100 transition-colors"
+              >
+                <span>Back to Home</span>
+              </Link>
+            )}
           </div>
 
           {/* Mobile Hamburger Toggle */}
-          <div className="flex lg:hidden items-center gap-3">
-            <Link
-              to="/contact"
-              className="px-3.5 py-1.5 rounded-lg bg-[#bba8bd] text-white text-xs font-semibold hover:bg-[#ad97af]"
-            >
-              Sign Up
-            </Link>
+          <div className="flex lg:hidden items-center gap-2">
+            {!['/login', '/register', '/pending-approval'].includes(location.pathname) ? (
+              <>
+                <Link
+                  to="/login"
+                  className="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-700 text-xs font-semibold hover:bg-gray-100"
+                >
+                  Sign In
+                </Link>
+                <Link
+                  to="/register"
+                  className="px-3 py-1.5 rounded-lg bg-[#63474D] text-white text-xs font-bold hover:bg-[#523a3f]"
+                >
+                  Register
+                </Link>
+              </>
+            ) : (
+              <Link
+                to="/"
+                className="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-700 text-xs font-semibold"
+              >
+                Back to Home
+              </Link>
+            )}
             <button
               onClick={() => setIsOpen(!isOpen)}
               className="p-2 rounded-lg text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-sheeba-purple cursor-pointer"
@@ -122,13 +158,20 @@ export default function Header() {
                 {link.name}
               </a>
             ))}
-            <div className="pt-4 border-t border-gray-100 flex flex-col gap-3">
+            <div className="pt-4 border-t border-gray-100 grid grid-cols-2 gap-2">
               <Link
-                to="/contact"
+                to="/login"
                 onClick={() => setIsOpen(false)}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-[#bba8bd] text-white font-semibold text-sm shadow-xs hover:bg-[#ad97af] transition-colors"
+                className="flex items-center justify-center py-2.5 rounded-xl border border-gray-300 text-gray-800 font-semibold text-sm hover:bg-gray-50 transition-colors"
               >
-                <span>Sign Up</span>
+                Sign In
+              </Link>
+              <Link
+                to="/register"
+                onClick={() => setIsOpen(false)}
+                className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-[#63474D] text-white font-bold text-sm shadow-xs hover:bg-[#523a3f] transition-colors"
+              >
+                <span>Register</span>
                 <ArrowRight className="w-4 h-4 text-white" />
               </Link>
             </div>
