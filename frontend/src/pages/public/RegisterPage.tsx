@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/ui/Button';
@@ -19,7 +19,7 @@ import type { UserRole } from '../../types/user';
 
 export const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
-  const { register } = useAuth();
+  const { user, isAuthenticated, register } = useAuth();
 
   const [selectedRole, setSelectedRole] = useState<UserRole>('ATTENDEE');
 
@@ -33,18 +33,24 @@ export const RegisterPage: React.FC = () => {
   const [organization, setOrganization] = useState('');
   const [bio, setBio] = useState('');
 
-  const [isAgeAttested, setIsAgeAttested] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      if (user.role === 'ORGANIZER') {
+        navigate('/organizer', { replace: true });
+      } else if (user.role === 'ADMIN') {
+        navigate('/admin', { replace: true });
+      } else {
+        navigate('/app', { replace: true });
+      }
+    }
+  }, [isAuthenticated, user, navigate]);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
-
-    if (!isAgeAttested) {
-      setErrorMsg('You must confirm you are 18 years of age or older to register on Sheba.');
-      return;
-    }
 
     if (selectedRole === 'ORGANIZER' && !organization.trim()) {
       setErrorMsg('Please specify your organization or community name.');
@@ -74,8 +80,8 @@ export const RegisterPage: React.FC = () => {
           },
         });
       } else {
-        // Attendee: immediate direct access to attendee events page
-        navigate('/app/events');
+        // Attendee: immediate direct access to attendee dashboard
+        navigate('/app');
       }
     } catch (err: any) {
       setErrorMsg(err.message || 'Registration failed. Please try again.');
@@ -245,19 +251,6 @@ export const RegisterPage: React.FC = () => {
             </div>
           )}
 
-          <div className="pt-1">
-            <label className="flex items-start gap-2.5 cursor-pointer text-xs text-[#756366]">
-              <input
-                type="checkbox"
-                checked={isAgeAttested}
-                onChange={(e) => setIsAgeAttested(e.target.checked)}
-                className="mt-0.5 rounded text-[#63474D] focus:ring-[#63474D]"
-              />
-              <span>
-                I confirm that I am <strong>18 years of age or older</strong> and agree to Sheba's Terms and Privacy Policy.
-              </span>
-            </label>
-          </div>
 
           <Button
             type="submit"

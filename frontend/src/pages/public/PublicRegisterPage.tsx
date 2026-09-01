@@ -6,6 +6,7 @@ import type { Event } from '../../types/event';
 import type { Ticket } from '../../types/ticket';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
+import { TicketCard } from '../../components/ticket/TicketCard';
 import {
   Calendar,
   Clock,
@@ -27,7 +28,6 @@ export const PublicRegisterPage: React.FC = () => {
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
   const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [isAgeAttested, setIsAgeAttested] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [issuedTicket, setIssuedTicket] = useState<Ticket | null>(null);
@@ -47,6 +47,18 @@ export const PublicRegisterPage: React.FC = () => {
           fetched = await api.events.getById(id);
         }
         setEvent(fetched);
+
+        if (fetched && user) {
+          try {
+            const existing = await api.registration.getTicketByEvent(fetched.id, user.id);
+            if (existing) {
+              navigate(`/app/ticket/${fetched.id}`);
+              return;
+            }
+          } catch {
+            // Ignore lookup error
+          }
+        }
       } catch (e) {
         console.error(e);
       } finally {
@@ -54,7 +66,7 @@ export const PublicRegisterPage: React.FC = () => {
       }
     };
     fetchEvent();
-  }, [token, id]);
+  }, [token, id, user, navigate]);
 
   const handleAnswerChange = (questionId: string, val: string) => {
     setAnswers((prev) => ({ ...prev, [questionId]: val }));
@@ -66,11 +78,6 @@ export const PublicRegisterPage: React.FC = () => {
 
     if (!isAuthenticated || !user) {
       navigate('/login');
-      return;
-    }
-
-    if (!isAgeAttested) {
-      setErrorMsg('You must confirm you are 18+ to complete registration.');
       return;
     }
 
@@ -98,6 +105,10 @@ export const PublicRegisterPage: React.FC = () => {
         attendee: user,
         answers,
       });
+      if (res.ticket) {
+        navigate(`/app/ticket/${event.id}`);
+        return;
+      }
       setIssuedTicket(res.ticket);
     } catch (err: any) {
       setErrorMsg(err.message || 'Registration failed.');
@@ -117,6 +128,10 @@ export const PublicRegisterPage: React.FC = () => {
         paymentReference: `CHP_TX_${Date.now()}`,
       });
       setShowChapaModal(false);
+      if (res.ticket) {
+        navigate(`/app/ticket/${event.id}`);
+        return;
+      }
       setIssuedTicket(res.ticket);
     } catch (err: any) {
       setErrorMsg(err.message || 'Payment processing failed.');
@@ -154,58 +169,33 @@ export const PublicRegisterPage: React.FC = () => {
     );
   }
 
-  // Registration Complete Screen
+  // Registration Complete Screen fallback
   if (issuedTicket) {
     return (
-      <div className="max-w-xl mx-auto py-12 px-4 space-y-6">
-        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#E8DDD7] shadow-sm space-y-6 text-center">
-          <div className="w-16 h-16 bg-[#2A7B5F]/15 rounded-full flex items-center justify-center text-[#2A7B5F] mx-auto">
-            <CheckCircle2 className="w-8 h-8" />
-          </div>
+      <div className="max-w-md mx-auto py-10 px-4 space-y-6">
+        <div className="text-center space-y-1">
+          <Badge variant="success" icon={<ShieldCheck className="w-3.5 h-3.5" />}>
+            Registration Confirmed & Dynamic QR Pass Issued
+          </Badge>
+          <h2 className="font-serif text-2xl font-extrabold text-[#2D1F23]">{event.title}</h2>
+          <p className="text-xs text-[#756366]">
+            Pass issued to <strong>{issuedTicket.attendeeEmail}</strong>
+          </p>
+        </div>
 
-          <div className="space-y-1">
-            <Badge variant="success" icon={<ShieldCheck className="w-3.5 h-3.5" />}>
-              Registration Confirmed & Dynamic QR Pass Issued
-            </Badge>
-            <h2 className="font-serif text-2xl font-extrabold text-[#2D1F23]">{event.title}</h2>
-            <p className="text-xs text-[#756366]">
-              Confirmation email sent to <strong>{issuedTicket.attendeeEmail}</strong>
-            </p>
-          </div>
+        <TicketCard ticket={issuedTicket} onDownload={() => window.print()} />
 
-          {/* Dynamic Pass Preview Card */}
-          <div className="bg-[#FAF7F5] p-5 rounded-2xl border border-[#E8DDD7] space-y-3 text-left">
-            <div className="flex items-center justify-between text-xs font-semibold text-[#63474D]">
-              <span>PASS ID: {issuedTicket.id}</span>
-              <span className="text-[#2A7B5F] font-bold">STATUS: VALID</span>
-            </div>
-            <div className="space-y-1 text-xs text-[#2D1F23]">
-              <p className="font-bold">{issuedTicket.attendeeName}</p>
-              <p className="text-[#756366] flex items-center gap-1.5">
-                <Calendar className="w-3.5 h-3.5" /> {issuedTicket.eventDate} • {issuedTicket.eventTime}
-              </p>
-              <p className="text-[#756366] flex items-center gap-1.5">
-                <MapPin className="w-3.5 h-3.5" /> {issuedTicket.eventLocation}
-              </p>
-            </div>
-            <div className="bg-white p-4 rounded-xl border border-[#E8DDD7] text-center space-y-2">
-              <QrCode className="w-32 h-32 mx-auto text-[#63474D]" />
-              <p className="text-[10px] text-[#756366]">Dynamic QR Pass (Evaluated server-side at door)</p>
-            </div>
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-3 pt-2">
-            <Link to="/app/events" className="flex-1">
-              <Button fullWidth variant="primary">
-                View My Tickets Wallet
-              </Button>
-            </Link>
-            <Link to="/app/profile" className="flex-1">
-              <Button fullWidth variant="outline">
-                View My Profile & Badges
-              </Button>
-            </Link>
-          </div>
+        <div className="flex gap-3 pt-2">
+          <Link to="/app/events" className="flex-1">
+            <Button fullWidth variant="primary">
+              View My Tickets Wallet
+            </Button>
+          </Link>
+          <Link to="/app/profile" className="flex-1">
+            <Button fullWidth variant="outline">
+              My Profile & Badges
+            </Button>
+          </Link>
         </div>
       </div>
     );
@@ -347,20 +337,7 @@ export const PublicRegisterPage: React.FC = () => {
               </div>
             )}
 
-            {/* 18+ Self-Attestation */}
-            <div className="pt-2">
-              <label className="flex items-start gap-2.5 cursor-pointer text-xs text-[#756366]">
-                <input
-                  type="checkbox"
-                  checked={isAgeAttested}
-                  onChange={(e) => setIsAgeAttested(e.target.checked)}
-                  className="mt-0.5 rounded text-[#63474D] focus:ring-[#63474D]"
-                />
-                <span>
-                  I self-attest that I am <strong>18 years of age or older</strong> and will present this digital ticket pass at check-in.
-                </span>
-              </label>
-            </div>
+
 
             <Button
               type="submit"

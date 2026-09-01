@@ -131,11 +131,23 @@ export const MyEventsPage: React.FC = () => {
                     <span className="text-[11px] text-gray-400 font-light">
                       {ev.registeredCount} / {ev.capacity} spots
                     </span>
-                    <Link to={`/e/${ev.shareLinkToken}`}>
-                      <Button variant="accent" size="sm" icon={<ArrowRight className="w-3.5 h-3.5" />}>
-                        Register / View
-                      </Button>
-                    </Link>
+                    {tickets.some((t) => t.eventId === ev.id) ? (
+                      <Link to={`/app/ticket/${ev.id}`}>
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#2A7B5F] text-white text-xs font-bold hover:bg-[#22634d] transition-all shadow-xs cursor-pointer"
+                        >
+                          <ShieldCheck className="w-3.5 h-3.5" />
+                          <span>Registered</span>
+                        </button>
+                      </Link>
+                    ) : (
+                      <Link to={`/e/${ev.shareLinkToken || ev.id}`}>
+                        <Button variant="accent" size="sm" icon={<ArrowRight className="w-3.5 h-3.5" />}>
+                          Register / Details
+                        </Button>
+                      </Link>
+                    )}
                   </div>
                 </div>
               ))}

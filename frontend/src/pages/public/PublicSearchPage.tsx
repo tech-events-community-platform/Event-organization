@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 import type { User } from '../../types/user';
 import type { Event } from '../../types/event';
 import { Badge } from '../../components/ui/Badge';
@@ -15,19 +16,37 @@ import {
   ArrowRight,
   Sparkles,
   Filter,
+  CheckCircle2,
 } from 'lucide-react';
 
 export const PublicSearchPage: React.FC = () => {
+  const { user } = useAuth();
   const [query, setQuery] = useState('');
   const [attendees, setAttendees] = useState<User[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
+  const [registeredEventIds, setRegisteredEventIds] = useState<Set<string>>(new Set());
   const [selectedType, setSelectedType] = useState<string>('all');
   const [activeTab, setActiveTab] = useState<'events' | 'attendees'>('events');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchResults('');
-  }, []);
+    fetchUserTickets();
+  }, [user]);
+
+  const fetchUserTickets = async () => {
+    if (!user) {
+      setRegisteredEventIds(new Set());
+      return;
+    }
+    try {
+      const tickets = await api.registration.getMyTickets(user.id);
+      const ids = new Set(tickets.map((t) => t.eventId));
+      setRegisteredEventIds(ids);
+    } catch (e) {
+      console.warn('Failed to fetch user tickets:', e);
+    }
+  };
 
   const fetchResults = async (searchQuery: string) => {
     setLoading(true);
@@ -214,11 +233,27 @@ export const PublicSearchPage: React.FC = () => {
                         <Users className="w-3 h-3 text-[#63474D]" />
                         {ev.registeredCount} / {ev.capacity} spots taken
                       </span>
-                      <Link to={`/e/${ev.shareLinkToken}`}>
-                        <Button variant="accent" size="sm" icon={<ArrowRight className="w-3.5 h-3.5" />}>
-                          Register / Details
-                        </Button>
-                      </Link>
+                      {registeredEventIds.has(ev.id) ? (
+                        <Link to={`/app/events`}>
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#2A7B5F] text-white text-xs font-bold hover:bg-[#22634d] transition-all shadow-xs cursor-pointer"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>Registered</span>
+                          </button>
+                        </Link>
+                      ) : ev.registeredCount >= ev.capacity || ev.status === 'closed' ? (
+                        <span className="px-3 py-1.5 rounded-xl bg-gray-100 text-gray-500 text-xs font-semibold">
+                          Capacity Full
+                        </span>
+                      ) : (
+                        <Link to={`/e/${ev.shareLinkToken || ev.id}`}>
+                          <Button variant="accent" size="sm" icon={<ArrowRight className="w-3.5 h-3.5" />}>
+                            Register / Details
+                          </Button>
+                        </Link>
+                      )}
                     </div>
                   </div>
                 </div>

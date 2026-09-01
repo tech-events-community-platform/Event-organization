@@ -45,19 +45,20 @@ export const AttendeeListPage: React.FC = () => {
   useEffect(() => {
     const fetchEvents = async () => {
       try {
-        const evts = await api.events.getAll();
-        setEvents(evts);
+        const evts = await api.events.getAll(user?.id);
+        const myEvents = user?.role === 'ADMIN' ? evts : evts.filter((e) => e.organizerId === user?.id || !user?.id);
+        setEvents(myEvents);
         if (id) {
           setSelectedEventId(id);
-        } else if (evts.length > 0 && !selectedEventId) {
-          setSelectedEventId(evts[0].id);
+        } else if (myEvents.length > 0 && !selectedEventId) {
+          setSelectedEventId(myEvents[0].id);
         }
       } catch (err) {
         console.error('Failed to load events:', err);
       }
     };
     fetchEvents();
-  }, [id]);
+  }, [id, user?.id, user?.role]);
 
   const loadRoster = async (eventId: string) => {
     setLoading(true);

@@ -265,6 +265,11 @@ export const api = {
     },
 
     delete: async (id: string): Promise<boolean> => {
+      try {
+        await requestApi(`/events/${id}`, { method: 'DELETE' });
+      } catch (e) {
+        console.warn('Backend event delete fallback:', e);
+      }
       eventsStore = eventsStore.filter((e) => e.id !== id);
       saveEventsStore();
       return true;
@@ -279,6 +284,27 @@ export const api = {
       answers?: Record<string, string>;
       paymentReference?: string;
     }): Promise<{ ticket: Ticket; isPaymentRequired: boolean; checkoutUrl?: string }> => {
+      try {
+        const res = await requestApi(`/events/${params.eventId}/register`, {
+          method: 'POST',
+          body: JSON.stringify({
+            attendee: params.attendee,
+            answers: params.answers,
+            paymentReference: params.paymentReference,
+          }),
+        });
+        if (res.data?.ticket) {
+          ticketsStore.unshift(res.data.ticket);
+          return res.data;
+        }
+      } catch (err: any) {
+        // If error has status 409 (already registered), throw that message
+        if (err.statusCode === 409 || err.message?.includes('already registered')) {
+          throw new Error('You are already registered for this event.');
+        }
+        console.warn('Backend register fallback to local store:', err.message);
+      }
+
       const event = eventsStore.find((e) => e.id === params.eventId);
       if (!event) throw new Error('Event not found.');
 
@@ -346,14 +372,21 @@ export const api = {
       return { ticket: newTicket, isPaymentRequired: false };
     },
 
-    getMyTickets: async (attendeeId: string): Promise<Ticket[]> => {
+    getMyTickets: async (attendeeId?: string): Promise<Ticket[]> => {
       try {
-        const res = await requestApi('/users/me/tickets');
-        if (res.data && Array.isArray(res.data)) return res.data;
+        const res = await requestApi('/tickets');
+        if (res.data && Array.isArray(res.data)) {
+          return res.data;
+        }
       } catch {
-        // fallback
+        try {
+          const userRes = await requestApi('/users/me/tickets');
+          if (userRes.data && Array.isArray(userRes.data)) return userRes.data;
+        } catch {
+          // fallback
+        }
       }
-      return ticketsStore.filter((t) => t.attendeeId === attendeeId);
+      return attendeeId ? ticketsStore.filter((t) => t.attendeeId === attendeeId) : ticketsStore;
     },
 
     getAttendeeTickets: async (attendeeId: string): Promise<Ticket[]> => {
@@ -361,6 +394,12 @@ export const api = {
     },
 
     getTicketByEvent: async (eventId: string, attendeeId: string): Promise<Ticket | null> => {
+      try {
+        const res = await requestApi(`/tickets/${eventId}`);
+        if (res.data) return res.data;
+      } catch {
+        // fallback
+      }
       return (
         ticketsStore.find((t) => t.eventId === eventId && t.attendeeId === attendeeId) || null
       );
@@ -428,6 +467,20 @@ export const api = {
         }
       }
 
+      const targetAttendeeId = ticket?.attendeeId || found?.attendeeId;
+      if (targetAttendeeId) {
+        try {
+          await api.badges.awardBadge({
+            eventId: params.eventId,
+            attendeeId: targetAttendeeId,
+            badgeCode: 'attended',
+            awardedByOrganizerId: params.organizerId,
+          });
+        } catch {
+          // ignore if already awarded
+        }
+      }
+
       const ev = eventsStore.find((e) => e.id === params.eventId);
       if (ev) {
         ev.checkedInCount = (ev.checkedInCount || 0) + 1;
@@ -435,7 +488,7 @@ export const api = {
 
       return {
         success: true,
-        message: `Check-in successful! Welcome, ${ticket?.attendeeName || found?.name || 'Attendee'}.`,
+        message: `Check-in successful! Verified attendance badge awarded to ${ticket?.attendeeName || found?.name || 'Attendee'}.`,
         rosterItem: found,
         ticket,
       };

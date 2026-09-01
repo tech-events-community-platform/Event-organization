@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/ui/Button';
@@ -13,7 +13,7 @@ import {
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { user, isAuthenticated, login } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -21,6 +21,18 @@ export const LoginPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isPendingNotice, setIsPendingNotice] = useState(false);
+
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      if (user.role === 'ORGANIZER') {
+        navigate('/organizer', { replace: true });
+      } else if (user.role === 'ADMIN') {
+        navigate('/admin', { replace: true });
+      } else {
+        navigate('/app', { replace: true });
+      }
+    }
+  }, [isAuthenticated, user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,7 +47,7 @@ export const LoginPage: React.FC = () => {
       } else if (loggedUser.role === 'ADMIN') {
         navigate('/admin');
       } else {
-        navigate('/app/events');
+        navigate('/app');
       }
     } catch (err: any) {
       const message = err.message || 'Authentication failed. Please verify your credentials.';

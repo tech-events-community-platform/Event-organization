@@ -68,6 +68,7 @@ export const router = createBrowserRouter([
           { index: true, element: <AttendeeDashboardPage /> },
           { path: 'record', element: <RecordPage /> },
           { path: 'events', element: <MyEventsPage /> },
+          { path: 'explore', element: <PublicSearchPage /> },
           { path: 'ticket/:eventId', element: <TicketPage /> },
           { path: 'profile', element: <ProfilePage /> },
           { path: 'profile/attendance', element: <AttendanceHistoryPage /> },

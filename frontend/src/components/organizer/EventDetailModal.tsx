@@ -21,9 +21,10 @@ interface EventDetailModalProps {
   event: Event | null;
   isOpen: boolean;
   onClose: () => void;
+  onDeleteClick?: (event: Event) => void;
 }
 
-export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, isOpen, onClose }) => {
+export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, isOpen, onClose, onDeleteClick }) => {
   const [copied, setCopied] = useState(false);
 
   if (!isOpen || !event) return null;
@@ -213,6 +214,22 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, isOpe
             <span>Event Report</span>
           </Link>
         </div>
+
+        {/* Optional Delete Button */}
+        {onDeleteClick && (
+          <div className="pt-2 border-t border-gray-100 flex justify-end">
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                onDeleteClick(event);
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 rounded-xl transition-colors cursor-pointer"
+            >
+              <span>Delete This Event</span>
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

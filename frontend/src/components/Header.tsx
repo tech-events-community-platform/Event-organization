@@ -1,12 +1,35 @@
-import { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, ArrowRight } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import {
+  Menu,
+  X,
+  ArrowRight,
+  User as UserIcon,
+  LogOut,
+  LayoutDashboard,
+  Award,
+  ChevronDown,
+  Compass,
+  Ticket,
+  PlusCircle,
+  Calendar,
+  BarChart3,
+  Shield,
+  Clock,
+} from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 export default function Header() {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const { user, isAuthenticated, logout } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const isHome = location.pathname === '/';
+  const isAuthPage = ['/login', '/register', '/pending-approval'].includes(location.pathname);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -18,162 +41,578 @@ export default function Header() {
 
   useEffect(() => {
     setIsOpen(false);
+    setUserDropdownOpen(false);
   }, [location]);
 
-  const navLinks = [
-    { name: 'Features', href: isHome ? '#features' : '/#features' },
-    { name: 'How It Works', href: isHome ? '#how-it-works' : '/#how-it-works' },
-    { name: 'Interactive Demo', href: isHome ? '#demo' : '/#demo' },
-    { name: 'Audiences', href: isHome ? '#audiences' : '/#audiences' },
-    { name: 'Roadmap', href: isHome ? '#roadmap' : '/#roadmap' },
-    { name: 'Team', href: isHome ? '#team' : '/#team' },
-  ];
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setUserDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleLogout = async () => {
+    await logout();
+    setUserDropdownOpen(false);
+    navigate('/');
+  };
+
+  const isTabActive = (path: string) => {
+    if (path === '/') return location.pathname === '/';
+    if (path === '/app') return location.pathname === '/app';
+    return location.pathname.startsWith(path);
+  };
+
+  const getDashboardPath = () => {
+    if (!user) return '/app';
+    if (user.role === 'ADMIN') return '/admin';
+    if (user.role === 'ORGANIZER') return '/organizer';
+    return '/app';
+  };
+
+  const getProfilePath = () => {
+    if (!user) return '/app/profile';
+    if (user.role === 'ORGANIZER') return '/organizer/events';
+    if (user.role === 'ADMIN') return '/admin';
+    return '/app/profile';
+  };
+
+  const publicNavLinks = isHome
+    ? [
+        { name: 'Features', href: '#features', isInternal: true },
+        { name: 'How It Works', href: '#how-it-works', isInternal: true },
+        { name: 'Interactive Demo', href: '#demo', isInternal: true },
+        { name: 'Audiences', href: '#audiences', isInternal: true },
+        { name: 'Explore Events', href: '/search', isInternal: false },
+      ]
+    : [
+        { name: 'Home', href: '/', isInternal: false },
+        { name: 'Explore Events', href: '/search', isInternal: false },
+      ];
+
+  const defaultAvatar = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80';
 
   return (
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         scrolled
-          ? 'bg-white/90 backdrop-blur-md shadow-sm border-b border-gray-100 py-3.5'
-          : 'bg-transparent py-5'
+          ? 'bg-white/95 backdrop-blur-md shadow-sm border-b border-gray-100'
+          : 'bg-white/90 backdrop-blur-sm border-b border-gray-100/80 shadow-2xs'
       }`}
     >
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between">
+      {/* Top Navbar Row */}
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-2.5 sm:py-3">
+        <div className="flex items-center justify-between gap-4">
           {/* Brand Logo */}
-          <Link to="/" className="flex items-center gap-3.5 group">
+          <Link to="/" className="flex items-center gap-3 group shrink-0">
             <img
               src="/logo.jpg"
               alt="Sheeba Logo"
-              className="h-10 sm:h-12 w-auto object-contain group-hover:scale-105 transition-transform duration-200"
+              className="h-8 sm:h-10 w-auto object-contain group-hover:scale-105 transition-transform duration-200"
             />
             <div className="flex flex-col">
-              <span className="font-serif text-2xl font-bold tracking-tight text-sheeba-dark group-hover:text-sheeba-purple transition-colors">
+              <span className="font-serif text-xl sm:text-2xl font-bold tracking-tight text-[#2D1F23] group-hover:text-[#63474D] transition-colors leading-none">
                 Sheeba
               </span>
-              <span className="text-[10px] uppercase font-semibold tracking-wider text-sheeba-rose -mt-1">
+              <span className="text-[8px] uppercase font-bold tracking-widest text-[#AA767C] mt-0.5">
                 Event Infrastructure
               </span>
             </div>
           </Link>
 
-          {/* Desktop Navigation */}
-          {!['/login', '/register', '/pending-approval'].includes(location.pathname) && (
-            <nav className="hidden lg:flex items-center gap-8 xl:gap-10">
-              {navLinks.map((link) => (
-                <a
-                  key={link.name}
-                  href={link.href}
-                  className="text-sm font-medium text-gray-700 hover:text-sheeba-purple transition-colors duration-150 relative py-1 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-0.5 after:bg-sheeba-purple hover:after:w-full after:transition-all after:duration-200"
-                >
-                  {link.name}
-                </a>
-              ))}
+          {/* Desktop Navigation for Logged Out Guests */}
+          {!isAuthenticated && !isAuthPage && (
+            <nav className="hidden md:flex items-center gap-6 lg:gap-8">
+              {publicNavLinks.map((link) =>
+                link.isInternal ? (
+                  <a
+                    key={link.name}
+                    href={link.href}
+                    className="text-xs sm:text-sm font-medium text-gray-700 hover:text-[#63474D] transition-colors py-1 relative after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-0.5 after:bg-[#63474D] hover:after:w-full after:transition-all after:duration-200"
+                  >
+                    {link.name}
+                  </a>
+                ) : (
+                  <Link
+                    key={link.name}
+                    to={link.href}
+                    className="text-xs sm:text-sm font-medium text-gray-700 hover:text-[#63474D] transition-colors py-1 relative after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-0.5 after:bg-[#63474D] hover:after:w-full after:transition-all after:duration-200"
+                  >
+                    {link.name}
+                  </Link>
+                )
+              )}
             </nav>
           )}
 
-          {/* Desktop Right CTA */}
-          <div className="hidden lg:flex items-center gap-3">
-            {!['/login', '/register', '/pending-approval'].includes(location.pathname) ? (
-              <>
+          {/* Desktop Right: Profile / Auth Actions */}
+          <div className="hidden md:flex items-center gap-3">
+            {isAuthenticated && user ? (
+              /* Logged In User Pill & Dropdown */
+              <div className="relative" ref={dropdownRef}>
+                <button
+                  type="button"
+                  onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                  className="flex items-center gap-2.5 pl-2 pr-3 py-1.5 rounded-full bg-white border border-[#E8DDD7] hover:border-[#63474D]/40 hover:shadow-xs transition-all cursor-pointer"
+                >
+                  <img
+                    src={user.avatarUrl || defaultAvatar}
+                    alt={user.name}
+                    className="w-7 h-7 rounded-full object-cover border border-[#FFA686]/60 shadow-xs"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = defaultAvatar;
+                    }}
+                  />
+                  <div className="flex flex-col text-left">
+                    <span className="text-xs font-bold text-[#2D1F23] max-w-[130px] truncate leading-tight">
+                      {user.name}
+                    </span>
+                    <span className="text-[9px] uppercase tracking-wider font-semibold text-[#AA767C]">
+                      {user.role === 'ADMIN' ? 'Super Admin' : user.role === 'ORGANIZER' ? 'Organizer' : 'Attendee'}
+                    </span>
+                  </div>
+                  <ChevronDown className="w-3.5 h-3.5 text-gray-500 transition-transform duration-200" />
+                </button>
+
+                {/* Profile Dropdown Menu */}
+                {userDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-60 bg-white rounded-2xl shadow-xl border border-[#E8DDD7] py-2 z-50 animate-fade-in">
+                    <div className="px-4 py-2.5 border-b border-[#E8DDD7]/60">
+                      <p className="text-xs font-bold text-[#2D1F23] truncate">{user.name}</p>
+                      <p className="text-[11px] text-gray-500 truncate">{user.email}</p>
+                    </div>
+
+                    <div className="py-1">
+                      <Link
+                        to={getDashboardPath()}
+                        onClick={() => setUserDropdownOpen(false)}
+                        className="flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-gray-700 hover:bg-[#FAF7F5] hover:text-[#63474D] transition-colors"
+                      >
+                        <LayoutDashboard className="w-4 h-4 text-[#AA767C]" />
+                        <span>Go to Dashboard</span>
+                      </Link>
+
+                      {user.role === 'ATTENDEE' && (
+                        <Link
+                          to={getProfilePath()}
+                          onClick={() => setUserDropdownOpen(false)}
+                          className="flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-gray-700 hover:bg-[#FAF7F5] hover:text-[#63474D] transition-colors"
+                        >
+                          <Award className="w-4 h-4 text-[#FFA686]" />
+                          <span>My Profile & Badges</span>
+                        </Link>
+                      )}
+
+                      <Link
+                        to="/search"
+                        onClick={() => setUserDropdownOpen(false)}
+                        className="flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-gray-700 hover:bg-[#FAF7F5] hover:text-[#63474D] transition-colors"
+                      >
+                        <Compass className="w-4 h-4 text-[#AA767C]" />
+                        <span>Explore Events</span>
+                      </Link>
+                    </div>
+
+                    <div className="pt-1 border-t border-[#E8DDD7]/60">
+                      <button
+                        type="button"
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 transition-colors cursor-pointer text-left"
+                      >
+                        <LogOut className="w-4 h-4 text-red-500" />
+                        <span>Sign Out</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : isAuthPage ? (
+              <Link
+                to="/"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-gray-300 text-gray-700 text-xs font-semibold hover:bg-gray-100 transition-colors"
+              >
+                <span>Back to Home</span>
+              </Link>
+            ) : (
+              <div className="flex items-center gap-2.5">
                 <Link
                   to="/login"
-                  className="inline-flex items-center px-4 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:text-sheeba-purple hover:bg-gray-100 transition-colors"
+                  className="inline-flex items-center px-4 py-2 rounded-xl text-xs font-semibold text-gray-700 hover:text-[#63474D] hover:bg-gray-100 transition-colors"
                 >
                   Sign In
                 </Link>
                 <Link
                   to="/register"
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#63474D] text-white text-sm font-bold hover:bg-[#523a3f] shadow-md hover:shadow-lg transition-all duration-200"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#63474D] text-white text-xs font-bold hover:bg-[#523a3f] shadow-xs hover:shadow-sm transition-all duration-200"
                 >
                   <span>Register</span>
-                  <ArrowRight className="w-4 h-4 text-white" />
+                  <ArrowRight className="w-3.5 h-3.5 text-white" />
                 </Link>
-              </>
-            ) : (
-              <Link
-                to="/"
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-300 text-gray-700 text-sm font-semibold hover:bg-gray-100 transition-colors"
-              >
-                <span>Back to Home</span>
-              </Link>
+              </div>
             )}
           </div>
 
           {/* Mobile Hamburger Toggle */}
-          <div className="flex lg:hidden items-center gap-2">
-            {!['/login', '/register', '/pending-approval'].includes(location.pathname) ? (
-              <>
-                <Link
-                  to="/login"
-                  className="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-700 text-xs font-semibold hover:bg-gray-100"
-                >
-                  Sign In
-                </Link>
-                <Link
-                  to="/register"
-                  className="px-3 py-1.5 rounded-lg bg-[#63474D] text-white text-xs font-bold hover:bg-[#523a3f]"
-                >
-                  Register
-                </Link>
-              </>
-            ) : (
-              <Link
-                to="/"
-                className="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-700 text-xs font-semibold"
+          <div className="flex md:hidden items-center gap-2">
+            {isAuthenticated && user ? (
+              <button
+                type="button"
+                onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                className="flex items-center gap-1.5 p-1 rounded-full border border-[#E8DDD7]"
               >
-                Back to Home
-              </Link>
-            )}
+                <img
+                  src={user.avatarUrl || defaultAvatar}
+                  alt={user.name}
+                  className="w-7 h-7 rounded-full object-cover"
+                />
+              </button>
+            ) : null}
+
             <button
               onClick={() => setIsOpen(!isOpen)}
-              className="p-2 rounded-lg text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-sheeba-purple cursor-pointer"
+              className="p-2 rounded-lg text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#63474D] cursor-pointer"
               aria-label="Toggle navigation menu"
             >
-              {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
         </div>
       </div>
 
+      {/* 1-LINE QUICK NAVIGATION SUBNAV (Visible When Logged In) */}
+      {isAuthenticated && user && (
+        <div className="bg-[#FAF7F5] border-t border-b border-[#E8DDD7]/70 py-1 px-4 sm:px-6 lg:px-8 overflow-x-auto scrollbar-none">
+          <div className="max-w-7xl mx-auto flex items-center justify-start sm:justify-center gap-2 sm:gap-4 whitespace-nowrap min-w-max text-xs">
+            {user.role === 'ATTENDEE' && (
+              <>
+                <Link
+                  to="/app"
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold transition-all ${
+                    location.pathname === '/app'
+                      ? 'bg-[#63474D] text-white shadow-xs'
+                      : 'text-[#63474D] hover:bg-[#63474D]/10'
+                  }`}
+                >
+                  <LayoutDashboard className="w-3.5 h-3.5" />
+                  <span>📊 Dashboard</span>
+                </Link>
+
+                <Link
+                  to="/app/events"
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold transition-all ${
+                    isTabActive('/app/events') || isTabActive('/app/ticket')
+                      ? 'bg-[#63474D] text-white shadow-xs'
+                      : 'text-[#63474D] hover:bg-[#63474D]/10'
+                  }`}
+                >
+                  <Ticket className="w-3.5 h-3.5" />
+                  <span>🎟️ My Tickets & Passes</span>
+                </Link>
+
+                <Link
+                  to="/app/record"
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold transition-all ${
+                    isTabActive('/app/record')
+                      ? 'bg-[#63474D] text-white shadow-xs'
+                      : 'text-[#63474D] hover:bg-[#63474D]/10'
+                  }`}
+                >
+                  <Award className="w-3.5 h-3.5" />
+                  <span>🏆 My Badges & Records</span>
+                </Link>
+
+                <Link
+                  to="/app/explore"
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold transition-all ${
+                    isTabActive('/app/explore') || isTabActive('/search')
+                      ? 'bg-[#63474D] text-white shadow-xs'
+                      : 'text-[#63474D] hover:bg-[#63474D]/10'
+                  }`}
+                >
+                  <Compass className="w-3.5 h-3.5" />
+                  <span>🔍 Explore Events</span>
+                </Link>
+
+                <Link
+                  to="/app/profile"
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold transition-all ${
+                    isTabActive('/app/profile') && location.pathname !== '/app/profile/attendance'
+                      ? 'bg-[#63474D] text-white shadow-xs'
+                      : 'text-[#63474D] hover:bg-[#63474D]/10'
+                  }`}
+                >
+                  <UserIcon className="w-3.5 h-3.5" />
+                  <span>👤 My Profile</span>
+                </Link>
+              </>
+            )}
+
+            {user.role === 'ORGANIZER' && (
+              <>
+                <Link
+                  to="/organizer/events"
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold transition-all ${
+                    isTabActive('/organizer/events') && location.pathname !== '/organizer/events/create'
+                      ? 'bg-[#63474D] text-white shadow-xs'
+                      : 'text-[#63474D] hover:bg-[#63474D]/10'
+                  }`}
+                >
+                  <Calendar className="w-3.5 h-3.5" />
+                  <span>📅 My Events</span>
+                </Link>
+
+                <Link
+                  to="/organizer/events/create"
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold transition-all ${
+                    isTabActive('/organizer/events/create')
+                      ? 'bg-[#63474D] text-white shadow-xs'
+                      : 'text-[#63474D] hover:bg-[#63474D]/10'
+                  }`}
+                >
+                  <PlusCircle className="w-3.5 h-3.5" />
+                  <span>➕ Create Event</span>
+                </Link>
+
+                <Link
+                  to="/organizer"
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold transition-all ${
+                    location.pathname === '/organizer'
+                      ? 'bg-[#63474D] text-white shadow-xs'
+                      : 'text-[#63474D] hover:bg-[#63474D]/10'
+                  }`}
+                >
+                  <LayoutDashboard className="w-3.5 h-3.5" />
+                  <span>📊 Organizer Studio</span>
+                </Link>
+
+                <Link
+                  to="/organizer/reports"
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold transition-all ${
+                    isTabActive('/organizer/reports')
+                      ? 'bg-[#63474D] text-white shadow-xs'
+                      : 'text-[#63474D] hover:bg-[#63474D]/10'
+                  }`}
+                >
+                  <BarChart3 className="w-3.5 h-3.5" />
+                  <span>📈 Reports & Badges</span>
+                </Link>
+
+                <Link
+                  to="/search"
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold transition-all ${
+                    isTabActive('/search')
+                      ? 'bg-[#63474D] text-white shadow-xs'
+                      : 'text-[#63474D] hover:bg-[#63474D]/10'
+                  }`}
+                >
+                  <Compass className="w-3.5 h-3.5" />
+                  <span>🔍 Explore Events</span>
+                </Link>
+              </>
+            )}
+
+            {user.role === 'ADMIN' && (
+              <>
+                <Link
+                  to="/admin"
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold transition-all ${
+                    location.pathname === '/admin'
+                      ? 'bg-[#63474D] text-white shadow-xs'
+                      : 'text-[#63474D] hover:bg-[#63474D]/10'
+                  }`}
+                >
+                  <Shield className="w-3.5 h-3.5" />
+                  <span>🛡️ Admin Portal</span>
+                </Link>
+
+                <Link
+                  to="/admin/users"
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold transition-all ${
+                    isTabActive('/admin/users')
+                      ? 'bg-[#63474D] text-white shadow-xs'
+                      : 'text-[#63474D] hover:bg-[#63474D]/10'
+                  }`}
+                >
+                  <UserIcon className="w-3.5 h-3.5" />
+                  <span>👥 Users Management</span>
+                </Link>
+
+                <Link
+                  to="/admin/events"
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold transition-all ${
+                    isTabActive('/admin/events')
+                      ? 'bg-[#63474D] text-white shadow-xs'
+                      : 'text-[#63474D] hover:bg-[#63474D]/10'
+                  }`}
+                >
+                  <Calendar className="w-3.5 h-3.5" />
+                  <span>📅 Events Moderation</span>
+                </Link>
+
+                <Link
+                  to="/search"
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold transition-all ${
+                    isTabActive('/search')
+                      ? 'bg-[#63474D] text-white shadow-xs'
+                      : 'text-[#63474D] hover:bg-[#63474D]/10'
+                  }`}
+                >
+                  <Compass className="w-3.5 h-3.5" />
+                  <span>🔍 Explore Events</span>
+                </Link>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Mobile Drawer */}
       {isOpen && (
-        <div className="lg:hidden fixed inset-x-0 top-[65px] bg-white/95 backdrop-blur-xl border-b border-gray-200 shadow-xl px-6 py-6 transition-all duration-300">
+        <div className="md:hidden fixed inset-x-0 top-[57px] bg-white/98 backdrop-blur-xl border-b border-gray-200 shadow-xl px-6 py-6 transition-all duration-300 max-h-[85vh] overflow-y-auto">
           <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-              <span className="text-xs font-semibold uppercase tracking-wider text-sheeba-rose">
-                Navigation
-              </span>
-              <span className="inline-flex items-center gap-1 text-xs text-sheeba-purple font-medium bg-sheeba-purple/10 px-2 py-0.5 rounded-full">
-                <span className="w-1.5 h-1.5 rounded-full bg-sheeba-pink"></span>
-                Ethiopia&apos;s Tech Engine
-              </span>
-            </div>
-            {navLinks.map((link) => (
-              <a
-                key={link.name}
-                href={link.href}
-                onClick={() => setIsOpen(false)}
-                className="text-base font-medium text-gray-800 hover:text-sheeba-purple py-1.5 transition-colors"
-              >
-                {link.name}
-              </a>
-            ))}
-            <div className="pt-4 border-t border-gray-100 grid grid-cols-2 gap-2">
-              <Link
-                to="/login"
-                onClick={() => setIsOpen(false)}
-                className="flex items-center justify-center py-2.5 rounded-xl border border-gray-300 text-gray-800 font-semibold text-sm hover:bg-gray-50 transition-colors"
-              >
-                Sign In
-              </Link>
-              <Link
-                to="/register"
-                onClick={() => setIsOpen(false)}
-                className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-[#63474D] text-white font-bold text-sm shadow-xs hover:bg-[#523a3f] transition-colors"
-              >
-                <span>Register</span>
-                <ArrowRight className="w-4 h-4 text-white" />
-              </Link>
+            {isAuthenticated && user ? (
+              /* Mobile Logged-in User Card */
+              <div className="pb-3 border-b border-gray-100 space-y-2">
+                <div className="flex items-center gap-3">
+                  <img
+                    src={user.avatarUrl || defaultAvatar}
+                    alt={user.name}
+                    className="w-10 h-10 rounded-full object-cover border border-[#FFA686]/60"
+                  />
+                  <div className="flex flex-col">
+                    <span className="text-sm font-bold text-[#2D1F23]">{user.name}</span>
+                    <span className="text-xs text-gray-500">{user.email}</span>
+                  </div>
+                </div>
+
+                <div className="pt-2 flex flex-col gap-1.5">
+                  {user.role === 'ATTENDEE' && (
+                    <>
+                      <Link
+                        to="/app/events"
+                        onClick={() => setIsOpen(false)}
+                        className="flex items-center gap-2 py-2 px-3 rounded-xl bg-[#FAF7F5] text-xs font-semibold text-[#63474D]"
+                      >
+                        <Ticket className="w-4 h-4" />
+                        <span>🎟️ My Tickets & Passes</span>
+                      </Link>
+
+                      <Link
+                        to="/app/record"
+                        onClick={() => setIsOpen(false)}
+                        className="flex items-center gap-2 py-2 px-3 rounded-xl hover:bg-gray-50 text-xs font-medium text-gray-700"
+                      >
+                        <Award className="w-4 h-4 text-[#FFA686]" />
+                        <span>🏆 My Badges & Records</span>
+                      </Link>
+
+                      <Link
+                        to="/app"
+                        onClick={() => setIsOpen(false)}
+                        className="flex items-center gap-2 py-2 px-3 rounded-xl hover:bg-gray-50 text-xs font-medium text-gray-700"
+                      >
+                        <LayoutDashboard className="w-4 h-4 text-[#AA767C]" />
+                        <span>📊 Dashboard</span>
+                      </Link>
+                    </>
+                  )}
+
+                  {user.role === 'ORGANIZER' && (
+                    <>
+                      <Link
+                        to="/organizer/events"
+                        onClick={() => setIsOpen(false)}
+                        className="flex items-center gap-2 py-2 px-3 rounded-xl bg-[#FAF7F5] text-xs font-semibold text-[#63474D]"
+                      >
+                        <Calendar className="w-4 h-4" />
+                        <span>📅 My Events</span>
+                      </Link>
+                      <Link
+                        to="/organizer/events/create"
+                        onClick={() => setIsOpen(false)}
+                        className="flex items-center gap-2 py-2 px-3 rounded-xl hover:bg-gray-50 text-xs font-medium text-gray-700"
+                      >
+                        <PlusCircle className="w-4 h-4 text-[#FFA686]" />
+                        <span>➕ Create Event</span>
+                      </Link>
+                    </>
+                  )}
+
+                  <Link
+                    to="/search"
+                    onClick={() => setIsOpen(false)}
+                    className="flex items-center gap-2 py-2 px-3 rounded-xl hover:bg-gray-50 text-xs font-medium text-gray-700"
+                  >
+                    <Compass className="w-4 h-4 text-[#AA767C]" />
+                    <span>🔍 Explore Events</span>
+                  </Link>
+                </div>
+              </div>
+            ) : null}
+
+            {/* Public Navigation links for guests */}
+            {!isAuthenticated && (
+              <div className="flex flex-col gap-2">
+                {publicNavLinks.map((link) =>
+                  link.isInternal ? (
+                    <a
+                      key={link.name}
+                      href={link.href}
+                      onClick={() => setIsOpen(false)}
+                      className="text-sm font-medium text-gray-800 hover:text-[#63474D] py-1.5 transition-colors"
+                    >
+                      {link.name}
+                    </a>
+                  ) : (
+                    <Link
+                      key={link.name}
+                      to={link.href}
+                      onClick={() => setIsOpen(false)}
+                      className="text-sm font-medium text-gray-800 hover:text-[#63474D] py-1.5 transition-colors"
+                    >
+                      {link.name}
+                    </Link>
+                  )
+                )}
+              </div>
+            )}
+
+            {/* Mobile Auth Actions */}
+            <div className="pt-4 border-t border-gray-100">
+              {isAuthenticated && user ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleLogout();
+                    setIsOpen(false);
+                  }}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-red-200 bg-red-50/50 text-red-600 font-semibold text-xs transition-colors cursor-pointer"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Sign Out</span>
+                </button>
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  <Link
+                    to="/login"
+                    onClick={() => setIsOpen(false)}
+                    className="flex items-center justify-center py-2.5 rounded-xl border border-gray-300 text-gray-800 font-semibold text-xs hover:bg-gray-50 transition-colors"
+                  >
+                    Sign In
+                  </Link>
+                  <Link
+                    to="/register"
+                    onClick={() => setIsOpen(false)}
+                    className="flex items-center justify-center gap-1 py-2.5 rounded-xl bg-[#63474D] text-white font-bold text-xs shadow-xs hover:bg-[#523a3f] transition-colors"
+                  >
+                    <span>Register</span>
+                    <ArrowRight className="w-3.5 h-3.5 text-white" />
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
         </div>

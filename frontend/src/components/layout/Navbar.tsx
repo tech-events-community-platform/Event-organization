@@ -136,40 +136,21 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAttendeeDrawer }) => {
                   </Badge>
                 )}
 
-                {role === 'ATTENDEE' && onOpenAttendeeDrawer ? (
-                  <button
-                    type="button"
-                    onClick={onOpenAttendeeDrawer}
-                    className="flex items-center gap-2 pl-1.5 pr-3 py-1 rounded-full hover:bg-gray-50 transition-colors border border-gray-200/80 cursor-pointer"
-                    title="Open Account & Settings"
-                  >
-                    <img
-                      src={user?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80'}
-                      alt={user?.name}
-                      className="w-7 h-7 rounded-full object-cover border border-sheeba-rose/40"
-                    />
-                    <span className="text-xs font-semibold text-sheeba-dark">
-                      {user?.name}
-                    </span>
-                    <Settings className="w-3.5 h-3.5 text-gray-500" />
-                  </button>
-                ) : (
-                  <Link
-                    to={role === 'ORGANIZER' ? '/organizer/settings' : role === 'ADMIN' ? '/admin/profile' : '/app/settings'}
-                    className="flex items-center gap-2 pl-1.5 pr-3 py-1 rounded-full hover:bg-gray-50 transition-colors border border-gray-200/80"
-                    title="Account Settings"
-                  >
-                    <img
-                      src={user?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80'}
-                      alt={user?.name}
-                      className="w-7 h-7 rounded-full object-cover border border-sheeba-rose/40"
-                    />
-                    <span className="text-xs font-semibold text-sheeba-dark">
-                      {user?.name}
-                    </span>
-                    <Settings className="w-3.5 h-3.5 text-gray-500" />
-                  </Link>
-                )}
+                <Link
+                  to={role === 'ORGANIZER' ? '/organizer/settings' : role === 'ADMIN' ? '/admin/profile' : '/app/profile'}
+                  className="flex items-center gap-2 pl-1.5 pr-3 py-1 rounded-full hover:bg-gray-50 transition-colors border border-gray-200/80"
+                  title="My Profile & Settings"
+                >
+                  <img
+                    src={user?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80'}
+                    alt={user?.name}
+                    className="w-7 h-7 rounded-full object-cover border border-[#FFA686]/60"
+                  />
+                  <span className="text-xs font-semibold text-[#2D1F23]">
+                    {user?.name}
+                  </span>
+                  <Settings className="w-3.5 h-3.5 text-gray-500" />
+                </Link>
 
                 <button
                   onClick={handleLogout}

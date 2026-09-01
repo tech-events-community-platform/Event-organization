@@ -16,6 +16,7 @@ import {
   Copy,
   Check,
   Send,
+  Ticket as TicketIcon,
 } from 'lucide-react';
 
 export const AttendeeDashboardPage: React.FC = () => {
@@ -50,7 +51,7 @@ export const AttendeeDashboardPage: React.FC = () => {
     return '/badges/meetup-badge.jpg';
   };
 
-  const userProfession = user?.organization || 'Software Engineer & Ecosystem Builder';
+  const userProfession = user?.organization || user?.bio || '';
   const publicShareUrl = typeof window !== 'undefined'
     ? `${window.location.origin}/profile/${user?.id || 'demo'}`
     : 'https://sheeba.events';
@@ -216,9 +217,11 @@ export const AttendeeDashboardPage: React.FC = () => {
             <h1 className="font-serif text-3xl sm:text-4xl font-bold text-sheeba-dark leading-tight">
               {user?.name || 'Abebe Kebede'}
             </h1>
-            <p className="text-sm sm:text-base text-gray-600 font-light">
-              {userProfession}
-            </p>
+            {userProfession ? (
+              <p className="text-sm sm:text-base text-gray-600 font-light">
+                {userProfession}
+              </p>
+            ) : null}
             {user?.bio && (
               <p className="text-xs text-gray-500 font-light max-w-xl leading-relaxed">
                 {user.bio}
@@ -268,7 +271,7 @@ export const AttendeeDashboardPage: React.FC = () => {
               <span>Export</span>
             </button>
             <span className="text-[11px] font-semibold text-gray-500 px-0.5">
-              {tickets.length} verified entries
+              {tickets.filter((t) => t.status === 'Checked in' || t.status === 'Used').length} verified badges • {tickets.length} total registrations
             </span>
           </div>
         </div>
@@ -286,7 +289,7 @@ export const AttendeeDashboardPage: React.FC = () => {
                 Discover upcoming hackathons and meetups on Sheeba to start building your verified event timeline.
               </p>
               <Link
-                to="/search"
+                to="/app/explore"
                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-sheeba-purple text-white text-xs font-semibold hover:bg-sheeba-indigo transition-colors"
               >
                 Browse Upcoming Events
@@ -295,42 +298,56 @@ export const AttendeeDashboardPage: React.FC = () => {
           ) : (
             tickets.map((t) => {
               const badgeImg = getBadgeImage(t.eventType);
-              const isCheckedIn = t.status === 'Checked in';
+              const isCheckedIn = t.status === 'Checked in' || t.status === 'Used';
 
               return (
-                /* Note to User: Event Card background color is set below (bg-[#d4c5d6]) */
                 <div
                   key={t.id}
                   className="p-5 rounded-2xl bg-[#d4c5d6] border border-[#c3b0c5] shadow-2xs hover:shadow-xs space-y-3 transition-all duration-200"
                 >
-                  {/* Top Row: Badge Photo + Title + Status */}
+                  {/* Top Row: Badge Photo (only if checked-in) / Ticket Pass Icon + Title + Status */}
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="flex items-center gap-4 min-w-0">
-                      <img
-                        src={badgeImg}
-                        alt={`${t.eventType} Badge`}
-                        className="w-12 h-12 sm:w-14 sm:h-14 object-contain shrink-0 mix-blend-multiply transition-transform hover:scale-105"
-                      />
+                      {isCheckedIn ? (
+                        <img
+                          src={badgeImg}
+                          alt={`${t.eventType} Badge`}
+                          className="w-12 h-12 sm:w-14 sm:h-14 object-contain shrink-0 mix-blend-multiply transition-transform hover:scale-105"
+                          title="Verified Attendance Badge Earned"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-white/70 border border-black/10 flex items-center justify-center text-[#4f0820] shrink-0 shadow-2xs">
+                          <TicketIcon className="w-6 h-6 text-[#63474D]" />
+                        </div>
+                      )}
                       <div className="min-w-0">
                         <h3 className="font-serif font-bold text-base sm:text-lg text-[#0e0622] truncate">
                           {t.eventTitle}
                         </h3>
-                        <p className="text-xs text-[#4f0820] font-semibold capitalize mt-0.5">
-                          {t.eventType} • Official Sheeba Verified Event
-                        </p>
+                        {isCheckedIn ? (
+                          <p className="text-xs text-[#1b4332] font-bold capitalize mt-0.5 flex items-center gap-1">
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>{t.eventType} • Verified Turnout & Official Badge Earned</span>
+                          </p>
+                        ) : (
+                          <p className="text-xs text-[#4f0820] font-semibold capitalize mt-0.5 flex items-center gap-1">
+                            <QrCode className="w-3 h-3 text-[#AA767C]" />
+                            <span>{t.eventType} • Registered Pass (Awaiting Door QR Scan for Badge)</span>
+                          </p>
+                        )}
                       </div>
                     </div>
 
                     <div className="flex items-center gap-3 shrink-0">
                       {isCheckedIn ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/70 text-xs font-bold text-[#1b4332]">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1b4332]/15 text-xs font-bold text-[#1b4332] border border-[#1b4332]/30 shadow-2xs">
                           <CheckCircle2 className="w-3.5 h-3.5" />
                           Verified Attended
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/70 text-xs font-bold text-sheeba-purple">
-                          <QrCode className="w-3.5 h-3.5" />
-                          Active Pass
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/80 text-xs font-bold text-[#63474D] border border-black/10 shadow-2xs">
+                          <QrCode className="w-3.5 h-3.5 text-[#AA767C]" />
+                          Registered (Pending Check-in)
                         </span>
                       )}
                     </div>
@@ -412,7 +429,7 @@ export const AttendeeDashboardPage: React.FC = () => {
                   />
                   <div>
                     <h4 className="font-serif font-bold text-base text-sheeba-dark leading-tight">{user?.name}</h4>
-                    <p className="text-xs text-gray-600 font-light">{userProfession}</p>
+                    {userProfession && <p className="text-xs text-gray-600 font-light">{userProfession}</p>}
                   </div>
                 </div>
                 <span className="text-[10px] uppercase font-bold text-[#1b4332] bg-[#1b4332]/10 px-2 py-0.5 rounded-md flex items-center gap-1">

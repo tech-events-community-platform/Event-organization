@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 import type { Event } from '../../types/event';
 import type { SponsorReportData } from '../../types/attendance';
 import { Badge } from '../../components/ui/Badge';
@@ -27,6 +28,7 @@ import {
 export const ReportPage: React.FC = () => {
   const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [events, setEvents] = useState<Event[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<string | 'all'>(id || '');
   const [report, setReport] = useState<SponsorReportData | null>(null);
@@ -38,12 +40,13 @@ export const ReportPage: React.FC = () => {
     const fetchAllEvents = async () => {
       setLoading(true);
       try {
-        const evts = await api.events.getAll();
-        setEvents(evts);
+        const evts = await api.events.getAll(user?.id);
+        const myEvents = user?.role === 'ADMIN' ? evts : evts.filter((e) => e.organizerId === user?.id || !user?.id);
+        setEvents(myEvents);
         if (id) {
           setSelectedEventId(id);
-        } else if (evts.length > 0 && !selectedEventId) {
-          setSelectedEventId(evts[0].id);
+        } else if (myEvents.length > 0 && !selectedEventId) {
+          setSelectedEventId(myEvents[0].id);
         }
       } catch (err) {
         console.error('Failed to load events:', err);
@@ -52,7 +55,7 @@ export const ReportPage: React.FC = () => {
       }
     };
     fetchAllEvents();
-  }, [id]);
+  }, [id, user?.id, user?.role]);
 
   useEffect(() => {
     const fetchReportData = async () => {
