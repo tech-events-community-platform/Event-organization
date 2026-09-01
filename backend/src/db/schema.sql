@@ -57,6 +57,7 @@ CREATE TABLE IF NOT EXISTS events (
 );
 
 -- Alter table commands for events
+ALTER TABLE events ADD COLUMN IF NOT EXISTS poster_image_url TEXT;
 ALTER TABLE events ADD COLUMN IF NOT EXISTS event_type VARCHAR(50) NOT NULL DEFAULT 'workshop';
 ALTER TABLE events ADD COLUMN IF NOT EXISTS start_time VARCHAR(50) DEFAULT '09:00 AM';
 ALTER TABLE events ADD COLUMN IF NOT EXISTS end_time VARCHAR(50) DEFAULT '05:00 PM';
@@ -89,6 +90,20 @@ CREATE TABLE IF NOT EXISTS registrations (
 ALTER TABLE registrations ADD COLUMN IF NOT EXISTS answers JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE registrations ADD COLUMN IF NOT EXISTS payment_reference VARCHAR(255);
 ALTER TABLE registrations ADD COLUMN IF NOT EXISTS payment_status VARCHAR(50) NOT NULL DEFAULT 'settled';
+
+-- Check-Ins Table (Section 4: Door Duty check-ins with soft-void Undo support)
+CREATE TABLE IF NOT EXISTS check_ins (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    registration_id UUID NOT NULL REFERENCES registrations(id) ON DELETE CASCADE,
+    event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    approved_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    approved_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    voided_at TIMESTAMPTZ,
+    voided_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 
 -- Tickets Table
 CREATE TABLE IF NOT EXISTS tickets (
@@ -167,5 +182,9 @@ CREATE INDEX IF NOT EXISTS idx_tickets_status ON tickets(status);
 CREATE INDEX IF NOT EXISTS idx_badge_awards_user_id ON badge_awards(user_id);
 CREATE INDEX IF NOT EXISTS idx_badge_awards_event_id ON badge_awards(event_id);
 CREATE INDEX IF NOT EXISTS idx_badge_awards_badge_code ON badge_awards(badge_code);
+CREATE INDEX IF NOT EXISTS idx_check_ins_event_id ON check_ins(event_id);
+CREATE INDEX IF NOT EXISTS idx_check_ins_user_id ON check_ins(user_id);
+CREATE INDEX IF NOT EXISTS idx_check_ins_registration_id ON check_ins(registration_id);
+CREATE INDEX IF NOT EXISTS idx_check_ins_voided_at ON check_ins(voided_at);
 CREATE INDEX IF NOT EXISTS idx_payments_event_id ON payments(event_id);
 CREATE INDEX IF NOT EXISTS idx_payments_user_id ON payments(user_id);

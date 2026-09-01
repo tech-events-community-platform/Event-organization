@@ -9,7 +9,6 @@ import {
   Compass,
   LayoutDashboard,
   User,
-  Clock,
 } from 'lucide-react';
 
 export const AttendeeLayout: React.FC = () => {

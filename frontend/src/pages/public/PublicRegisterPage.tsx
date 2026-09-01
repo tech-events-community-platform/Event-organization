@@ -13,10 +13,8 @@ import {
   MapPin,
   Users,
   ShieldCheck,
-  CheckCircle2,
   AlertCircle,
   CreditCard,
-  QrCode,
   ArrowLeft,
 } from 'lucide-react';
 

@@ -1,5 +1,5 @@
 import { query } from '../config/db';
-import { BadgeCode, IBadgeAward } from '../types';
+import { BadgeCode, IBadgeAward, UserRole } from '../types';
 
 export class BadgeService {
   static formatBadge(row: any): any {
@@ -90,13 +90,87 @@ export class BadgeService {
     return this.formatBadge(result.rows[0]);
   }
 
-  static async bulkAwardBadges(params: {
+  // Section 6: Query attendees for selected event where a non-voided CheckIn row exists
+  static async getAttendedBadgeHolders(eventId: string): Promise<any[]> {
+    const result = await query(
+      `SELECT 
+        ci.id AS checkin_id,
+        ci.approved_at AS check_in_time,
+        r.id AS registration_id,
+        r.registered_at,
+        r.answers,
+        u.id AS attendee_id,
+        u.full_name AS name,
+        u.email,
+        COALESCE(
+          json_agg(b.badge_code) FILTER (WHERE b.id IS NOT NULL AND b.revoked_at IS NULL),
+          '[]'::json
+        ) AS badges
+       FROM check_ins ci
+       JOIN registrations r ON ci.registration_id = r.id
+       JOIN users u ON ci.user_id = u.id
+       LEFT JOIN badge_awards b ON b.event_id = ci.event_id AND b.user_id = u.id
+       WHERE ci.event_id = $1 AND ci.voided_at IS NULL
+       GROUP BY ci.id, r.id, u.id
+       ORDER BY ci.approved_at ASC`,
+      [eventId]
+    );
+
+    return result.rows.map((row) => ({
+      id: row.attendee_id,
+      registrationId: row.registration_id,
+      attendeeId: row.attendee_id,
+      name: row.name,
+      email: row.email,
+      registrationDate: new Date(row.registered_at).toISOString().split('T')[0],
+      status: 'Checked in' as const,
+      checkInTime: row.check_in_time
+        ? new Date(row.check_in_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) + ' EAT'
+        : undefined,
+      badges: row.badges || ['attended'],
+      answers: typeof row.answers === 'string' ? JSON.parse(row.answers) : row.answers || {},
+    }));
+  }
+
+  // Section 7: Single shared badge-award action (Participant / Winner / Speaker)
+  static async awardBadge(params: {
     eventId: string;
-    attendeeUserIds: string[];
+    attendeeId: string;
     badgeCode: BadgeCode;
     awardedByOrganizerId: string;
-  }): Promise<{ awardedCount: number }> {
-    const { eventId, attendeeUserIds, badgeCode, awardedByOrganizerId } = params;
+    userRole?: UserRole;
+  }): Promise<any> {
+    const { eventId, attendeeId, badgeCode, awardedByOrganizerId } = params;
+
+    // Validate badge type: only participant, winner, speaker can be manually awarded
+    const validHigherTierBadges = ['participant', 'winner', 'speaker'];
+    if (!validHigherTierBadges.includes(badgeCode.toLowerCase())) {
+      const err: any = new Error(`Invalid badge type: "${badgeCode}". Manual awards can only be Participant, Winner, or Speaker.`);
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const normBadgeCode = badgeCode.toLowerCase() as BadgeCode;
+
+    // Section 0 & 7: Check that attendee holds non-revoked "Attended" badge for this event (Attended is the floor)
+    const attendedCheck = await query(
+      `SELECT id FROM badge_awards 
+       WHERE event_id = $1 AND user_id = $2 AND badge_code = 'attended' AND revoked_at IS NULL`,
+      [eventId, attendeeId]
+    );
+
+    if (!attendedCheck.rowCount || attendedCheck.rowCount === 0) {
+      // Also check check_ins table
+      const checkinCheck = await query(
+        `SELECT id FROM check_ins WHERE event_id = $1 AND user_id = $2 AND voided_at IS NULL`,
+        [eventId, attendeeId]
+      );
+      if (!checkinCheck.rowCount || checkinCheck.rowCount === 0) {
+        const err: any = new Error('Cannot award badge. Attendee must hold verified "Attended" status for this event first.');
+        err.statusCode = 400;
+        throw err;
+      }
+    }
 
     const badgeLabels: Record<BadgeCode, string> = {
       attended: 'Attended',
@@ -105,19 +179,42 @@ export class BadgeService {
       speaker: 'Speaker',
     };
 
-    const badgeLabel = badgeLabels[badgeCode] || 'Participant';
-    let count = 0;
+    const badgeLabel = badgeLabels[normBadgeCode] || 'Participant';
 
+    const insertRes = await query(
+      `INSERT INTO badge_awards (badge_code, badge_label, event_id, user_id, awarded_by, awarded_at)
+       VALUES ($1, $2, $3, $4, $5, NOW())
+       ON CONFLICT (event_id, user_id, badge_code)
+       DO UPDATE SET revoked_at = NULL, awarded_at = NOW(), revocation_reason = NULL
+       RETURNING *`,
+      [normBadgeCode, badgeLabel, eventId, attendeeId, awardedByOrganizerId]
+    );
+
+    const raw = insertRes.rows[0];
+    return this.getBadgeById(raw.id);
+  }
+
+  static async bulkAwardBadges(params: {
+    eventId: string;
+    attendeeUserIds: string[];
+    badgeCode: BadgeCode;
+    awardedByOrganizerId: string;
+  }): Promise<{ awardedCount: number }> {
+    const { eventId, attendeeUserIds, badgeCode, awardedByOrganizerId } = params;
+
+    let count = 0;
     for (const userId of attendeeUserIds) {
-      const res = await query(
-        `INSERT INTO badge_awards (badge_code, badge_label, event_id, user_id, awarded_by)
-         VALUES ($1, $2, $3, $4, $5)
-         ON CONFLICT (event_id, user_id, badge_code) 
-         DO UPDATE SET revoked_at = NULL, awarded_at = NOW()
-         RETURNING id`,
-        [badgeCode, badgeLabel, eventId, userId, awardedByOrganizerId]
-      );
-      if (res.rowCount && res.rowCount > 0) count++;
+      try {
+        await this.awardBadge({
+          eventId,
+          attendeeId: userId,
+          badgeCode,
+          awardedByOrganizerId,
+        });
+        count++;
+      } catch (err) {
+        console.warn(`Skipping award for user ${userId}:`, (err as any).message);
+      }
     }
 
     return { awardedCount: count };

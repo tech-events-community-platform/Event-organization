@@ -7,8 +7,17 @@ const router = Router();
 
 // Public / Attendee badge inspection
 router.get('/', BadgeController.getAllBadges);
+router.get('/event/:eventId/attended', BadgeController.getAttendedBadgeHolders);
 router.get('/:id', BadgeController.getBadgeById);
 router.get('/user/:userId', BadgeController.getAttendeeBadges);
+
+// Organizer Single Shared Badge Award (Section 7)
+router.post(
+  '/award',
+  authenticate,
+  authorizeRoles('organizer', 'admin'),
+  BadgeController.awardBadge
+);
 
 // Organizer Bulk Award
 router.post(

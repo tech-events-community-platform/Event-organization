@@ -26,13 +26,14 @@ import { ProfilePage } from '../pages/attendee/ProfilePage';
 import { AttendanceHistoryPage } from '../pages/attendee/AttendanceHistoryPage';
 import { AccountSettingsPage } from '../pages/attendee/AccountSettingsPage';
 
-// Organizer Pages
+// Organizer Pages (Section 1: 6 Tabs)
 import { OrganizerDashboardPage } from '../pages/organizer/OrganizerDashboardPage';
-import { EventListPage } from '../pages/organizer/EventListPage';
 import { CreateEventPage } from '../pages/organizer/CreateEventPage';
-import { AttendeeListPage } from '../pages/organizer/AttendeeListPage';
-import { ScannerPage } from '../pages/organizer/ScannerPage';
+import { EventDetailPage } from '../pages/organizer/EventDetailPage';
+import { CheckInPage } from '../pages/organizer/CheckInPage';
+import { BadgesPage } from '../pages/organizer/BadgesPage';
 import { ReportPage } from '../pages/organizer/ReportPage';
+import { EventListPage } from '../pages/organizer/EventListPage';
 
 // Admin Pages
 import { AdminDashboardPage } from '../pages/admin/AdminDashboardPage';
@@ -77,7 +78,7 @@ export const router = createBrowserRouter([
       },
     ],
   },
-  // Protected Organizer Routes (/organizer)
+  // Protected Organizer Routes (/organizer - Section 1: 6 core tabs)
   {
     path: '/organizer',
     element: <ProtectedRoute allowedRoles={['ORGANIZER']} />,
@@ -86,15 +87,16 @@ export const router = createBrowserRouter([
         element: <OrganizerLayout />,
         children: [
           { index: true, element: <OrganizerDashboardPage /> },
-          { path: 'events', element: <EventListPage /> },
           { path: 'events/create', element: <CreateEventPage /> },
-          { path: 'events/:id/attendees', element: <AttendeeListPage /> },
-          { path: 'events/:id/scanner', element: <ScannerPage /> },
+          { path: 'events/:id', element: <EventDetailPage /> },
+          { path: 'events', element: <EventListPage /> },
+          { path: 'events/:id/scanner', element: <CheckInPage /> },
+          { path: 'events/:id/attendees', element: <BadgesPage /> },
           { path: 'events/:id/report', element: <ReportPage /> },
-          { path: 'badges', element: <AttendeeListPage /> },
-          { path: 'badges/:id', element: <AttendeeListPage /> },
-          { path: 'attendees', element: <AttendeeListPage /> },
-          { path: 'attendees/:id', element: <AttendeeListPage /> },
+          { path: 'check-in', element: <CheckInPage /> },
+          { path: 'check-in/:id', element: <CheckInPage /> },
+          { path: 'badges', element: <BadgesPage /> },
+          { path: 'badges/:id', element: <BadgesPage /> },
           { path: 'reports', element: <ReportPage /> },
           { path: 'reports/:id', element: <ReportPage /> },
           { path: 'settings', element: <AccountSettingsPage /> },

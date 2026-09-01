@@ -63,6 +63,7 @@ export interface IEvent {
   share_link_token: string;
   custom_questions: RegistrationQuestion[];
   banner_url?: string | null;
+  poster_image_url?: string | null;
   created_at: Date;
   updated_at: Date;
   // Computed / Joined fields
@@ -70,6 +71,19 @@ export interface IEvent {
   checked_in_count?: number;
   organizer_name?: string;
   organizer_email?: string;
+}
+
+export interface ICheckIn {
+  id: string;
+  registration_id: string;
+  event_id: string;
+  user_id: string;
+  approved_by: string;
+  approved_at: Date;
+  voided_at?: Date | null;
+  voided_by?: string | null;
+  created_at: Date;
+  updated_at: Date;
 }
 
 export type RegistrationStatus = 'registered' | 'cancelled';
@@ -172,10 +186,12 @@ export interface AttendeeRosterItem {
 export interface SponsorReportData {
   eventId: string;
   eventTitle: string;
+  eventDescription: string;
   eventType: EventType;
   eventDate: string;
   eventLocation: string;
   organizerName: string;
+  customQuestions?: any[];
   totalRegistered: number;
   totalAttended: number;
   attendanceRate: number;

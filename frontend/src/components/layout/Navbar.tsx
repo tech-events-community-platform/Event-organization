@@ -19,7 +19,7 @@ interface NavbarProps {
   onOpenAttendeeDrawer?: () => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ onOpenAttendeeDrawer }) => {
+export const Navbar: React.FC<NavbarProps> = ({ onOpenAttendeeDrawer: _onOpenAttendeeDrawer }) => {
   const { user, role, isAuthenticated, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();

@@ -271,7 +271,7 @@ export const AttendeeDashboardPage: React.FC = () => {
               <span>Export</span>
             </button>
             <span className="text-[11px] font-semibold text-gray-500 px-0.5">
-              {tickets.filter((t) => t.status === 'Checked in' || t.status === 'Used').length} verified badges • {tickets.length} total registrations
+              {tickets.filter((t) => (t.status as string) === 'Checked in' || (t.status as string) === 'Used').length} verified badges • {tickets.length} total registrations
             </span>
           </div>
         </div>
@@ -298,7 +298,7 @@ export const AttendeeDashboardPage: React.FC = () => {
           ) : (
             tickets.map((t) => {
               const badgeImg = getBadgeImage(t.eventType);
-              const isCheckedIn = t.status === 'Checked in' || t.status === 'Used';
+              const isCheckedIn = (t.status as string) === 'Checked in' || (t.status as string) === 'Used';
 
               return (
                 <div

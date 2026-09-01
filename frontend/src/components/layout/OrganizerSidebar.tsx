@@ -3,8 +3,8 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
   LayoutDashboard,
-  Calendar,
   PlusCircle,
+  QrCode,
   Award,
   BarChart3,
   LogOut,
@@ -17,24 +17,30 @@ export const OrganizerSidebar: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
 
+  // Six organizer-side tabs in exact specification order (Section 1)
   const navItems = [
-    { label: 'Overview', path: '/organizer', icon: LayoutDashboard },
-    { label: 'My Events', path: '/organizer/events', icon: Calendar },
+    { label: 'Dashboard', path: '/organizer', icon: LayoutDashboard },
     { label: 'Create Event', path: '/organizer/events/create', icon: PlusCircle },
-    { label: 'Give / Approve Badges', path: '/organizer/badges', icon: Award },
+    { label: 'Check-in', path: '/organizer/check-in', icon: QrCode },
+    { label: 'Badges', path: '/organizer/badges', icon: Award },
     { label: 'Reports', path: '/organizer/reports', icon: BarChart3 },
-    { label: 'Account & Data Export', path: '/organizer/settings', icon: Settings },
+    { label: 'Settings', path: '/organizer/settings', icon: Settings },
   ];
 
   const isActive = (path: string) => {
     if (path === '/organizer') return location.pathname === '/organizer';
-    if (path === '/organizer/events') return location.pathname === '/organizer/events';
     if (path === '/organizer/events/create') return location.pathname === '/organizer/events/create';
+    if (path === '/organizer/check-in') {
+      return location.pathname.startsWith('/organizer/check-in') || location.pathname.includes('/scanner');
+    }
     if (path === '/organizer/badges') {
       return location.pathname.startsWith('/organizer/badges') || location.pathname.includes('/attendees');
     }
     if (path === '/organizer/reports') {
       return location.pathname.startsWith('/organizer/reports') || location.pathname.includes('/report');
+    }
+    if (path === '/organizer/settings') {
+      return location.pathname.startsWith('/organizer/settings');
     }
     return location.pathname.startsWith(path);
   };
