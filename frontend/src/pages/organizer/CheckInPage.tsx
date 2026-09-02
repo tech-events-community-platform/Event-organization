@@ -300,41 +300,59 @@ export const CheckInPage: React.FC = () => {
       </div>
 
       {/* Selected Event Context Bar */}
-      {currentEvent && (
-        <div className="bg-[#63474D] text-white p-5 rounded-3xl shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <span className="font-serif text-lg font-bold text-white truncate max-w-lg block">
-                {currentEvent.title}
-              </span>
+      {currentEvent && (() => {
+        const timeState = api.getEventTimeStatus(currentEvent);
+        return (
+          <div className="bg-[#63474D] text-white p-5 rounded-3xl shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-serif text-lg font-bold text-white truncate max-w-lg block">
+                  {currentEvent.title}
+                </span>
+                <span
+                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                    timeState === 'ongoing'
+                      ? 'bg-amber-100 text-amber-900 border border-amber-300 animate-pulse'
+                      : timeState === 'upcoming'
+                      ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                      : 'bg-gray-100 text-gray-700 border border-gray-200'
+                  }`}
+                >
+                  {timeState === 'ongoing'
+                    ? '● Live Today — Check-in Active'
+                    : timeState === 'upcoming'
+                    ? `⏳ Scheduled for ${currentEvent.date}`
+                    : `📁 Past Event (${currentEvent.date})`}
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center gap-4 text-xs text-[#E8DDD7]">
+                <span className="flex items-center gap-1">
+                  <Calendar className="w-3.5 h-3.5 text-[#FFA686]" />
+                  Event Date: {currentEvent.date}
+                </span>
+                <span className="flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5 text-[#FFA686]" />
+                  {currentEvent.time || `${currentEvent.startTime} - ${currentEvent.endTime}`}
+                </span>
+                <span className="flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5 text-[#FFA686]" />
+                  {currentEvent.location}
+                </span>
+              </div>
             </div>
-            <div className="flex flex-wrap items-center gap-4 text-xs text-[#E8DDD7]">
-              <span className="flex items-center gap-1">
-                <Calendar className="w-3.5 h-3.5 text-[#FFA686]" />
-                {currentEvent.date}
-              </span>
-              <span className="flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5 text-[#FFA686]" />
-                {currentEvent.time || `${currentEvent.startTime} - ${currentEvent.endTime}`}
-              </span>
-              <span className="flex items-center gap-1">
-                <MapPin className="w-3.5 h-3.5 text-[#FFA686]" />
-                {currentEvent.location}
-              </span>
-            </div>
-          </div>
 
-          {/* Turnout Ticker */}
-          <div className="bg-white/10 px-5 py-2.5 rounded-2xl border border-white/20 text-center shrink-0">
-            <span className="text-[10px] font-bold uppercase text-[#FFA686] block tracking-wider">
-              Door Turnout
-            </span>
-            <span className="text-xl font-serif font-black text-white">
-              {checkedInCount} <span className="text-xs font-normal text-[#E8DDD7]">/ {totalCount}</span>
-            </span>
+            {/* Turnout Ticker */}
+            <div className="bg-white/10 px-5 py-2.5 rounded-2xl border border-white/20 text-center shrink-0">
+              <span className="text-[10px] font-bold uppercase text-[#FFA686] block tracking-wider">
+                Door Turnout ({currentEvent.date})
+              </span>
+              <span className="text-xl font-serif font-black text-white">
+                {checkedInCount} <span className="text-xs font-normal text-[#E8DDD7]">/ {totalCount}</span>
+              </span>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Action Toast Banner */}
       {lastActionToast && (
@@ -349,7 +367,7 @@ export const CheckInPage: React.FC = () => {
             <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
             <span>
               {lastActionToast.type === 'checkin'
-                ? `✓ Marked "${lastActionToast.name}" Attended & issued verified badge.`
+                ? `✓ Marked "${lastActionToast.name}" Attended for event date (${currentEvent?.date || 'Today'}) & issued verified badge.`
                 : `↩ Reverted check-in for "${lastActionToast.name}".`}
             </span>
           </div>
