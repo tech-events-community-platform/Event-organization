@@ -102,6 +102,22 @@ export class UserService {
   }
 
   static async deleteAccount(userId: string) {
+    // Section 9: Block account deletion while the organizer has an upcoming or ongoing event
+    const activeEventsRes = await query(
+      `SELECT id, title, event_date FROM events 
+       WHERE organizer_id = $1 
+         AND (event_date >= CURRENT_DATE - INTERVAL '1 day')`,
+      [userId]
+    );
+
+    if (activeEventsRes.rowCount && activeEventsRes.rowCount > 0) {
+      const err: any = new Error(
+        `Cannot delete account: You have active, ongoing, or upcoming events associated with this organizer profile. Complete or conclude them first.`
+      );
+      err.statusCode = 400;
+      throw err;
+    }
+
     await query('DELETE FROM users WHERE id = $1', [userId]);
     return true;
   }

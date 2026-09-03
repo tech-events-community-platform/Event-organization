@@ -86,10 +86,12 @@ export class ReportService {
     return {
       eventId: event.id,
       eventTitle: event.title,
+      eventDescription: event.description,
       eventType: event.type,
       eventDate: event.date,
       eventLocation: event.location,
       organizerName: event.organizerName,
+      customQuestions: event.customQuestions || [],
       totalRegistered: roster.length,
       totalAttended: checkedIn.length,
       attendanceRate,

@@ -3,15 +3,26 @@ import { Outlet, Link, useLocation } from 'react-router-dom';
 import { Navbar } from '../components/layout/Navbar';
 import { OrganizerSidebar } from '../components/layout/OrganizerSidebar';
 import { Footer } from '../components/layout/Footer';
-import { LayoutDashboard, Calendar, PlusCircle, QrCode } from 'lucide-react';
+import { LayoutDashboard, PlusCircle, QrCode, Award, BarChart3, Settings } from 'lucide-react';
 
 export const OrganizerLayout: React.FC = () => {
   const location = useLocation();
 
   const isTabActive = (path: string) => {
     if (path === '/organizer') return location.pathname === '/organizer';
-    if (path === '/organizer/events') return location.pathname === '/organizer/events';
     if (path === '/organizer/events/create') return location.pathname === '/organizer/events/create';
+    if (path === '/organizer/check-in') {
+      return location.pathname.startsWith('/organizer/check-in') || location.pathname.includes('/scanner');
+    }
+    if (path === '/organizer/badges') {
+      return location.pathname.startsWith('/organizer/badges') || location.pathname.includes('/attendees');
+    }
+    if (path === '/organizer/reports') {
+      return location.pathname.startsWith('/organizer/reports') || location.pathname.includes('/report');
+    }
+    if (path === '/organizer/settings') {
+      return location.pathname.startsWith('/organizer/settings');
+    }
     return location.pathname.startsWith(path);
   };
 
@@ -19,47 +30,61 @@ export const OrganizerLayout: React.FC = () => {
     <div className="min-h-screen flex flex-col bg-white">
       <Navbar />
 
-      {/* Mobile Top Sub-bar for Organizers */}
-      <div className="md:hidden bg-[#63474D] text-white py-2.5 px-4 border-b border-[#AA767C]/40 overflow-x-auto scrollbar-none flex gap-2">
+      {/* Mobile Top Sub-bar for Organizers (Section 1: 6 tabs) */}
+      <div className="md:hidden bg-[#63474D] text-white py-2 px-3 border-b border-[#AA767C]/40 overflow-x-auto scrollbar-none flex gap-1.5">
         <Link
           to="/organizer"
-          className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 ${
-            isTabActive('/organizer')
-              ? 'bg-[#AA767C] text-white'
-              : 'text-[#E8DDD7]'
+          className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap flex items-center gap-1 ${
+            isTabActive('/organizer') ? 'bg-[#AA767C] text-white' : 'text-[#E8DDD7]'
           }`}
         >
           <LayoutDashboard className="w-3.5 h-3.5" />
-          Overview
-        </Link>
-        <Link
-          to="/organizer/events"
-          className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 ${
-            isTabActive('/organizer/events')
-              ? 'bg-[#AA767C] text-white'
-              : 'text-[#E8DDD7]'
-          }`}
-        >
-          <Calendar className="w-3.5 h-3.5" />
-          My Events
+          Dashboard
         </Link>
         <Link
           to="/organizer/events/create"
-          className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 ${
-            isTabActive('/organizer/events/create')
-              ? 'bg-[#AA767C] text-white'
-              : 'text-[#E8DDD7]'
+          className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap flex items-center gap-1 ${
+            isTabActive('/organizer/events/create') ? 'bg-[#AA767C] text-white' : 'text-[#E8DDD7]'
           }`}
         >
           <PlusCircle className="w-3.5 h-3.5" />
           Create Event
         </Link>
         <Link
-          to="/organizer/events/evt_react_workshop_2026/scanner"
-          className="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap bg-[#FFA686] text-[#2D1F23] flex items-center gap-1.5"
+          to="/organizer/check-in"
+          className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap flex items-center gap-1 ${
+            isTabActive('/organizer/check-in') ? 'bg-[#AA767C] text-white' : 'text-[#E8DDD7]'
+          }`}
         >
           <QrCode className="w-3.5 h-3.5" />
-          Door Scanner
+          Check-in
+        </Link>
+        <Link
+          to="/organizer/badges"
+          className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap flex items-center gap-1 ${
+            isTabActive('/organizer/badges') ? 'bg-[#AA767C] text-white' : 'text-[#E8DDD7]'
+          }`}
+        >
+          <Award className="w-3.5 h-3.5" />
+          Badges
+        </Link>
+        <Link
+          to="/organizer/reports"
+          className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap flex items-center gap-1 ${
+            isTabActive('/organizer/reports') ? 'bg-[#AA767C] text-white' : 'text-[#E8DDD7]'
+          }`}
+        >
+          <BarChart3 className="w-3.5 h-3.5" />
+          Reports
+        </Link>
+        <Link
+          to="/organizer/settings"
+          className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap flex items-center gap-1 ${
+            isTabActive('/organizer/settings') ? 'bg-[#AA767C] text-white' : 'text-[#E8DDD7]'
+          }`}
+        >
+          <Settings className="w-3.5 h-3.5" />
+          Settings
         </Link>
       </div>
 

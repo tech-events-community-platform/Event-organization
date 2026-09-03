@@ -22,6 +22,7 @@ export class EventService {
     const capacity = parseInt(row.capacity || '100', 10);
     const isFull = registeredCount >= capacity;
     const posterImageUrl = row.poster_image_url || row.banner_url || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80';
+    const posterUrl = row.poster_image_url || row.banner_url || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80';
 
     return {
       id: row.id,
@@ -49,8 +50,8 @@ export class EventService {
       currency: row.currency || 'ETB',
       shareLinkToken: row.share_link_token || row.id,
       customQuestions: typeof row.custom_questions === 'string' ? JSON.parse(row.custom_questions) : row.custom_questions || [],
-      bannerUrl: posterImageUrl,
-      posterImageUrl,
+      bannerUrl: posterUrl,
+      posterImageUrl: posterUrl,
       createdAt: row.created_at,
     };
   }
@@ -92,7 +93,7 @@ export class EventService {
       posterImageUrl,
     } = data;
 
-    const resolvedPoster = posterImageUrl || bannerUrl || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80';
+    const poster = posterImageUrl || bannerUrl || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80';
     const timeStr = `${startTime} - ${endTime} EAT`;
     const shareLinkToken = `shb-${Math.random().toString(36).substring(2, 8)}`;
 
@@ -121,8 +122,8 @@ export class EventService {
         ticketPrice,
         shareLinkToken,
         JSON.stringify(customQuestions),
-        resolvedPoster,
-        resolvedPoster,
+        poster,
+        poster,
       ]
     );
 
@@ -173,17 +174,19 @@ export class EventService {
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
+    // Section 2: Count registered rows, count non-voided check_ins (or checked-in tickets) on request
     const queryText = `
       SELECT 
         e.*,
         u.full_name AS organizer_name,
         u.email AS organizer_email,
         COUNT(DISTINCT r.id) AS registered_count,
-        COUNT(DISTINCT CASE WHEN t.status = 'CHECKED_IN' THEN t.id END) AS checked_in_count
+        COUNT(DISTINCT CASE WHEN (ci.id IS NOT NULL AND ci.voided_at IS NULL) OR t.status = 'CHECKED_IN' THEN r.id END) AS checked_in_count
       FROM events e
       JOIN users u ON e.organizer_id = u.id
       LEFT JOIN registrations r ON e.id = r.event_id AND r.status = 'registered'
-      LEFT JOIN tickets t ON e.id = t.event_id
+      LEFT JOIN check_ins ci ON r.id = ci.registration_id AND ci.voided_at IS NULL
+      LEFT JOIN tickets t ON e.id = t.event_id AND t.registration_id = r.id
       ${whereClause}
       GROUP BY e.id, u.id
       ORDER BY e.event_date DESC
@@ -194,19 +197,18 @@ export class EventService {
   }
 
   static async getEventById(identifier: string): Promise<any> {
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier);
-
     const queryText = `
       SELECT 
         e.*,
         u.full_name AS organizer_name,
         u.email AS organizer_email,
         COUNT(DISTINCT r.id) AS registered_count,
-        COUNT(DISTINCT CASE WHEN t.status = 'CHECKED_IN' THEN t.id END) AS checked_in_count
+        COUNT(DISTINCT CASE WHEN (ci.id IS NOT NULL AND ci.voided_at IS NULL) OR t.status = 'CHECKED_IN' THEN r.id END) AS checked_in_count
       FROM events e
       JOIN users u ON e.organizer_id = u.id
       LEFT JOIN registrations r ON e.id = r.event_id AND r.status = 'registered'
-      LEFT JOIN tickets t ON e.id = t.event_id
+      LEFT JOIN check_ins ci ON r.id = ci.registration_id AND ci.voided_at IS NULL
+      LEFT JOIN tickets t ON e.id = t.event_id AND t.registration_id = r.id
       WHERE e.id::text = $1 OR e.share_link_token = $1
       GROUP BY e.id, u.id
     `;
@@ -443,36 +445,42 @@ export class EventService {
         u.email,
         r.registered_at,
         r.answers,
+        ci.id AS check_in_id,
+        ci.approved_at AS check_in_time,
         t.status AS ticket_status,
-        t.checked_in_at,
         COALESCE(
           json_agg(b.badge_code) FILTER (WHERE b.id IS NOT NULL AND b.revoked_at IS NULL),
           '[]'::json
         ) AS badges
       FROM registrations r
       JOIN users u ON r.user_id = u.id
+      LEFT JOIN check_ins ci ON ci.registration_id = r.id AND ci.voided_at IS NULL
       LEFT JOIN tickets t ON t.registration_id = r.id
       LEFT JOIN badge_awards b ON b.event_id = r.event_id AND b.user_id = u.id
       WHERE r.event_id = $1 AND r.status = 'registered'
-      GROUP BY r.id, u.id, t.id
+      GROUP BY r.id, u.id, ci.id, t.id
       ORDER BY r.registered_at ASC
     `;
 
     const result = await query(queryText, [event.id]);
 
-    return result.rows.map((row) => ({
-      id: row.attendee_id,
-      registrationId: row.registration_id,
-      attendeeId: row.attendee_id,
-      name: row.name,
-      email: row.email,
-      registrationDate: new Date(row.registered_at).toISOString().split('T')[0],
-      status: row.ticket_status === 'CHECKED_IN' ? 'Checked in' : 'Registered',
-      checkInTime: row.checked_in_at
-        ? new Date(row.checked_in_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) + ' EAT'
-        : undefined,
-      badges: row.badges || [],
-      answers: typeof row.answers === 'string' ? JSON.parse(row.answers) : row.answers || {},
-    }));
+    return result.rows.map((row) => {
+      const isCheckedIn = Boolean((row.check_in_id && !row.voided_at) || row.ticket_status === 'CHECKED_IN');
+      const checkInTimeDate = row.check_in_time;
+      return {
+        id: row.attendee_id,
+        registrationId: row.registration_id,
+        attendeeId: row.attendee_id,
+        name: row.name,
+        email: row.email,
+        registrationDate: new Date(row.registered_at).toISOString().split('T')[0],
+        status: isCheckedIn ? 'Checked in' : 'Registered',
+        checkInTime: checkInTimeDate
+          ? new Date(checkInTimeDate).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) + ' EAT'
+          : undefined,
+        badges: row.badges || [],
+        answers: typeof row.answers === 'string' ? JSON.parse(row.answers) : row.answers || {},
+      };
+    });
   }
 }

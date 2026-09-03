@@ -45,10 +45,12 @@ export interface AttendeeRosterItem {
 export interface SponsorReportData {
   eventId: string;
   eventTitle: string;
+  eventDescription?: string;
   eventType: EventType;
   eventDate: string;
   eventLocation: string;
   organizerName: string;
+  customQuestions?: any[];
   totalRegistered: number;
   totalAttended: number;
   attendanceRate: number;
@@ -59,6 +61,6 @@ export interface SponsorReportData {
     speaker: number;
   };
   registrationsOverTime: { date: string; count: number }[];
-  hourlyCheckIns: { time: string; count: number }[];
+  hourlyCheckIns: { time?: string; hour?: string; count: number }[];
   attendees?: AttendeeRosterItem[];
 }

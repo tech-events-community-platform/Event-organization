@@ -15,13 +15,13 @@ export class CheckinController {
     }
   }
 
-  static async approve(req: AuthRequest, res: Response, next: NextFunction) {
+  static async markAttended(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const { eventId, attendeeRosterId, attendeeId } = req.body;
       const approvedByOrganizerId = req.user!.userId;
       const userRole = req.user!.role;
 
-      const result = await CheckinService.approveCheckIn({
+      const result = await CheckinService.markAttended({
         eventId,
         attendeeId: attendeeId || attendeeRosterId,
         approvedByOrganizerId,
@@ -32,5 +32,49 @@ export class CheckinController {
     } catch (error) {
       next(error);
     }
+  }
+
+  static async undo(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const { eventId, attendeeRosterId, attendeeId } = req.body;
+      const undoneByOrganizerId = req.user!.userId;
+      const userRole = req.user!.role;
+
+      const result = await CheckinService.undoCheckIn({
+        eventId,
+        attendeeId: attendeeId || attendeeRosterId,
+        undoneByOrganizerId,
+        userRole,
+      });
+
+      return sendSuccess(res, result, 'Check-in undone successfully.');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async addManualAttendee(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const { eventId, name, email, phone } = req.body;
+      const organizerId = req.user!.userId;
+      const userRole = req.user!.role;
+
+      const result = await CheckinService.addManualAttendee({
+        eventId,
+        organizerId,
+        name,
+        email,
+        phone,
+        userRole,
+      });
+
+      return sendSuccess(res, result, result.message);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async approve(req: AuthRequest, res: Response, next: NextFunction) {
+    return CheckinController.markAttended(req, res, next);
   }
 }

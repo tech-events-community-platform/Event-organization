@@ -486,78 +486,76 @@ export const api = {
     },
   },
 
-  // QR Scanning & Check-in (Organizer)
+  // Helper to derive event time state (Section 2)
+  getEventTimeStatus(event: { date: string; startTime?: string; endTime?: string }): 'ongoing' | 'upcoming' | 'past' {
+    try {
+      const now = new Date();
+      const eventDateStr = event.date.includes('T') ? event.date.split('T')[0] : event.date;
+      
+      // Parse event start and end
+      const [year, month, day] = eventDateStr.split('-').map(Number);
+      if (!year || !month || !day) return 'upcoming';
+
+      // Default start 00:00 and end 23:59 if time string isn't parsed
+      let startHour = 8;
+      let startMin = 0;
+      let endHour = 18;
+      let endMin = 0;
+
+      if (event.startTime) {
+        const match = event.startTime.match(/(\d+):(\d+)\s*(AM|PM)?/i);
+        if (match) {
+          let h = parseInt(match[1], 10);
+          const m = parseInt(match[2], 10);
+          const p = match[3]?.toUpperCase();
+          if (p === 'PM' && h < 12) h += 12;
+          if (p === 'AM' && h === 12) h = 0;
+          startHour = h;
+          startMin = m;
+        }
+      }
+
+      if (event.endTime) {
+        const match = event.endTime.match(/(\d+):(\d+)\s*(AM|PM)?/i);
+        if (match) {
+          let h = parseInt(match[1], 10);
+          const m = parseInt(match[2], 10);
+          const p = match[3]?.toUpperCase();
+          if (p === 'PM' && h < 12) h += 12;
+          if (p === 'AM' && h === 12) h = 0;
+          endHour = h;
+          endMin = m;
+        }
+      }
+
+      const startDateTime = new Date(year, month - 1, day, startHour, startMin, 0);
+      const endDateTime = new Date(year, month - 1, day, endHour, endMin, 59);
+
+      if (now < startDateTime) {
+        return 'upcoming';
+      } else if (now > endDateTime) {
+        return 'past';
+      } else {
+        return 'ongoing';
+      }
+    } catch {
+      return 'upcoming';
+    }
+  },
+
+  // QR Scanning & Check-in (Organizer Section 4)
   checkIn: {
-    verifyAndCheckInQr: async (params: {
-      qrToken: string;
-      eventId: string;
-      organizerId: string;
-    }): Promise<{
-      success: boolean;
-      message: string;
-      alreadyCheckedIn?: boolean;
-      ticket?: Ticket;
-      rosterItem?: AttendeeRosterItem;
-    }> => {
-      const roster = attendeeRosterStore[params.eventId] || [];
-      const ticket = ticketsStore.find((t) => t.qrToken === params.qrToken);
-      const found = roster.find((r) => r.attendeeId === ticket?.attendeeId) || roster[0];
-
-      if (!ticket && !found) {
-        return {
-          success: false,
-          message: 'Invalid QR Ticket. No active registration matches this digital signature.',
-        };
+    lookup: async (eventId: string, query: string): Promise<AttendeeRosterItem | null> => {
+      try {
+        const res = await requestApi('/checkin/lookup', {
+          method: 'POST',
+          body: JSON.stringify({ eventId, query }),
+        });
+        if (res.data) return res.data;
+      } catch (err) {
+        console.warn('Backend check-in lookup fallback:', err);
       }
-
-      if (ticket && ticket.status === 'Checked in') {
-        return {
-          success: false,
-          alreadyCheckedIn: true,
-          message: `Already Checked-In at ${ticket.checkedInAt ? new Date(ticket.checkedInAt).toLocaleTimeString() : 'earlier'}.`,
-          rosterItem: found,
-          ticket,
-        };
-      }
-
-      if (ticket) {
-        ticket.status = 'Checked in';
-        ticket.checkedInAt = new Date().toISOString();
-      }
-
-      if (found) {
-        found.status = 'Checked in';
-        found.checkInTime = new Date().toLocaleTimeString();
-        if (!found.badges.includes('attended')) {
-          found.badges.push('attended');
-        }
-      }
-
-      const targetAttendeeId = ticket?.attendeeId || found?.attendeeId;
-      if (targetAttendeeId) {
-        try {
-          await api.badges.awardBadge({
-            eventId: params.eventId,
-            attendeeId: targetAttendeeId,
-            badgeCode: 'attended',
-            awardedByOrganizerId: params.organizerId,
-          });
-        } catch {
-          // ignore if already awarded
-        }
-      }
-
-      const ev = eventsStore.find((e) => e.id === params.eventId);
-      if (ev) {
-        ev.checkedInCount = (ev.checkedInCount || 0) + 1;
-      }
-
-      return {
-        success: true,
-        message: `Check-in successful! Verified attendance badge awarded to ${ticket?.attendeeName || found?.name || 'Attendee'}.`,
-        rosterItem: found,
-        ticket,
-      };
+      return api.checkIn.lookupByTokenOrName(eventId, query);
     },
 
     lookupByTokenOrName: async (eventId: string, query: string): Promise<AttendeeRosterItem | null> => {
@@ -573,90 +571,145 @@ export const api = {
       return match || null;
     },
 
+    markAttended: async (params: {
+      eventId: string;
+      attendeeId: string;
+    }): Promise<{ success: boolean; message: string; badgeAwarded?: BadgeAward; rosterItem?: AttendeeRosterItem }> => {
+      try {
+        const res = await requestApi('/checkin/mark-attended', {
+          method: 'POST',
+          body: JSON.stringify({ eventId: params.eventId, attendeeId: params.attendeeId }),
+        });
+        if (res.data) {
+          return {
+            success: true,
+            message: res.message || 'Check-in approved and Attended badge granted.',
+            badgeAwarded: res.data.badgeAwarded,
+            rosterItem: res.data.rosterItem,
+          };
+        }
+      } catch (err: any) {
+        console.warn('Backend mark-attended fallback:', err);
+        throw err;
+      }
+      return api.checkIn.approveCheckIn({
+        eventId: params.eventId,
+        attendeeRosterId: params.attendeeId,
+        approvedByOrganizerId: 'current',
+      });
+    },
+
+    addManualAttendee: async (params: {
+      eventId: string;
+      name: string;
+      email: string;
+      phone?: string;
+    }): Promise<{ success: boolean; message: string; rosterItem?: AttendeeRosterItem }> => {
+      try {
+        const res = await requestApi('/checkin/manual-attendee', {
+          method: 'POST',
+          body: JSON.stringify(params),
+        });
+        if (res.data) {
+          return {
+            success: true,
+            message: res.message || 'Attendee added and marked attended.',
+            rosterItem: res.data.rosterItem,
+          };
+        }
+      } catch (err: any) {
+        console.warn('Backend manual-attendee error:', err);
+        throw err;
+      }
+      return { success: true, message: 'Attendee added successfully.' };
+    },
+
+    undo: async (params: {
+      eventId: string;
+      attendeeId: string;
+    }): Promise<{ success: boolean; message: string; rosterItem?: AttendeeRosterItem }> => {
+      try {
+        const res = await requestApi('/checkin/undo', {
+          method: 'POST',
+          body: JSON.stringify({ eventId: params.eventId, attendeeId: params.attendeeId }),
+        });
+        if (res.data) {
+          return {
+            success: true,
+            message: res.message || 'Check-in undone successfully.',
+            rosterItem: res.data.rosterItem,
+          };
+        }
+      } catch (err: any) {
+        console.warn('Backend undo checkin fallback:', err);
+        throw err;
+      }
+      return { success: true, message: 'Check-in undone.' };
+    },
+
     approveCheckIn: async (params: {
       eventId: string;
       attendeeRosterId: string;
       approvedByOrganizerId: string;
     }): Promise<{ success: boolean; message: string; badgeAwarded?: BadgeAward; rosterItem?: AttendeeRosterItem }> => {
-      const roster = attendeeRosterStore[params.eventId] || [];
-      const item = roster.find((r) => r.id === params.attendeeRosterId);
-      if (item) {
-        item.status = 'Checked in';
-        item.checkInTime = new Date().toLocaleTimeString();
-        if (!item.badges.includes('attended')) item.badges.push('attended');
-
-        const ev = eventsStore.find((e) => e.id === params.eventId);
-        if (ev) ev.checkedInCount = (ev.checkedInCount || 0) + 1;
-
-        const badge = await api.badges.awardBadge({
-          eventId: params.eventId,
-          attendeeId: item.attendeeId,
-          badgeCode: 'attended',
-          awardedByOrganizerId: params.approvedByOrganizerId,
-        });
-
-        return {
-          success: true,
-          message: `Approved check-in for ${item.name}!`,
-          badgeAwarded: badge,
-          rosterItem: item,
-        };
-      }
-      return { success: false, message: 'Attendee not found in roster.' };
-    },
-
-    verifyToken: async (qrToken: string, eventId: string): Promise<any> => {
-      return api.checkIn.verifyAndCheckInQr({ qrToken, eventId, organizerId: 'current' });
-    },
-
-    manualCheckin: async (attendeeRosterId: string, eventId: string): Promise<boolean> => {
-      return api.checkIn.manualCheckIn({ attendeeRosterId, eventId });
-    },
-
-    manualCheckIn: async (params: {
-      attendeeRosterId: string;
-      eventId: string;
-    }): Promise<boolean> => {
-      const roster = attendeeRosterStore[params.eventId] || [];
-      const item = roster.find((r) => r.id === params.attendeeRosterId || r.attendeeId === params.attendeeRosterId);
-      if (item && item.status !== 'Checked in') {
-        item.status = 'Checked in';
-        item.checkInTime = new Date().toLocaleTimeString();
-        if (!item.badges.includes('attended')) item.badges.push('attended');
-
-        const ev = eventsStore.find((e) => e.id === params.eventId);
-        if (ev) ev.checkedInCount = (ev.checkedInCount || 0) + 1;
-        return true;
-      }
-      return false;
+      return api.checkIn.markAttended({ eventId: params.eventId, attendeeId: params.attendeeRosterId });
     },
   },
 
-  // Alias for checkin / scanner
+  // Alias for checkin
   get checkin() {
     return this.checkIn;
   },
 
-  // Badge Awards
+  // Badge Awards (Section 6 & 7)
   badges: {
+    getAttendedHolders: async (eventId: string): Promise<AttendeeRosterItem[]> => {
+      try {
+        const res = await requestApi(`/badges/event/${eventId}/attended`);
+        if (res.data && Array.isArray(res.data)) {
+          return res.data;
+        }
+      } catch (err) {
+        console.warn('Backend getAttendedHolders fallback:', err);
+      }
+      const roster = await api.roster.getByEventId(eventId);
+      return roster.filter((r) => r.status === 'Checked in' || r.badges.includes('attended'));
+    },
+
     awardBadge: async (params: {
       eventId: string;
       attendeeId: string;
       badgeCode: BadgeCode;
-      awardedByOrganizerId: string;
-      reason?: string;
+      awardedByOrganizerId?: string;
     }): Promise<BadgeAward> => {
+      try {
+        const res = await requestApi('/badges/award', {
+          method: 'POST',
+          body: JSON.stringify({
+            eventId: params.eventId,
+            attendeeId: params.attendeeId,
+            badgeCode: params.badgeCode,
+          }),
+        });
+        if (res.data) {
+          return res.data;
+        }
+      } catch (err: any) {
+        console.warn('Backend awardBadge error:', err);
+        throw err;
+      }
+
       const badgeLabels: Record<BadgeCode, string> = {
         attended: 'Attended',
         participant: 'Participant',
-        winner: 'Winner / Finalist',
-        speaker: 'Keynote Speaker',
+        winner: 'Winner',
+        speaker: 'Speaker',
       };
 
       const newBadge: BadgeAward = {
         id: `bdg_${Date.now()}`,
         badgeCode: params.badgeCode,
-        badgeLabel: badgeLabels[params.badgeCode] || 'Attended',
+        badgeLabel: badgeLabels[params.badgeCode] || 'Verified Badge',
         eventId: params.eventId,
         eventTitle: 'Event Badge',
         eventType: 'workshop',
@@ -666,19 +719,12 @@ export const api = {
         attendeeName: 'Attendee',
         attendeeEmail: 'attendee@sheba.et',
         issuerName: 'Event Organizer',
-        awardedBy: params.awardedByOrganizerId,
+        awardedBy: params.awardedByOrganizerId || 'organizer',
         awardedAt: new Date().toISOString(),
         revokedAt: null,
       };
 
       badgeAwardsStore.push(newBadge);
-
-      const roster = attendeeRosterStore[params.eventId] || [];
-      const attendee = roster.find((r) => r.attendeeId === params.attendeeId);
-      if (attendee && !attendee.badges.includes(params.badgeCode)) {
-        attendee.badges.push(params.badgeCode);
-      }
-
       return newBadge;
     },
 
@@ -689,36 +735,25 @@ export const api = {
       awardedByOrganizerId: string;
     }): Promise<{ awardedCount: number }> => {
       let count = 0;
-      const roster = attendeeRosterStore[params.eventId] || [];
-      for (const rosterId of params.attendeeRosterIds) {
-        const item = roster.find((r) => r.id === rosterId || r.attendeeId === rosterId);
-        const attendeeId = item ? item.attendeeId : rosterId;
-        await api.badges.awardBadge({
-          eventId: params.eventId,
-          attendeeId,
-          badgeCode: params.badgeCode,
-          awardedByOrganizerId: params.awardedByOrganizerId,
-        });
-        count++;
+      for (const attendeeId of params.attendeeRosterIds) {
+        try {
+          await api.badges.awardBadge({
+            eventId: params.eventId,
+            attendeeId,
+            badgeCode: params.badgeCode,
+            awardedByOrganizerId: params.awardedByOrganizerId,
+          });
+          count++;
+        } catch (e) {
+          console.warn(`Error awarding badge to ${attendeeId}:`, e);
+        }
       }
       return { awardedCount: count };
     },
 
-    revokeBadge: async (params: {
-      badgeAwardId: string;
-      reason?: string;
-    }): Promise<boolean> => {
-      const award = badgeAwardsStore.find((b) => b.id === params.badgeAwardId);
-      if (award) {
-        award.revokedAt = new Date().toISOString();
-        return true;
-      }
-      return false;
-    },
-
     getAttendeeBadges: async (attendeeId: string): Promise<BadgeAward[]> => {
       try {
-        const res = await requestApi(`/badges/attendee/${attendeeId}`);
+        const res = await requestApi(`/badges/user/${attendeeId}`);
         if (res.data && Array.isArray(res.data)) return res.data;
       } catch {
         // fallback
@@ -727,60 +762,85 @@ export const api = {
     },
 
     getAllBadgeAwards: async (): Promise<BadgeAward[]> => {
+      try {
+        const res = await requestApi('/badges');
+        if (res.data && Array.isArray(res.data)) return res.data;
+      } catch {
+        // fallback
+      }
       return [...badgeAwardsStore];
     },
 
     getBadgeById: async (badgeId: string): Promise<BadgeAward | null> => {
+      try {
+        const res = await requestApi(`/badges/${badgeId}`);
+        if (res.data) return res.data;
+      } catch {
+        // fallback
+      }
       return badgeAwardsStore.find((b) => b.id === badgeId) || null;
     },
 
     adminRevokeBadge: async (badgeId: string): Promise<boolean> => {
-      const award = badgeAwardsStore.find((b) => b.id === badgeId);
-      if (award) {
-        award.revokedAt = new Date().toISOString();
+      try {
+        await requestApi(`/badges/${badgeId}/revoke`, { method: 'POST' });
         return true;
+      } catch {
+        const award = badgeAwardsStore.find((b) => b.id === badgeId);
+        if (award) {
+          award.revokedAt = new Date().toISOString();
+          return true;
+        }
+        return false;
       }
-      return false;
-    },
-
-    getBadgeByVerificationToken: async (token: string): Promise<BadgeAward | null> => {
-      return badgeAwardsStore.find((b) => b.id === token) || null;
     },
   },
 
   // Roster Alias
   roster: {
     getByEventId: async (eventId: string): Promise<AttendeeRosterItem[]> => {
+      try {
+        const res = await requestApi(`/events/${eventId}/roster`);
+        if (res.data && Array.isArray(res.data)) {
+          return res.data;
+        }
+      } catch (err) {
+        console.warn('Backend roster fetch fallback:', err);
+      }
       return attendeeRosterStore[eventId] || [];
     },
     getEventRoster: async (eventId: string): Promise<AttendeeRosterItem[]> => {
-      return attendeeRosterStore[eventId] || [];
+      return api.roster.getByEventId(eventId);
     },
   },
 
-  // Organizer Reports & Sponsor Reports
+  // Organizer Reports (Section 8)
   reports: {
-    getAttendeeRoster: async (eventId: string): Promise<AttendeeRosterItem[]> => {
-      return attendeeRosterStore[eventId] || [];
-    },
-
     getEventReport: async (eventId: string): Promise<SponsorReportData> => {
+      try {
+        const res = await requestApi(`/reports/${eventId}`);
+        if (res.data) return res.data;
+      } catch (err) {
+        console.warn('Backend report fetch fallback:', err);
+      }
       return api.reports.getSponsorReport(eventId);
     },
 
     getSponsorReport: async (eventId: string): Promise<SponsorReportData> => {
-      const event = eventsStore.find((e) => e.id === eventId);
-      const roster = attendeeRosterStore[eventId] || [];
+      const event = await api.events.getById(eventId);
+      const roster = await api.roster.getByEventId(eventId);
       const totalTurnout = roster.filter((r) => r.status === 'Checked in').length;
       const turnoutRate = roster.length > 0 ? (totalTurnout / roster.length) * 100 : 0;
 
       return {
         eventId,
         eventTitle: event?.title || 'Tech Event',
+        eventDescription: event?.description || '',
         eventType: event?.type || 'workshop',
         eventDate: event?.date || new Date().toISOString().split('T')[0],
         eventLocation: event?.location || 'Addis Ababa',
         organizerName: event?.organizerName || 'Sheba Organizer',
+        customQuestions: event?.customQuestions || [],
         totalRegistered: roster.length,
         totalAttended: totalTurnout,
         attendanceRate: parseFloat(turnoutRate.toFixed(1)),
@@ -797,18 +857,33 @@ export const api = {
     },
 
     exportCsv: async (eventId: string): Promise<void> => {
+      try {
+        const res = await requestApi(`/reports/${eventId}/export`);
+        if (res instanceof Blob) {
+          const url = URL.createObjectURL(res);
+          const link = document.createElement('a');
+          link.href = url;
+          link.setAttribute('download', `sheba-event-report-${eventId}.csv`);
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          return;
+        }
+      } catch (e) {
+        console.warn('Export CSV fallback:', e);
+      }
       return api.reports.exportSponsorReportCsv(eventId);
     },
 
     exportSponsorReportCsv: async (eventId: string): Promise<void> => {
-      const roster = attendeeRosterStore[eventId] || [];
-      const headers = ['Attendee Name', 'Email', 'Registered At', 'Checked In', 'Check-In Time', 'Badges'];
+      const roster = await api.roster.getByEventId(eventId);
+      const headers = ['Attendee Name', 'Email', 'Registered At', 'Status', 'Check-In Time', 'Badges'];
       const rows = roster.map((r) => [
         `"${r.name}"`,
         r.email,
         r.registrationDate,
-        r.status === 'Checked in' ? 'YES' : 'NO',
-        r.checkInTime || 'N/A',
+        r.status,
+        r.checkInTime || '—',
         `"${r.badges.join(', ')}"`,
       ]);
 
@@ -817,7 +892,7 @@ export const api = {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `sheba-sponsor-report-${eventId}.csv`);
+      link.setAttribute('download', `sheba-event-report-${eventId}.csv`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

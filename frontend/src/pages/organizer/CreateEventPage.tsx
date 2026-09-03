@@ -31,6 +31,7 @@ export const CreateEventPage: React.FC = () => {
     isPaid: false,
     ticketPrice: 0,
     description: '',
+    posterImageUrl: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80',
   });
 
   const [questions, setQuestions] = useState<Array<{ id: string; questionText: string; isRequired: boolean }>>([
@@ -105,6 +106,8 @@ export const CreateEventPage: React.FC = () => {
         organizerId: user?.id || 'demo-organizer-001',
         organizerName: user?.organization || user?.name || 'GDG Addis',
         customQuestions: formattedQuestions,
+        bannerUrl: formData.posterImageUrl,
+        posterImageUrl: formData.posterImageUrl,
       });
 
       setCreatedEvent(newEvent);
@@ -257,6 +260,30 @@ export const CreateEventPage: React.FC = () => {
                 className="w-full px-3.5 py-2 bg-[#FAF7F5] border border-[#E8DDD7] rounded-xl text-xs text-[#2D1F23] focus:outline-none focus:ring-2 focus:ring-[#63474D]"
               />
             </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-[#2D1F23] mb-1">Poster / Banner Image URL</label>
+            <input
+              type="url"
+              placeholder="https://images.unsplash.com/..."
+              value={formData.posterImageUrl}
+              onChange={(e) => setFormData({ ...formData, posterImageUrl: e.target.value })}
+              className="w-full px-3.5 py-2 bg-[#FAF7F5] border border-[#E8DDD7] rounded-xl text-xs text-[#2D1F23] focus:outline-none focus:ring-2 focus:ring-[#63474D]"
+            />
+            {formData.posterImageUrl && (
+              <div className="mt-2 flex items-center gap-3">
+                <img
+                  src={formData.posterImageUrl}
+                  alt="Poster preview"
+                  className="w-20 h-12 object-cover rounded-lg border border-gray-200"
+                  onError={(e) => {
+                    (e.target as HTMLElement).style.display = 'none';
+                  }}
+                />
+                <span className="text-[11px] text-gray-500">Live Poster Preview</span>
+              </div>
+            )}
           </div>
 
           <div>
