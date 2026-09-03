@@ -63,6 +63,7 @@ export interface IEvent {
   share_link_token: string;
   custom_questions: RegistrationQuestion[];
   banner_url?: string | null;
+  poster_image_url?: string | null;
   created_at: Date;
   updated_at: Date;
   // Computed / Joined fields

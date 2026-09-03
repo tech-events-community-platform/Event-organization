@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/ui/Button';
 import {
@@ -19,9 +19,14 @@ import type { UserRole } from '../../types/user';
 
 export const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirectTarget = searchParams.get('redirect');
+  const roleParam = searchParams.get('role');
   const { user, isAuthenticated, register } = useAuth();
 
-  const [selectedRole, setSelectedRole] = useState<UserRole>('ATTENDEE');
+  const [selectedRole, setSelectedRole] = useState<UserRole>(
+    roleParam?.toUpperCase() === 'ORGANIZER' ? 'ORGANIZER' : 'ATTENDEE'
+  );
 
   // Common fields
   const [fullName, setFullName] = useState('');
@@ -38,7 +43,9 @@ export const RegisterPage: React.FC = () => {
 
   useEffect(() => {
     if (isAuthenticated && user) {
-      if (user.role === 'ORGANIZER') {
+      if (redirectTarget) {
+        navigate(redirectTarget, { replace: true });
+      } else if (user.role === 'ORGANIZER') {
         navigate('/organizer', { replace: true });
       } else if (user.role === 'ADMIN') {
         navigate('/admin', { replace: true });
@@ -46,7 +53,7 @@ export const RegisterPage: React.FC = () => {
         navigate('/app', { replace: true });
       }
     }
-  }, [isAuthenticated, user, navigate]);
+  }, [isAuthenticated, user, navigate, redirectTarget]);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,8 +87,12 @@ export const RegisterPage: React.FC = () => {
           },
         });
       } else {
-        // Attendee: immediate direct access to attendee dashboard
-        navigate('/app');
+        // Attendee: context preserved across signup
+        if (redirectTarget) {
+          navigate(redirectTarget);
+        } else {
+          navigate('/app');
+        }
       }
     } catch (err: any) {
       setErrorMsg(err.message || 'Registration failed. Please try again.');
@@ -268,7 +279,10 @@ export const RegisterPage: React.FC = () => {
         <div className="pt-3 text-center border-t border-[#E8DDD7] space-y-2">
           <p className="text-xs text-[#756366]">
             Already have an account?{' '}
-            <Link to="/login" className="font-bold text-[#63474D] hover:underline">
+            <Link
+              to={`/login${redirectTarget ? `?redirect=${encodeURIComponent(redirectTarget)}` : ''}`}
+              className="font-bold text-[#63474D] hover:underline"
+            >
               Sign in here
             </Link>
           </p>

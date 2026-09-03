@@ -15,7 +15,6 @@ import {
   Calendar,
   BarChart3,
   Shield,
-  Clock,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 

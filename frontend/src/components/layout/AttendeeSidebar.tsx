@@ -2,12 +2,8 @@ import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
-  LayoutDashboard,
   Ticket,
   Award,
-  Compass,
-  User,
-  Clock,
   Settings,
   LogOut,
   ShieldCheck,
@@ -19,19 +15,15 @@ export const AttendeeSidebar: React.FC = () => {
   const { user, logout } = useAuth();
 
   const navItems = [
-    { label: 'Dashboard Overview', path: '/app', icon: LayoutDashboard },
-    { label: 'My Tickets & Passes', path: '/app/events', icon: Ticket },
-    { label: 'My Badges & Turnout', path: '/app/record', icon: Award },
-    { label: 'Explore Events', path: '/app/explore', icon: Compass },
-    { label: 'My Profile', path: '/app/profile', icon: User },
-    { label: 'Attendance Timeline', path: '/app/profile/attendance', icon: Clock },
-    { label: 'Account Settings', path: '/app/settings', icon: Settings },
+    { label: 'Badges', path: '/app', icon: Award },
+    { label: 'My Registrations', path: '/app/events', icon: Ticket },
+    { label: 'Settings', path: '/app/settings', icon: Settings },
   ];
 
   const isActive = (path: string) => {
-    if (path === '/app') return location.pathname === '/app';
-    if (path === '/app/events') return location.pathname === '/app/events' || location.pathname.startsWith('/app/ticket');
-    if (path === '/app/profile') return location.pathname === '/app/profile';
+    if (path === '/app') return location.pathname === '/app' || location.pathname === '/app/badges';
+    if (path === '/app/events') return location.pathname === '/app/events' || location.pathname === '/app/registrations' || location.pathname.startsWith('/app/ticket');
+    if (path === '/app/settings') return location.pathname === '/app/settings';
     return location.pathname.startsWith(path);
   };
 

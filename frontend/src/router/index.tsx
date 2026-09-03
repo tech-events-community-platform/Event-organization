@@ -18,6 +18,7 @@ import { BadgeDetailPage } from '../pages/public/BadgeDetailPage';
 import { PublicSearchPage } from '../pages/public/PublicSearchPage';
 
 // Attendee Pages
+import { BadgesPage } from '../pages/attendee/BadgesPage';
 import { AttendeeDashboardPage } from '../pages/attendee/DashboardPage';
 import { RecordPage } from '../pages/attendee/RecordPage';
 import { MyEventsPage } from '../pages/attendee/MyEventsPage';
@@ -65,14 +66,16 @@ export const router = createBrowserRouter([
       {
         element: <AttendeeLayout />,
         children: [
-          { index: true, element: <AttendeeDashboardPage /> },
-          { path: 'record', element: <RecordPage /> },
+          { index: true, element: <BadgesPage /> },
+          { path: 'badges', element: <BadgesPage /> },
           { path: 'events', element: <MyEventsPage /> },
-          { path: 'explore', element: <PublicSearchPage /> },
+          { path: 'registrations', element: <MyEventsPage /> },
           { path: 'ticket/:eventId', element: <TicketPage /> },
+          { path: 'settings', element: <AccountSettingsPage /> },
           { path: 'profile', element: <ProfilePage /> },
           { path: 'profile/attendance', element: <AttendanceHistoryPage /> },
-          { path: 'settings', element: <AccountSettingsPage /> },
+          { path: 'record', element: <RecordPage /> },
+          { path: 'dashboard', element: <AttendeeDashboardPage /> },
         ],
       },
     ],

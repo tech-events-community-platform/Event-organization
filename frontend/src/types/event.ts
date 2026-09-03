@@ -34,5 +34,7 @@ export interface Event {
   shareLinkToken: string;
   customQuestions: RegistrationQuestion[];
   bannerUrl?: string;
+  posterImageUrl?: string;
+  isFull?: boolean;
   createdAt?: string;
 }

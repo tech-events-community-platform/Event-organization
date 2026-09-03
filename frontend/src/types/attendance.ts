@@ -22,6 +22,8 @@ export interface BadgeAward {
   attendeeName: string;
   attendeeEmail: string;
   issuerName: string; // e.g. "GDG Addis"
+  organizerName?: string;
+  givenBy?: string;
   awardedBy: string;
   awardedAt: string;
   revokedAt?: string | null;
