@@ -6,8 +6,6 @@ import { Footer } from '../components/layout/Footer';
 import {
   Ticket,
   Award,
-  Compass,
-  LayoutDashboard,
   User,
 } from 'lucide-react';
 
@@ -15,9 +13,9 @@ export const AttendeeLayout: React.FC = () => {
   const location = useLocation();
 
   const isTabActive = (path: string) => {
-    if (path === '/app') return location.pathname === '/app';
+    if (path === '/app') return location.pathname === '/app' || location.pathname === '/app/badges';
     if (path === '/app/events') return location.pathname === '/app/events' || location.pathname.startsWith('/app/ticket');
-    if (path === '/app/profile') return location.pathname === '/app/profile';
+    if (path === '/app/settings') return location.pathname === '/app/settings';
     return location.pathname.startsWith(path);
   };
 
@@ -30,13 +28,13 @@ export const AttendeeLayout: React.FC = () => {
         <Link
           to="/app"
           className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 ${
-            isTabActive('/app') && location.pathname === '/app'
+            isTabActive('/app')
               ? 'bg-[#AA767C] text-white'
               : 'text-[#E8DDD7]'
           }`}
         >
-          <LayoutDashboard className="w-3.5 h-3.5" />
-          <span>Dashboard</span>
+          <Award className="w-3.5 h-3.5" />
+          <span>Badges</span>
         </Link>
         <Link
           to="/app/events"
@@ -47,40 +45,18 @@ export const AttendeeLayout: React.FC = () => {
           }`}
         >
           <Ticket className="w-3.5 h-3.5" />
-          <span>Tickets & Passes</span>
+          <span>My Registrations</span>
         </Link>
         <Link
-          to="/app/record"
+          to="/app/settings"
           className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 ${
-            isTabActive('/app/record')
-              ? 'bg-[#AA767C] text-white'
-              : 'text-[#E8DDD7]'
-          }`}
-        >
-          <Award className="w-3.5 h-3.5" />
-          <span>My Badges</span>
-        </Link>
-        <Link
-          to="/app/explore"
-          className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 ${
-            isTabActive('/app/explore')
-              ? 'bg-[#AA767C] text-white'
-              : 'text-[#E8DDD7]'
-          }`}
-        >
-          <Compass className="w-3.5 h-3.5" />
-          <span>Explore</span>
-        </Link>
-        <Link
-          to="/app/profile"
-          className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 ${
-            isTabActive('/app/profile') && location.pathname !== '/app/profile/attendance'
+            location.pathname === '/app/settings'
               ? 'bg-[#AA767C] text-white'
               : 'text-[#E8DDD7]'
           }`}
         >
           <User className="w-3.5 h-3.5" />
-          <span>Profile</span>
+          <span>Settings</span>
         </Link>
       </div>
 

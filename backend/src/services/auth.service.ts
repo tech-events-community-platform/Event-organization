@@ -1,7 +1,9 @@
+import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { query } from '../config/db';
 import { IUser, IUserSafe, UserRole } from '../types';
 import { signAuthToken } from '../utils/jwt.util';
+import { EmailService } from './email.service';
 
 export class AuthService {
   static formatUserResponse(user: any, stats?: any) {
@@ -117,6 +119,14 @@ export class AuthService {
     });
 
     const user = this.formatUserResponse(rawUser);
+
+    // Trigger separate "Welcome to Sheeba" email after account creation (Section 2)
+    try {
+      await EmailService.sendWelcomeEmail(rawUser.email, rawUser.full_name || 'Attendee');
+    } catch (emailErr) {
+      console.warn('Welcome email dispatch failed:', emailErr);
+    }
+
     return { user, token, isPendingApproval: false };
   }
 
@@ -193,5 +203,63 @@ export class AuthService {
     const rawUser = result.rows[0];
     const stats = await this.computeUserStats(rawUser.id);
     return this.formatUserResponse(rawUser, stats);
+  }
+
+  static async forgotPassword(email: string): Promise<{ success: boolean; message: string }> {
+    const result = await query<IUser>(
+      'SELECT id, email, full_name FROM users WHERE LOWER(email) = LOWER($1)',
+      [email.trim()]
+    );
+
+    if (result.rowCount && result.rowCount > 0) {
+      const user = result.rows[0];
+      const resetToken = crypto.randomBytes(32).toString('hex');
+      const expiresAt = new Date(Date.now() + 3600 * 1000); // 1 hour
+
+      await query(
+        'INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES ($1, $2, $3)',
+        [user.id, resetToken, expiresAt]
+      );
+
+      try {
+        await EmailService.sendPasswordResetEmail(user.email, resetToken, user.full_name || 'Attendee');
+      } catch (e) {
+        console.warn('Password reset email dispatch error:', e);
+      }
+    }
+
+    return {
+      success: true,
+      message: 'If an account exists with that email, a password reset link has been dispatched.',
+    };
+  }
+
+  static async resetPassword(token: string, newPassword: string): Promise<{ success: boolean; message: string }> {
+    const tokenRes = await query(
+      'SELECT user_id, expires_at FROM password_reset_tokens WHERE token = $1',
+      [token]
+    );
+
+    if (!tokenRes.rowCount || tokenRes.rowCount === 0) {
+      const err: any = new Error('Invalid or expired password reset token.');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const { user_id, expires_at } = tokenRes.rows[0];
+    if (new Date() > new Date(expires_at)) {
+      const err: any = new Error('Password reset token has expired.');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await query('UPDATE users SET password_hash = $1 WHERE id = $2', [passwordHash, user_id]);
+    await query('DELETE FROM password_reset_tokens WHERE token = $1', [token]);
+
+    return {
+      success: true,
+      message: 'Password has been reset successfully. You may now log in.',
+    };
   }
 }
