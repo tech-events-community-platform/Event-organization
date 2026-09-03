@@ -10,6 +10,9 @@ export class BadgeService {
       speaker: 'Speaker',
     };
 
+    const organizerName = row.organizer_organization || row.organizer_name || row.issuer_name || 'Organizer';
+    const givenBy = row.given_by || `Given by ${organizerName}`;
+
     return {
       id: row.id,
       badgeCode: row.badge_code as BadgeCode,
@@ -22,7 +25,9 @@ export class BadgeService {
       attendeeId: row.user_id,
       attendeeName: row.attendee_name || row.user_name || 'Attendee',
       attendeeEmail: row.attendee_email || row.user_email || '',
-      issuerName: row.issuer_name || row.organizer_name || 'GDG Addis',
+      issuerName: organizerName,
+      organizerName,
+      givenBy,
       awardedBy: row.awarded_by,
       awardedAt: row.awarded_at ? new Date(row.awarded_at).toISOString() : new Date().toISOString(),
       revokedAt: row.revoked_at ? new Date(row.revoked_at).toISOString() : null,
@@ -36,7 +41,9 @@ export class BadgeService {
         b.id, b.badge_code, b.badge_label, b.event_id, b.user_id, b.awarded_by, b.awarded_at, b.revoked_at, b.revocation_reason,
         e.title AS event_title, e.event_type, e.event_date, e.location AS event_location,
         u.full_name AS attendee_name, u.email AS attendee_email,
-        org.full_name AS issuer_name
+        org.full_name AS issuer_name,
+        COALESCE(org.organization, org.full_name, 'Organizer') AS organizer_name,
+        org.organization AS organizer_organization
        FROM badge_awards b
        JOIN events e ON b.event_id = e.id
        JOIN users u ON b.user_id = u.id
@@ -44,7 +51,7 @@ export class BadgeService {
        ORDER BY b.awarded_at DESC`
     );
 
-    return result.rows.map(this.formatBadge);
+    return result.rows.map((row: any) => this.formatBadge(row));
   }
 
   static async getAttendeeBadges(userId: string): Promise<any[]> {
@@ -53,7 +60,9 @@ export class BadgeService {
         b.id, b.badge_code, b.badge_label, b.event_id, b.user_id, b.awarded_by, b.awarded_at, b.revoked_at,
         e.title AS event_title, e.event_type, e.event_date, e.location AS event_location,
         u.full_name AS attendee_name, u.email AS attendee_email,
-        org.full_name AS issuer_name
+        org.full_name AS issuer_name,
+        COALESCE(org.organization, org.full_name, 'Organizer') AS organizer_name,
+        org.organization AS organizer_organization
        FROM badge_awards b
        JOIN events e ON b.event_id = e.id
        JOIN users u ON b.user_id = u.id
@@ -63,7 +72,7 @@ export class BadgeService {
       [userId]
     );
 
-    return result.rows.map(this.formatBadge);
+    return result.rows.map((row: any) => this.formatBadge(row));
   }
 
   static async getBadgeById(badgeId: string): Promise<any> {

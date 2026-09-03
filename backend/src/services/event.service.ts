@@ -1,6 +1,7 @@
 import { query, getClient } from '../config/db';
 import { IEvent, EventType, EventStatus, UserRole, AttendeeRosterItem } from '../types';
 import { generateTicketToken, generateQrDataUrl } from '../utils/qr.util';
+import { EmailService } from './email.service';
 
 export class EventService {
   static formatEvent(row: any): any {
@@ -17,6 +18,10 @@ export class EventService {
       }
     }
 
+    const registeredCount = parseInt(row.registered_count || '0', 10);
+    const capacity = parseInt(row.capacity || '100', 10);
+    const isFull = registeredCount >= capacity;
+    const posterImageUrl = row.poster_image_url || row.banner_url || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80';
     const posterUrl = row.poster_image_url || row.banner_url || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80';
 
     return {
@@ -35,9 +40,10 @@ export class EventService {
       time: row.time_str || `${row.start_time || '09:00 AM'} - ${row.end_time || '05:00 PM'} EAT`,
       location: row.location,
       venueName: row.venue_name || row.location,
-      capacity: parseInt(row.capacity || '100', 10),
-      registeredCount: parseInt(row.registered_count || '0', 10),
+      capacity,
+      registeredCount,
       checkedInCount: parseInt(row.checked_in_count || '0', 10),
+      isFull,
       status: row.status || 'open',
       isPaid,
       ticketPrice,
@@ -239,10 +245,10 @@ export class EventService {
     const values: any[] = [];
     let counter = 1;
 
-    const allowedFields = ['title', 'description', 'event_type', 'location', 'venue_name', 'capacity', 'status', 'is_paid', 'ticket_price', 'start_time', 'end_time', 'time_str', 'banner_url'];
+    const allowedFields = ['title', 'description', 'event_type', 'location', 'venue_name', 'capacity', 'status', 'is_paid', 'ticket_price', 'start_time', 'end_time', 'time_str', 'banner_url', 'poster_image_url'];
 
     for (const [key, value] of Object.entries(data)) {
-      const dbKey = key === 'type' ? 'event_type' : key === 'ticketPrice' ? 'ticket_price' : key === 'isPaid' ? 'is_paid' : key;
+      const dbKey = key === 'type' ? 'event_type' : key === 'ticketPrice' ? 'ticket_price' : key === 'isPaid' ? 'is_paid' : key === 'posterImageUrl' ? 'poster_image_url' : key === 'bannerUrl' ? 'banner_url' : key;
       if (allowedFields.includes(dbKey)) {
         fields.push(`${dbKey} = $${counter++}`);
         values.push(value);
@@ -306,23 +312,18 @@ export class EventService {
       throw err;
     }
 
-    if (event.registeredCount >= event.capacity) {
+    if (event.registeredCount >= event.capacity || event.isFull) {
       const err: any = new Error('Event has reached maximum capacity.');
       err.statusCode = 400;
       throw err;
     }
 
-    // Check duplicate registration
+    // Reject duplicate registration server-side (Section 3)
     const existingReg = await query('SELECT id FROM registrations WHERE event_id = $1 AND user_id = $2', [event.id, userId]);
     if (existingReg.rowCount && existingReg.rowCount > 0) {
-      // User already registered, return existing ticket
-      const existingTicket = await query('SELECT * FROM tickets WHERE event_id = $1 AND user_id = $2', [event.id, userId]);
-      if (existingTicket.rowCount && existingTicket.rowCount > 0) {
-        return {
-          ticket: existingTicket.rows[0],
-          isPaymentRequired: false,
-        };
-      }
+      const err: any = new Error('You are already registered for this event.');
+      err.statusCode = 409;
+      throw err;
     }
 
     // Handle Paid Event Check (Chapa ETB)
@@ -401,6 +402,22 @@ export class EventService {
         ticketPrice: rawTicket.ticket_price,
         currency: 'ETB',
       };
+
+      // Trigger separate registration-confirmation email with date, time, location (Section 4)
+      try {
+        if (attendeeUser.email) {
+          await EmailService.sendRegistrationConfirmationEmail(
+            attendeeUser.email,
+            attendeeUser.full_name || 'Attendee',
+            event.title,
+            event.date,
+            event.time,
+            event.location
+          );
+        }
+      } catch (emailErr) {
+        console.warn('Registration confirmation email dispatch failed:', emailErr);
+      }
 
       return { ticket: formattedTicket, isPaymentRequired: false };
     } catch (err) {

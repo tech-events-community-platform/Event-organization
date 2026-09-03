@@ -35,5 +35,6 @@ export interface Event {
   customQuestions: RegistrationQuestion[];
   bannerUrl?: string;
   posterImageUrl?: string;
+  isFull?: boolean;
   createdAt?: string;
 }
