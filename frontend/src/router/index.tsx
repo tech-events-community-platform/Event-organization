@@ -13,12 +13,13 @@ import { LoginPage } from '../pages/public/LoginPage';
 import { RegisterPage } from '../pages/public/RegisterPage';
 import { PendingApprovalPage } from '../pages/public/PendingApprovalPage';
 import { PublicRegisterPage } from '../pages/public/PublicRegisterPage';
+import { EventRegistrationCheckoutPage } from '../pages/public/EventRegistrationCheckoutPage';
 import { PublicProfilePage } from '../pages/public/PublicProfilePage';
 import { BadgeDetailPage } from '../pages/public/BadgeDetailPage';
 import { PublicSearchPage } from '../pages/public/PublicSearchPage';
 
 // Attendee Pages
-import { BadgesPage } from '../pages/attendee/BadgesPage';
+import { BadgesPage as AttendeeBadgesPage } from '../pages/attendee/BadgesPage';
 import { AttendeeDashboardPage } from '../pages/attendee/DashboardPage';
 import { RecordPage } from '../pages/attendee/RecordPage';
 import { MyEventsPage } from '../pages/attendee/MyEventsPage';
@@ -32,7 +33,7 @@ import { OrganizerDashboardPage } from '../pages/organizer/OrganizerDashboardPag
 import { CreateEventPage } from '../pages/organizer/CreateEventPage';
 import { EventDetailPage } from '../pages/organizer/EventDetailPage';
 import { CheckInPage } from '../pages/organizer/CheckInPage';
-import { BadgesPage } from '../pages/organizer/BadgesPage';
+import { BadgesPage as OrganizerBadgesPage } from '../pages/organizer/BadgesPage';
 import { ReportPage } from '../pages/organizer/ReportPage';
 import { EventListPage } from '../pages/organizer/EventListPage';
 
@@ -54,7 +55,9 @@ export const router = createBrowserRouter([
       { path: 'contact', element: <LoginPage /> },
       { path: 'search', element: <PublicSearchPage /> },
       { path: 'e/:token', element: <PublicRegisterPage /> },
+      { path: 'e/:token/register', element: <EventRegistrationCheckoutPage /> },
       { path: 'events/:id/register', element: <PublicRegisterPage /> },
+      { path: 'events/:id/register/form', element: <EventRegistrationCheckoutPage /> },
       { path: 'profile/:id', element: <PublicProfilePage /> },
       { path: 'badge/:id', element: <BadgeDetailPage /> },
     ],
@@ -67,8 +70,8 @@ export const router = createBrowserRouter([
       {
         element: <AttendeeLayout />,
         children: [
-          { index: true, element: <BadgesPage /> },
-          { path: 'badges', element: <BadgesPage /> },
+          { index: true, element: <AttendeeBadgesPage /> },
+          { path: 'badges', element: <AttendeeBadgesPage /> },
           { path: 'events', element: <MyEventsPage /> },
           { path: 'registrations', element: <MyEventsPage /> },
           { path: 'ticket/:eventId', element: <TicketPage /> },
@@ -94,12 +97,12 @@ export const router = createBrowserRouter([
           { path: 'events/:id', element: <EventDetailPage /> },
           { path: 'events', element: <EventListPage /> },
           { path: 'events/:id/scanner', element: <CheckInPage /> },
-          { path: 'events/:id/attendees', element: <BadgesPage /> },
+          { path: 'events/:id/attendees', element: <OrganizerBadgesPage /> },
           { path: 'events/:id/report', element: <ReportPage /> },
           { path: 'check-in', element: <CheckInPage /> },
           { path: 'check-in/:id', element: <CheckInPage /> },
-          { path: 'badges', element: <BadgesPage /> },
-          { path: 'badges/:id', element: <BadgesPage /> },
+          { path: 'badges', element: <OrganizerBadgesPage /> },
+          { path: 'badges/:id', element: <OrganizerBadgesPage /> },
           { path: 'reports', element: <ReportPage /> },
           { path: 'reports/:id', element: <ReportPage /> },
           { path: 'settings', element: <AccountSettingsPage /> },

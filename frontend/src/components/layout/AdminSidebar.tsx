@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
   LayoutDashboard,
@@ -8,13 +8,11 @@ import {
   Award,
   CreditCard,
   User,
-  LogOut,
 } from 'lucide-react';
 
 export const AdminSidebar: React.FC = () => {
   const location = useLocation();
-  const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
 
   const navItems = [
     { label: 'Platform Dashboard', path: '/admin', icon: LayoutDashboard },
@@ -35,14 +33,9 @@ export const AdminSidebar: React.FC = () => {
     return location.pathname.startsWith(path);
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
-
   return (
-    <aside className="w-64 bg-[#63474D] text-white flex flex-col justify-between hidden md:flex min-h-[calc(100vh-4rem)] border-r border-[#AA767C]/40">
-      <div className="p-4 space-y-6">
+    <aside className="w-64 bg-[#63474D] text-white flex flex-col hidden md:flex sticky top-16 h-[calc(100vh-4rem)] border-r border-[#AA767C]/40 shrink-0 self-start overflow-y-auto">
+      <div className="p-4 space-y-5">
         {/* Console Header */}
         <div className="bg-[#523a3f] rounded-xl p-3 border border-[#FFA686]/30 space-y-1">
           <div className="flex items-center gap-2">
@@ -61,7 +54,7 @@ export const AdminSidebar: React.FC = () => {
             const active = isActive(item.path);
             return (
               <Link
-                key={item.label}
+                key={item.path}
                 to={item.path}
                 className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
                   active
@@ -75,29 +68,20 @@ export const AdminSidebar: React.FC = () => {
             );
           })}
         </nav>
-      </div>
 
-      {/* Footer Profile */}
-      <div className="p-4 border-t border-[#AA767C]/40 space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5 min-w-0">
+        {/* Brought-up Profile */}
+        <div className="pt-4 border-t border-[#AA767C]/40">
+          <div className="flex items-center gap-2.5 px-1 min-w-0">
             <img
               src={user?.avatarUrl || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80'}
               alt="Admin"
-              className="w-8 h-8 rounded-full object-cover border border-[#FFA686]"
+              className="w-8 h-8 rounded-full object-cover border border-[#FFA686] shrink-0"
             />
             <div className="min-w-0">
               <p className="text-xs font-semibold text-white truncate">{user?.name || 'Hanan Admin'}</p>
               <p className="text-[10px] text-[#FFA686] truncate">Platform Ops</p>
             </div>
           </div>
-          <button
-            onClick={handleLogout}
-            className="p-1.5 text-red-200 hover:text-white hover:bg-red-900/40 rounded-lg transition-colors"
-            title="Log out"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
         </div>
       </div>
     </aside>

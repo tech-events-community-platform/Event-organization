@@ -8,7 +8,6 @@ import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import {
   Calendar,
-  MapPin,
   QrCode,
   ShieldCheck,
   ArrowRight,
@@ -121,7 +120,7 @@ export const MyEventsPage: React.FC = () => {
                         <span>{ev.date} • {ev.time || `${ev.startTime} - ${ev.endTime}`}</span>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <MapPin className="w-3.5 h-3.5 text-sheeba-purple" />
+                        <img src="/location.png" alt="Location" className="w-3.5 h-3.5 object-contain shrink-0" />
                         <span className="truncate">{ev.venueName || ev.location}</span>
                       </div>
                     </div>
@@ -200,7 +199,7 @@ export const MyEventsPage: React.FC = () => {
                     {ticket.eventDate} • {ticket.eventTime}
                   </span>
                   <span className="flex items-center gap-1">
-                    <MapPin className="w-3.5 h-3.5 text-sheeba-purple" />
+                    <img src="/location.png" alt="Location" className="w-3.5 h-3.5 object-contain shrink-0" />
                     {ticket.eventLocation}
                   </span>
                 </div>

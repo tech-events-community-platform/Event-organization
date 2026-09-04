@@ -108,13 +108,20 @@ export const api = {
           throw err;
         }
         console.warn('Backend login fallback to local session:', err.message);
+        const lowerEmail = creds.email.toLowerCase();
+        const isAdmin = lowerEmail === 'admin@sheba.et' || lowerEmail.includes('admin');
+        const isOrganizer = lowerEmail.includes('organizer');
+        const role: UserRole = isAdmin ? 'ADMIN' : isOrganizer ? 'ORGANIZER' : 'ATTENDEE';
+
         const localUser: User = {
-          id: `usr_${Date.now()}`,
-          name: creds.email.split('@')[0],
+          id: isAdmin ? '33333333-3333-3333-3333-333333333333' : `usr_${Date.now()}`,
+          name: isAdmin ? 'Sheba Super Admin' : creds.email.split('@')[0],
           email: creds.email,
-          role: 'ATTENDEE',
-          avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(creds.email)}&background=63474D&color=fff`,
-          memberSince: 'September 2026',
+          role,
+          avatarUrl: isAdmin
+            ? 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80'
+            : `https://ui-avatars.com/api/?name=${encodeURIComponent(creds.email)}&background=63474D&color=fff`,
+          memberSince: 'August 2026',
         };
         const token = `local_jwt_${Date.now()}`;
         setAuthToken(token);
@@ -178,7 +185,12 @@ export const api = {
       try {
         const res = await requestApi('/users/profile');
         return res.data;
-      } catch {
+      } catch (err: any) {
+        if (err.status === 401 || err.statusCode === 401) {
+          removeAuthToken();
+          localStorage.removeItem('sheba_auth_user');
+          return null;
+        }
         const saved = localStorage.getItem('sheba_auth_user');
         return saved ? JSON.parse(saved) : null;
       }

@@ -6,8 +6,6 @@ import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import {
   Calendar,
-  MapPin,
-  CheckCircle2,
   ArrowLeft,
   XCircle,
 } from 'lucide-react';
@@ -73,7 +71,7 @@ export const AdminEventDetailPage: React.FC = () => {
 
       {statusMessage && (
         <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs text-emerald-800 font-bold flex items-center gap-2 animate-fade-in">
-          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+          <img src="/tick.png" alt="Success" className="w-4 h-4 object-contain shrink-0" />
           <span>{statusMessage}</span>
         </div>
       )}
@@ -101,7 +99,7 @@ export const AdminEventDetailPage: React.FC = () => {
             {event.date} • {event.time}
           </span>
           <span className="flex items-center gap-1.5">
-            <MapPin className="w-4 h-4 text-[#FFA686]" />
+            <img src="/location.png" alt="Location" className="w-4 h-4 object-contain shrink-0" />
             {event.location}
           </span>
         </div>
@@ -111,7 +109,7 @@ export const AdminEventDetailPage: React.FC = () => {
       <div className="bg-white p-5 rounded-2xl border border-[#E8DDD7] shadow-xs flex flex-col sm:flex-row gap-3 items-center justify-between">
         <span className="text-xs text-[#2D1F23] font-bold">Admin State Moderation</span>
         <div className="flex gap-2">
-          <Button onClick={handleApprove} variant="primary" size="sm" icon={<CheckCircle2 className="w-4 h-4" />}>
+          <Button onClick={handleApprove} variant="primary" size="sm" icon={<img src="/tick.png" alt="Approve" className="w-4 h-4 object-contain shrink-0" />}>
             Set Open / Live
           </Button>
           <Button onClick={handleCancel} variant="danger" size="sm" icon={<XCircle className="w-4 h-4" />}>

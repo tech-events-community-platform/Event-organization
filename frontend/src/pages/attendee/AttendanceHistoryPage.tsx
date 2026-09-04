@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/api';
 import type { BadgeAward } from '../../types/attendance';
 import { Badge } from '../../components/ui/Badge';
-import { Award, Calendar, MapPin, ArrowLeft } from 'lucide-react';
+import { Award, Calendar, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export const AttendanceHistoryPage: React.FC = () => {
@@ -97,7 +97,7 @@ export const AttendanceHistoryPage: React.FC = () => {
                     Event Date: {record.eventDate}
                   </span>
                   <span className="flex items-center gap-1">
-                    <MapPin className="w-3.5 h-3.5 text-sheeba-purple" />
+                    <img src="/location.png" alt="Location" className="w-3.5 h-3.5 object-contain shrink-0" />
                     {record.eventLocation.split(',')[0]}
                   </span>
                 </div>

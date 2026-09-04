@@ -8,7 +8,6 @@ import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import {
   Calendar,
-  MapPin,
   Award,
   BarChart3,
   FileSpreadsheet,
@@ -193,7 +192,7 @@ export const ReportPage: React.FC = () => {
                 {report.eventDate}
               </span>
               <span className="flex items-center gap-1.5">
-                <MapPin className="w-4 h-4 text-[#63474D]" />
+                <img src="/location.png" alt="Location" className="w-4 h-4 object-contain shrink-0" />
                 {report.eventLocation}
               </span>
               <span className="flex items-center gap-1.5 font-bold text-[#63474D]">

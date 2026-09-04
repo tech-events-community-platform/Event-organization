@@ -3,23 +3,15 @@ import { useParams, Link } from 'react-router-dom';
 import { api } from '../../services/api';
 import type { Event } from '../../types/event';
 import type { AttendeeRosterItem, BadgeCode } from '../../types/attendance';
-import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import {
   Calendar,
-  MapPin,
   Clock,
-  Users,
-  CheckCircle2,
   Award,
   QrCode,
   BarChart3,
   Copy,
-  Check,
   ExternalLink,
-  ChevronDown,
-  ChevronUp,
-  Search,
   ArrowLeft,
   Sparkles,
   Image,
@@ -28,6 +20,7 @@ import {
   Phone,
   User,
   AlertCircle,
+  X,
 } from 'lucide-react';
 
 export const EventDetailPage: React.FC = () => {
@@ -41,10 +34,6 @@ export const EventDetailPage: React.FC = () => {
   const [registeredSearch, setRegisteredSearch] = useState('');
   const [attendedSearch, setAttendedSearch] = useState('');
 
-  // Expand / collapse states
-  const [isRegisteredExpanded, setIsRegisteredExpanded] = useState(true);
-  const [isAttendedExpanded, setIsAttendedExpanded] = useState(true);
-
   // Badge award modal / action state
   const [awardingAttendee, setAwardingAttendee] = useState<AttendeeRosterItem | null>(null);
   const [selectedBadgeCode, setSelectedBadgeCode] = useState<BadgeCode>('participant');
@@ -57,6 +46,9 @@ export const EventDetailPage: React.FC = () => {
   const [manualForm, setManualForm] = useState({ name: '', email: '', phone: '' });
   const [isSubmittingManualUser, setIsSubmittingManualUser] = useState(false);
   const [manualUserError, setManualUserError] = useState<string | null>(null);
+
+  // Registration Answers Modal State
+  const [selectedAnswersAttendee, setSelectedAnswersAttendee] = useState<AttendeeRosterItem | null>(null);
 
   const fetchEventData = async () => {
     if (!id) return;
@@ -184,7 +176,7 @@ export const EventDetailPage: React.FC = () => {
   const totalAttendedCount = roster.filter((r) => r.status === 'Checked in' || r.badges?.includes('attended')).length;
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 pb-24">
+    <div className="w-full space-y-8 pb-24">
       {/* Back Navigation & Breadcrumb */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <Link
@@ -196,17 +188,6 @@ export const EventDetailPage: React.FC = () => {
         </Link>
 
         <div className="flex flex-wrap items-center gap-2">
-          <Button
-            onClick={() => {
-              setManualUserError(null);
-              setIsAddUserModalOpen(true);
-            }}
-            variant="primary"
-            size="sm"
-            icon={<UserPlus className="w-4 h-4" />}
-          >
-            Add User Manually
-          </Button>
           <Link to={`/organizer/check-in/${event.id}`}>
             <Button variant="accent" size="sm" icon={<QrCode className="w-4 h-4" />}>
               Door Check-in
@@ -224,110 +205,115 @@ export const EventDetailPage: React.FC = () => {
       {awardSuccessMsg && (
         <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl text-xs font-semibold flex items-center justify-between shadow-2xs animate-fade-in">
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            <img src="/tick.png" alt="Success" className="w-4 h-4 object-contain shrink-0" />
             <span>{awardSuccessMsg}</span>
           </div>
         </div>
       )}
 
-      {/* Event Details Card (Everything captured at creation) */}
-      <div className="bg-white rounded-3xl border border-[#E8DDD7] p-6 sm:p-8 shadow-xs space-y-6">
+      {/* Event Details Section (Unboxed) */}
+      <div className="space-y-6">
         <div className="flex flex-col md:flex-row gap-6 items-start">
           {/* Poster Image */}
           {event.posterImageUrl || event.bannerUrl ? (
             <img
               src={event.posterImageUrl || event.bannerUrl}
               alt={event.title}
-              className="w-full md:w-56 h-40 object-cover rounded-2xl border border-gray-200 shrink-0"
+              className="w-full md:w-64 h-44 object-cover rounded-2xl shrink-0"
             />
           ) : (
-            <div className="w-full md:w-56 h-40 bg-gray-100 rounded-2xl flex items-center justify-center text-gray-400 shrink-0">
+            <div className="w-full md:w-64 h-44 bg-[#FAF7F5] rounded-2xl flex items-center justify-center text-gray-400 shrink-0">
               <Image className="w-8 h-8" />
             </div>
           )}
 
           {/* Core Info */}
-          <div className="space-y-3 flex-1 min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="primary" className="uppercase font-mono text-[10px]">
+          <div className="space-y-2.5 flex-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-2.5 text-xs">
+              <span className="font-bold uppercase tracking-wider text-[#63474D]">
                 {event.type}
-              </Badge>
+              </span>
+              <span className="text-gray-300">•</span>
               <span
-                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider ${
+                className={`font-semibold uppercase text-[11px] tracking-wider ${
                   timeState === 'ongoing'
-                    ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                    ? 'text-amber-700 font-bold'
                     : timeState === 'upcoming'
-                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                    : 'bg-gray-100 text-gray-700 border border-gray-200'
+                    ? 'text-emerald-700 font-bold'
+                    : 'text-gray-500'
                 }`}
               >
                 {timeState === 'ongoing' ? 'Ongoing Today' : timeState === 'upcoming' ? 'Upcoming' : 'Past Event'}
               </span>
-              <span className="text-xs font-bold text-[#63474D]">
+              <span className="text-gray-300">•</span>
+              <span className="font-bold text-[#2D1F23]">
                 {event.isPaid ? `${event.ticketPrice} ETB` : 'FREE ADMISSION'}
               </span>
             </div>
 
-            <h1 className="font-serif text-2xl sm:text-3xl font-extrabold text-[#2D1F23]">
+            <h1 className="font-serif text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[#2D1F23]">
               {event.title}
             </h1>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-gray-600">
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-1.5 text-xs text-[#756366]">
               <span className="flex items-center gap-1.5">
-                <Calendar className="w-4 h-4 text-[#63474D]" />
+                <Calendar className="w-4 h-4 text-[#AA767C]" />
                 {event.date}
               </span>
               <span className="flex items-center gap-1.5">
-                <Clock className="w-4 h-4 text-[#63474D]" />
+                <Clock className="w-4 h-4 text-[#AA767C]" />
                 {event.time || `${event.startTime} - ${event.endTime}`}
               </span>
-              <span className="flex items-center gap-1.5 sm:col-span-2">
-                <MapPin className="w-4 h-4 text-[#63474D]" />
+              <span className="flex items-center gap-1.5">
+                <img src="/location.png" alt="Location" className="w-4 h-4 object-contain shrink-0" />
                 {event.location} {event.venueName && `(${event.venueName})`}
               </span>
             </div>
 
-            {/* Turnout Statistics Bar */}
-            <div className="flex flex-wrap items-center gap-6 pt-2 border-t border-gray-100 text-xs">
+            {/* Turnout Statistics */}
+            <div className="flex flex-wrap items-center gap-6 pt-2 text-xs">
               <div>
                 <span className="text-[10px] uppercase font-bold text-gray-400 block">Registered</span>
-                <span className="font-bold text-base text-[#2D1F23]">{event.registeredCount || roster.length}</span>
+                <span className="font-bold text-lg text-[#2D1F23]">{event.registeredCount || roster.length}</span>
               </div>
               <div>
                 <span className="text-[10px] uppercase font-bold text-gray-400 block">Checked In</span>
-                <span className="font-bold text-base text-[#2A7B5F]">{totalAttendedCount}</span>
+                <span className="font-bold text-lg text-[#2A7B5F]">{totalAttendedCount}</span>
               </div>
               <div>
                 <span className="text-[10px] uppercase font-bold text-gray-400 block">Capacity</span>
-                <span className="font-bold text-base text-[#63474D]">{event.capacity}</span>
+                <span className="font-bold text-lg text-[#63474D]">{event.capacity}</span>
               </div>
             </div>
           </div>
         </div>
 
         {/* Description */}
-        <div className="space-y-1.5 pt-2 border-t border-gray-100">
-          <h3 className="font-serif font-bold text-sm text-[#2D1F23]">Description</h3>
-          <p className="text-xs text-gray-600 leading-relaxed whitespace-pre-line">{event.description}</p>
-        </div>
+        {event.description && (
+          <div className="space-y-1 pt-2 border-t border-gray-100">
+            <h3 className="font-serif font-bold text-sm text-[#2D1F23]">Description</h3>
+            <p className="text-xs text-gray-600 leading-relaxed whitespace-pre-line">{event.description}</p>
+          </div>
+        )}
 
-        {/* Shareable Link Box */}
-        <div className="bg-[#FAF7F5] p-4 rounded-2xl border border-[#E8DDD7] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="space-y-0.5">
-            <span className="text-[10px] uppercase font-bold text-[#63474D] block">Public Registration Link</span>
-            <span className="font-mono text-xs text-gray-700 select-all truncate block max-w-md">
+        {/* Public Registration Link (Brought close to the left) */}
+        <div className="pt-3 border-t border-gray-100 space-y-1.5">
+          <span className="text-[10px] uppercase font-bold text-[#756366] block">Public Registration Link</span>
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="font-mono text-xs text-[#2D1F23] bg-gray-50 border border-gray-200 px-3 py-1.5 rounded-xl select-all">
               {window.location.origin}/e/{event.shareLinkToken}
             </span>
-          </div>
-
-          <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
               onClick={handleCopyLink}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl text-xs font-semibold text-[#2D1F23] transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl text-xs font-semibold text-[#2D1F23] transition-colors cursor-pointer"
             >
-              {copiedLink ? <Check className="w-3.5 h-3.5 text-[#2A7B5F]" /> : <Copy className="w-3.5 h-3.5 text-[#AA767C]" />}
-              <span>{copiedLink ? 'Copied' : 'Copy Link'}</span>
+              {copiedLink ? (
+                <img src="/tick.png" alt="Copied" className="w-3.5 h-3.5 object-contain shrink-0" />
+              ) : (
+                <Copy className="w-3.5 h-3.5 text-[#AA767C]" />
+              )}
+              <span>{copiedLink ? 'Copied' : 'link'}</span>
             </button>
             <Link
               to={`/e/${event.shareLinkToken}`}
@@ -341,206 +327,201 @@ export const EventDetailPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Section 3: Two Collapsible & Independently Searchable Lists */}
-      <div className="space-y-6">
-        {/* List 1: ATTENDED (Non-voided CheckIn only) */}
-        <div className="bg-white rounded-3xl border border-[#E8DDD7] overflow-hidden shadow-xs">
-          <div
-            onClick={() => setIsAttendedExpanded(!isAttendedExpanded)}
-            className="p-5 bg-[#FAF7F5] border-b border-[#E8DDD7] flex items-center justify-between cursor-pointer select-none"
-          >
-            <div className="flex items-center gap-2.5">
-              <CheckCircle2 className="w-5 h-5 text-[#2A7B5F]" />
-              <h2 className="font-serif font-bold text-base text-[#2D1F23]">
-                Attended List ({attendedList.length})
-              </h2>
-              <Badge variant="success" className="text-[10px]">
-                Verified Door Check-ins
-              </Badge>
-            </div>
-            <button type="button" className="p-1 text-gray-500">
-              {isAttendedExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-            </button>
+      {/* Section: Attended List (Unboxed) */}
+      <div className="space-y-4 pt-8 border-t border-gray-100">
+        {/* Attended List Header: Heading, Search Bar in Middle, Add User Manually on Right */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <h2 className="font-serif font-bold text-xl text-[#2D1F23] shrink-0">
+            Attended List ({attendedList.length})
+          </h2>
+
+          <div className="w-full sm:max-w-md flex-1">
+            <input
+              type="text"
+              placeholder="Search attended by name or email..."
+              value={attendedSearch}
+              onChange={(e) => setAttendedSearch(e.target.value)}
+              className="w-full px-3.5 py-2 bg-white border border-gray-200 rounded-xl text-xs text-[#2D1F23] focus:outline-none focus:ring-2 focus:ring-[#63474D]"
+            />
           </div>
 
-          {isAttendedExpanded && (
-            <div className="p-5 space-y-4">
-              {/* Toolbar: Client-side search bar and Add User Manually button */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="relative flex-1 max-w-md">
-                  <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Filter attended by name or email..."
-                    value={attendedSearch}
-                    onChange={(e) => setAttendedSearch(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-[#2D1F23] focus:outline-none focus:ring-2 focus:ring-[#63474D]"
-                  />
-                </div>
-
-                <Button
-                  onClick={() => {
-                    setManualUserError(null);
-                    setIsAddUserModalOpen(true);
-                  }}
-                  variant="primary"
-                  size="sm"
-                  icon={<UserPlus className="w-4 h-4" />}
-                >
-                  + Add User Manually
-                </Button>
-              </div>
-
-              {attendedList.length === 0 ? (
-                <div className="py-8 text-center text-xs text-gray-400">
-                  {roster.filter((r) => r.status === 'Checked in').length === 0
-                    ? 'No attendees checked in at the door yet.'
-                    : 'No attended records match your search filter.'}
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-gray-50 border-b border-gray-200 text-gray-600 font-bold uppercase text-[10px]">
-                      <tr>
-                        <th className="py-3 px-4">Attendee</th>
-                        <th className="py-3 px-4">Check-in Time</th>
-                        <th className="py-3 px-4">Current Badges</th>
-                        <th className="py-3 px-4 text-right">Award Higher Badge</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {attendedList.map((att) => (
-                        <tr key={att.id} className="hover:bg-gray-50/60 transition-colors">
-                          <td className="py-3.5 px-4">
-                            <p className="font-bold text-[#2D1F23]">{att.name}</p>
-                            <p className="text-[11px] text-gray-500">{att.email}</p>
-                          </td>
-                          <td className="py-3.5 px-4 text-gray-600 font-mono text-[11px]">
-                            {att.checkInTime || 'Checked in'}
-                          </td>
-                          <td className="py-3.5 px-4">
-                            <div className="flex flex-wrap gap-1">
-                              {att.badges && att.badges.length > 0 ? (
-                                att.badges.map((b) => (
-                                  <span
-                                    key={b}
-                                    className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase bg-gray-100 text-gray-800 border border-gray-200"
-                                  >
-                                    {b}
-                                  </span>
-                                ))
-                              ) : (
-                                <span className="text-gray-400 italic">Attended</span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="py-3.5 px-4 text-right">
-                            <button
-                              type="button"
-                              onClick={() => setAwardingAttendee(att)}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#63474D] hover:bg-[#523a3f] text-white text-xs font-semibold shadow-2xs transition-all cursor-pointer"
-                            >
-                              <Award className="w-3.5 h-3.5 text-[#FFA686]" />
-                              <span>Award Badge</span>
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          )}
+          <Button
+            onClick={() => {
+              setManualUserError(null);
+              setIsAddUserModalOpen(true);
+            }}
+            variant="primary"
+            size="sm"
+            className="shrink-0"
+          >
+            Add User Manually
+          </Button>
         </div>
 
-        {/* List 2: REGISTERED (Everyone with a registration row) */}
-        <div className="bg-white rounded-3xl border border-[#E8DDD7] overflow-hidden shadow-xs">
-          <div
-            onClick={() => setIsRegisteredExpanded(!isRegisteredExpanded)}
-            className="p-5 bg-[#FAF7F5] border-b border-[#E8DDD7] flex items-center justify-between cursor-pointer select-none"
-          >
-            <div className="flex items-center gap-2.5">
-              <Users className="w-5 h-5 text-[#63474D]" />
-              <h2 className="font-serif font-bold text-base text-[#2D1F23]">
-                Registered List ({registeredList.length})
-              </h2>
-              <Badge variant="gray" className="text-[10px]">
-                All Registrants
-              </Badge>
-            </div>
-            <button type="button" className="p-1 text-gray-500">
-              {isRegisteredExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-            </button>
+        {attendedList.length === 0 ? (
+          <div className="py-8 text-center text-xs text-gray-400">
+            {roster.filter((r) => r.status === 'Checked in').length === 0
+              ? 'No attendees checked in at the door yet.'
+              : 'No attended records match your search filter.'}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="border-b border-gray-200 text-gray-600 font-bold uppercase text-[10px]">
+                <tr>
+                  <th className="py-3 px-2">Attendee</th>
+                  <th className="py-3 px-2">Check-in Time</th>
+                  <th className="py-3 px-2">Status</th>
+                  <th className="py-3 px-2">Current Badges</th>
+                  <th className="py-3 px-2 text-right">Award Higher Badge</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {attendedList.map((att) => (
+                  <tr key={att.id} className="hover:bg-gray-50/60 transition-colors">
+                    <td className="py-3.5 px-2">
+                      <p className="font-bold text-[#2D1F23]">{att.name}</p>
+                      <p className="text-[11px] text-gray-500">{att.email}</p>
+                    </td>
+                    <td className="py-3.5 px-2 text-gray-600 font-mono text-[11px]">
+                      {att.checkInTime || 'Checked in'}
+                    </td>
+                    <td className="py-3.5 px-2">
+                      {/* Unboxed status, NOT clickable on attended list */}
+                      <span className="text-[#2A7B5F] font-semibold text-xs">
+                        Checked in
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-2">
+                      <div className="flex flex-wrap gap-1.5 text-xs text-gray-700">
+                        {att.badges && att.badges.length > 0 ? (
+                          att.badges.map((b) => (
+                            <span key={b} className="font-medium text-[#63474D]">
+                              {b}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-gray-400 italic">Attended</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-2 text-right">
+                      <button
+                        type="button"
+                        onClick={() => setAwardingAttendee(att)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#63474D] hover:bg-[#523a3f] text-white text-xs font-semibold shadow-2xs transition-all cursor-pointer"
+                      >
+                        <Award className="w-3.5 h-3.5 text-[#FFA686]" />
+                        <span>Award Badge</span>
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Thick separating line between Attended List and Registered List, stopping before left & right edges */}
+      <div className="px-6 sm:px-12 my-10">
+        <div className="h-1 bg-gray-300/90 rounded-full w-full" />
+      </div>
+
+      {/* Section: Registered List (Unboxed) */}
+      <div className="space-y-4">
+        {/* Registered List Header: Heading, Search Bar in Middle, Add User Manually on Right */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <h2 className="font-serif font-bold text-xl text-[#2D1F23] shrink-0">
+            Registered List ({registeredList.length})
+          </h2>
+
+          <div className="w-full sm:max-w-md flex-1">
+            <input
+              type="text"
+              placeholder="Search registrants by name or email..."
+              value={registeredSearch}
+              onChange={(e) => setRegisteredSearch(e.target.value)}
+              className="w-full px-3.5 py-2 bg-white border border-gray-200 rounded-xl text-xs text-[#2D1F23] focus:outline-none focus:ring-2 focus:ring-[#63474D]"
+            />
           </div>
 
-          {isRegisteredExpanded && (
-            <div className="p-5 space-y-4">
-              {/* Client-side search bar */}
-              <div className="relative max-w-md">
-                <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Filter registrants by name or email..."
-                  value={registeredSearch}
-                  onChange={(e) => setRegisteredSearch(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-[#2D1F23] focus:outline-none focus:ring-2 focus:ring-[#63474D]"
-                />
-              </div>
-
-              {registeredList.length === 0 ? (
-                <div className="py-8 text-center text-xs text-gray-400">
-                  {roster.length === 0 ? 'No registrations received yet.' : 'No registrants match your search filter.'}
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-gray-50 border-b border-gray-200 text-gray-600 font-bold uppercase text-[10px]">
-                      <tr>
-                        <th className="py-3 px-4">Attendee Name & Email</th>
-                        <th className="py-3 px-4">Registration Date</th>
-                        <th className="py-3 px-4">Status</th>
-                        <th className="py-3 px-4">Registration Answers</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {registeredList.map((att) => {
-                        const isCheckedIn = att.status === 'Checked in' || att.badges?.includes('attended');
-                        return (
-                          <tr key={att.id} className="hover:bg-gray-50/60 transition-colors">
-                            <td className="py-3.5 px-4">
-                              <p className="font-bold text-[#2D1F23]">{att.name}</p>
-                              <p className="text-[11px] text-gray-500">{att.email}</p>
-                            </td>
-                            <td className="py-3.5 px-4 text-gray-600 font-mono text-[11px]">
-                              {att.registrationDate}
-                            </td>
-                            <td className="py-3.5 px-4">
-                              <Badge variant={isCheckedIn ? 'success' : 'gray'}>
-                                {isCheckedIn ? 'Checked in' : 'Registered (Pending Door)'}
-                              </Badge>
-                            </td>
-                            <td className="py-3.5 px-4 max-w-xs truncate text-gray-600">
-                              {att.answers && Object.keys(att.answers).length > 0 ? (
-                                <span title={JSON.stringify(att.answers)}>
-                                  {Object.entries(att.answers)
-                                    .map(([q, a]) => `${q}: ${a}`)
-                                    .join('; ')}
-                                </span>
-                              ) : (
-                                <span className="text-gray-400 italic">None</span>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          )}
+          <Button
+            onClick={() => {
+              setManualUserError(null);
+              setIsAddUserModalOpen(true);
+            }}
+            variant="primary"
+            size="sm"
+            className="shrink-0"
+          >
+            Add User Manually
+          </Button>
         </div>
+
+        {registeredList.length === 0 ? (
+          <div className="py-8 text-center text-xs text-gray-400">
+            {roster.length === 0 ? 'No registrations received yet.' : 'No registrants match your search filter.'}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="border-b border-gray-200 text-gray-600 font-bold uppercase text-[10px]">
+                <tr>
+                  <th className="py-3 px-2">Attendee Name & Email</th>
+                  <th className="py-3 px-2">Registration Date</th>
+                  <th className="py-3 px-2">Status</th>
+                  <th className="py-3 px-2">Registration Answers</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {registeredList.map((att) => {
+                  const isCheckedIn = att.status === 'Checked in' || att.badges?.includes('attended');
+                  return (
+                    <tr key={att.id} className="hover:bg-gray-50/60 transition-colors">
+                      <td className="py-3.5 px-2">
+                        <p className="font-bold text-[#2D1F23]">{att.name}</p>
+                        <p className="text-[11px] text-gray-500">{att.email}</p>
+                      </td>
+                      <td className="py-3.5 px-2 text-gray-600 font-mono text-[11px]">
+                        {att.registrationDate}
+                      </td>
+                      <td className="py-3.5 px-2">
+                        {/* Unboxed status, CLICKABLE to view attendee answers */}
+                        <button
+                          type="button"
+                          onClick={() => setSelectedAnswersAttendee(att)}
+                          className="text-left cursor-pointer hover:underline focus:outline-none transition-colors"
+                          title="Click to view answers to questions"
+                        >
+                          <span className={`font-semibold ${isCheckedIn ? 'text-[#2A7B5F]' : 'text-[#63474D]'}`}>
+                            {isCheckedIn ? 'Checked in' : 'Registered'}
+                          </span>
+                        </button>
+                      </td>
+                      <td className="py-3.5 px-2 max-w-xs truncate text-gray-600">
+                        {att.answers && Object.keys(att.answers).length > 0 ? (
+                          <button
+                            type="button"
+                            onClick={() => setSelectedAnswersAttendee(att)}
+                            className="text-left text-gray-600 hover:text-[#63474D] hover:underline truncate block max-w-xs cursor-pointer"
+                            title="Click to view all answers"
+                          >
+                            {Object.entries(att.answers)
+                              .map(([q, a]) => `${q}: ${a}`)
+                              .join('; ')}
+                          </button>
+                        ) : (
+                          <span className="text-gray-400 italic">None</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Award Badge Modal (Shared action offering Participant / Winner / Speaker) */}
@@ -692,7 +673,7 @@ export const EventDetailPage: React.FC = () => {
               </div>
 
               <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-2xl text-[11px] text-emerald-900 flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0 mt-0.5" />
+                <img src="/tick.png" alt="Success" className="w-4 h-4 object-contain shrink-0 mt-0.5" />
                 <span>
                   Adding this attendee will instantly create their registration, record their door check-in, and award them the official <strong>Attended</strong> badge.
                 </span>
@@ -718,6 +699,69 @@ export const EventDetailPage: React.FC = () => {
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Registration Answers Modal */}
+      {selectedAnswersAttendee && (
+        <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4">
+          <div
+            onClick={() => setSelectedAnswersAttendee(null)}
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
+          />
+
+          <div className="relative bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-gray-100 z-10 space-y-5 animate-fade-in">
+            <div className="flex items-start justify-between pb-3 border-b border-gray-100">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#63474D]">
+                  Registration Answers
+                </span>
+                <h3 className="font-serif font-bold text-xl text-[#2D1F23]">
+                  {selectedAnswersAttendee.name}
+                </h3>
+                <p className="text-xs text-gray-500">
+                  {selectedAnswersAttendee.email} • {selectedAnswersAttendee.status || 'Registered'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedAnswersAttendee(null)}
+                className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3.5 max-h-[60vh] overflow-y-auto pr-1">
+              {selectedAnswersAttendee.answers && Object.keys(selectedAnswersAttendee.answers).length > 0 ? (
+                Object.entries(selectedAnswersAttendee.answers).map(([question, answer], idx) => (
+                  <div key={idx} className="p-3.5 bg-[#FAF7F5] rounded-xl border border-[#E8DDD7] space-y-1">
+                    <p className="text-xs font-bold text-[#2D1F23]">{question}</p>
+                    <p className="text-xs text-[#63474D] font-medium leading-relaxed">
+                      {answer || <span className="italic text-gray-400">No answer provided</span>}
+                    </p>
+                  </div>
+                ))
+              ) : (
+                <div className="py-6 text-center text-xs text-gray-400 space-y-1">
+                  <p className="font-medium text-gray-600">No Custom Answers</p>
+                  <p className="text-[11px] text-gray-400">
+                    No custom questionnaire responses were required or provided during registration.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="pt-3 border-t border-gray-100 flex items-center justify-end">
+              <Button
+                onClick={() => setSelectedAnswersAttendee(null)}
+                variant="outline"
+                size="sm"
+              >
+                Close
+              </Button>
+            </div>
           </div>
         </div>
       )}
