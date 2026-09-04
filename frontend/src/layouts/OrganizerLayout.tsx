@@ -88,14 +88,15 @@ export const OrganizerLayout: React.FC = () => {
         </Link>
       </div>
 
-      <div className="flex-1 flex max-w-7xl w-full mx-auto">
+      <div className="flex-1 flex w-full items-start">
         <OrganizerSidebar />
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 min-w-0 overflow-y-auto bg-white">
-          <Outlet />
-        </main>
+        <div className="flex-1 min-w-0 flex flex-col min-h-[calc(100vh-4rem)]">
+          <main className="flex-1 p-4 sm:p-6 lg:p-8 min-w-0">
+            <Outlet />
+          </main>
+          <Footer />
+        </div>
       </div>
-
-      <Footer />
     </div>
   );
 };

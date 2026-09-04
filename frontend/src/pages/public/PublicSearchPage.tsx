@@ -10,13 +10,11 @@ import {
   Search as SearchIcon,
   User as UserIcon,
   Calendar,
-  MapPin,
   Clock,
   Users,
   ArrowRight,
   Sparkles,
   Filter,
-  CheckCircle2,
 } from 'lucide-react';
 
 export const PublicSearchPage: React.FC = () => {
@@ -223,7 +221,7 @@ export const PublicSearchPage: React.FC = () => {
                         <span>{ev.time || `${ev.startTime} - ${ev.endTime}`}</span>
                       </div>
                       <div className="flex items-center gap-1.5 col-span-2">
-                        <MapPin className="w-3.5 h-3.5 text-[#63474D]" />
+                        <img src="/location.png" alt="Location" className="w-3.5 h-3.5 object-contain shrink-0" />
                         <span className="truncate">{ev.venueName || ev.location}</span>
                       </div>
                     </div>
@@ -239,7 +237,7 @@ export const PublicSearchPage: React.FC = () => {
                             type="button"
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#2A7B5F] text-white text-xs font-bold hover:bg-[#22634d] transition-all shadow-xs cursor-pointer"
                           >
-                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <img src="/tick.png" alt="Registered" className="w-3.5 h-3.5 object-contain" />
                             <span>Registered</span>
                           </button>
                         </Link>

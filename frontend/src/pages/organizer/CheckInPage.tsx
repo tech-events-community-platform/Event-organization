@@ -7,11 +7,9 @@ import type { AttendeeRosterItem } from '../../types/attendance';
 import { Badge } from '../../components/ui/Badge';
 import {
   Search,
-  CheckCircle2,
   RotateCcw,
   Users,
   Calendar,
-  MapPin,
   Clock,
   X,
   UserPlus,
@@ -318,7 +316,7 @@ export const CheckInPage: React.FC = () => {
                 {currentEvent.time || `${currentEvent.startTime} - ${currentEvent.endTime}`}
               </span>
               <span className="flex items-center gap-1">
-                <MapPin className="w-3.5 h-3.5 text-[#FFA686]" />
+                <img src="/location.png" alt="Location" className="w-3.5 h-3.5 object-contain shrink-0" />
                 {currentEvent.location}
               </span>
             </div>
@@ -346,7 +344,7 @@ export const CheckInPage: React.FC = () => {
           }`}
         >
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <img src="/tick.png" alt="Success" className="w-4 h-4 object-contain shrink-0" />
             <span>
               {lastActionToast.type === 'checkin'
                 ? `✓ Marked "${lastActionToast.name}" Attended & issued verified badge.`
@@ -430,7 +428,7 @@ export const CheckInPage: React.FC = () => {
                       </h3>
                       {isCheckedIn && (
                         <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#2A7B5F] bg-emerald-100/70 px-2 py-0.5 rounded-md">
-                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <img src="/tick.png" alt="Attended" className="w-3.5 h-3.5 object-contain" />
                           Attended
                         </span>
                       )}
@@ -454,7 +452,7 @@ export const CheckInPage: React.FC = () => {
                         onClick={() => handleMarkAttended(att)}
                         className="px-5 py-2.5 rounded-xl bg-[#2A7B5F] hover:bg-[#236850] active:scale-98 text-white text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                       >
-                        <CheckCircle2 className="w-4 h-4" />
+                        <img src="/tick.png" alt="Check In" className="w-4 h-4 object-contain" />
                         <span>{isBusy ? 'Checking in...' : 'Mark Attended'}</span>
                       </button>
                     ) : (
@@ -555,7 +553,7 @@ export const CheckInPage: React.FC = () => {
               </div>
 
               <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-2xl text-[11px] text-emerald-900 flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0 mt-0.5" />
+                <img src="/tick.png" alt="Success" className="w-4 h-4 object-contain shrink-0 mt-0.5" />
                 <span>
                   Adding this attendee will immediately create their ticket and grant their verified <strong>Attended</strong> badge.
                 </span>

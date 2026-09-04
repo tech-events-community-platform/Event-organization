@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import type { Event } from '../../types/event';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
-import { Calendar, MapPin, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Calendar, ArrowRight, ShieldCheck } from 'lucide-react';
 
 interface EventCardProps {
   event: Event;
@@ -58,7 +58,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, isRegistered }) => 
             <span className="truncate">{event.date} • {event.time}</span>
           </div>
           <div className="flex items-center gap-2 text-[#756366]">
-            <MapPin className="w-4 h-4 text-[#63474D] flex-shrink-0" />
+            <img src="/location.png" alt="Location" className="w-4 h-4 object-contain shrink-0" />
             <span className="truncate">{event.location}</span>
           </div>
         </div>
