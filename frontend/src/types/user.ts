@@ -1,4 +1,4 @@
-export type UserRole = 'ATTENDEE' | 'ORGANIZER' | 'ADMIN';
+export type UserRole = 'ATTENDEE' | 'ORGANIZER' | 'ADMIN' | 'SPONSOR';
 export type ProfileVisibility = 'public' | 'private';
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected';
 

@@ -39,6 +39,10 @@ import { AdminDashboardPage } from '../pages/admin/AdminDashboardPage';
 import { AdminEventsPage } from '../pages/admin/AdminEventsPage';
 import { AdminUsersPage } from '../pages/admin/AdminUsersPage';
 
+// Sponsor Layout & Pages
+import { SponsorLayout } from '../layouts/SponsorLayout';
+import { SponsorDashboardPage } from '../pages/sponsor/SponsorDashboardPage';
+
 export const router = createBrowserRouter([
   // Public Routes (SRS Section 18)
   {
@@ -97,6 +101,20 @@ export const router = createBrowserRouter([
           { path: 'attendees/:id', element: <AttendeeListPage /> },
           { path: 'reports', element: <ReportPage /> },
           { path: 'reports/:id', element: <ReportPage /> },
+          { path: 'settings', element: <AccountSettingsPage /> },
+        ],
+      },
+    ],
+  },
+  // Protected Sponsor Routes (/sponsor)
+  {
+    path: '/sponsor',
+    element: <ProtectedRoute allowedRoles={['SPONSOR']} />,
+    children: [
+      {
+        element: <SponsorLayout />,
+        children: [
+          { index: true, element: <SponsorDashboardPage /> },
           { path: 'settings', element: <AccountSettingsPage /> },
         ],
       },

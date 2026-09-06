@@ -75,13 +75,13 @@ export const PublicSearchPage: React.FC = () => {
     <div className="max-w-5xl mx-auto py-10 px-4 space-y-8 pb-20">
       {/* Header */}
       <div className="text-center space-y-2 max-w-xl mx-auto">
-        <Badge variant="tertiary" icon={<Sparkles className="w-3.5 h-3.5" />}>
+        <Badge variant="tertiary" icon={<Sparkles className="w-3.5 h-3.5 text-[#F9FF46]" />}>
           Community Registry & Directory
         </Badge>
-        <h1 className="font-serif text-3xl sm:text-4xl font-extrabold text-[#2D1F23]">
+        <h1 className="font-serif text-3xl sm:text-4xl font-extrabold text-[#FFFFFF] drop-shadow-xs">
           Explore Events & Profiles
         </h1>
-        <p className="text-xs sm:text-sm text-[#756366]">
+        <p className="text-xs sm:text-sm text-[#FFFFFF] opacity-90 font-medium">
           Discover upcoming workshops, hackathons, and meetups in Ethiopia.
         </p>
       </div>
@@ -98,53 +98,53 @@ export const PublicSearchPage: React.FC = () => {
               setQuery(e.target.value);
               fetchResults(e.target.value);
             }}
-            className="w-full pl-10 pr-4 py-3 bg-white border border-[#E8DDD7] rounded-2xl text-xs sm:text-sm text-[#2D1F23] focus:outline-none focus:ring-2 focus:ring-[#63474D] shadow-xs"
+            className="w-full pl-10 pr-4 py-3 bg-white border border-[#E8DDD7] rounded-2xl text-xs sm:text-sm text-[#2D1F23] focus:outline-none focus:ring-2 focus:ring-[#153E2A] shadow-xs"
           />
         </div>
-        <Button type="submit" variant="primary" size="md">
+        <Button type="submit" variant="accent" size="md">
           Search
         </Button>
       </form>
 
       {/* Main Switch Tabs: Events vs Attendees */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-[#E8DDD7] pb-3">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-white/20 pb-3">
         <div className="flex gap-4">
           <button
             onClick={() => setActiveTab('events')}
             className={`pb-2 text-xs sm:text-sm font-bold border-b-2 transition-all flex items-center gap-2 ${
               activeTab === 'events'
-                ? 'border-[#63474D] text-[#63474D]'
-                : 'border-transparent text-[#756366] hover:text-[#2D1F23]'
+                ? 'border-[#F9FF46] text-[#FFFFFF]'
+                : 'border-transparent text-[#FFFFFF] opacity-70 hover:opacity-100'
             }`}
           >
-            <Calendar className="w-4 h-4" />
-            All Events ({events.length})
+            <Calendar className="w-4 h-4 text-[#F9FF46]" />
+            <span className="text-[#FFFFFF]">All Events ({events.length})</span>
           </button>
           <button
             onClick={() => setActiveTab('attendees')}
             className={`pb-2 text-xs sm:text-sm font-bold border-b-2 transition-all flex items-center gap-2 ${
               activeTab === 'attendees'
-                ? 'border-[#63474D] text-[#63474D]'
-                : 'border-transparent text-[#756366] hover:text-[#2D1F23]'
+                ? 'border-[#F9FF46] text-[#FFFFFF]'
+                : 'border-transparent text-[#FFFFFF] opacity-70 hover:opacity-100'
             }`}
           >
-            <UserIcon className="w-4 h-4" />
-            Verified Attendees ({attendees.length})
+            <UserIcon className="w-4 h-4 text-[#F9FF46]" />
+            <span className="text-[#FFFFFF]">Verified Attendees ({attendees.length})</span>
           </button>
         </div>
 
         {/* Category Filters (when on events tab) */}
         {activeTab === 'events' && (
           <div className="flex flex-wrap items-center gap-1.5">
-            <Filter className="w-3.5 h-3.5 text-[#756366] mr-1" />
+            <Filter className="w-3.5 h-3.5 text-white/80 mr-1" />
             {['all', 'workshop', 'meetup', 'hackathon'].map((type) => (
               <button
                 key={type}
                 onClick={() => setSelectedType(type)}
                 className={`px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider transition-colors ${
                   selectedType === type
-                    ? 'bg-[#63474D] text-white'
-                    : 'bg-white border border-[#E8DDD7] text-[#756366] hover:bg-[#FAF7F5]'
+                    ? 'bg-[#F9FF46] text-[#153E2A] font-bold'
+                    : 'bg-white/10 border border-white/20 text-white hover:bg-white/20'
                 }`}
               >
                 {type}

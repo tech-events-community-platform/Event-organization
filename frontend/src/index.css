@@ -1,24 +1,27 @@
 @import "tailwindcss";
 
 @theme {
-  --color-sheba-coral: #f49390;
-  --color-sheba-rose: #a2666f;
-  --color-sheba-pink: #f45866;
-  --color-sheba-indigo: #1e0b97;
-  --color-sheba-purple: #631a86;
-  --color-sheba-dark: #0e0622;
-  --color-sheba-surface: #fbf9fc;
-  --color-sheba-muted: #6b7280;
+  --color-sheba-dark-green: #153E2A;
+  --color-sheba-yellow: #F9FF46;
+  --color-sheba-olive: #8BA448;
+  --color-sheba-coral: #8BA448;
+  --color-sheba-rose: #8BA448;
+  --color-sheba-pink: #F9FF46;
+  --color-sheba-indigo: #153E2A;
+  --color-sheba-purple: #153E2A;
+  --color-sheba-dark: #0e2016;
+  --color-sheba-surface: #f6f9f7;
+  --color-sheba-muted: #536e60;
 
-  --color-sheba-primary: #631a86;
-  --color-sheba-secondary: #a2666f;
-  --color-sheba-tertiary: #f49390;
-  --color-sheba-accent: #f45866;
-  --color-sheba-light: #fbf9fc;
+  --color-sheba-primary: #153E2A;
+  --color-sheba-secondary: #8BA448;
+  --color-sheba-tertiary: #8BA448;
+  --color-sheba-accent: #F9FF46;
+  --color-sheba-light: #f6f9f7;
   --color-sheba-bg: #ffffff;
-  --color-sheba-border: #e5e7eb;
+  --color-sheba-border: #e2ebe5;
 
-  --color-sheba-success: #2A7B5F;
+  --color-sheba-success: #153E2A;
   --color-sheba-warning: #D97706;
   --color-sheba-error: #B91C1C;
 
@@ -29,19 +32,19 @@
 @layer base {
   html {
     scroll-behavior: smooth;
-    color-scheme: light;
+    color-scheme: dark light;
   }
   body {
     font-family: var(--font-sans);
-    color: #1f2937;
-    background-color: #ffffff;
+    color: #ffffff;
+    background-color: #153E2A;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overflow-x: hidden;
   }
   ::selection {
-    background-color: #631a86;
-    color: #ffffff;
+    background-color: #F9FF46;
+    color: #153E2A;
   }
 }
 
@@ -51,17 +54,17 @@
     -webkit-background-clip: text;
     color: transparent;
     -webkit-text-fill-color: transparent;
-    background-image: linear-gradient(135deg, #f45866 0%, #631a86 50%, #1e0b97 100%);
+    background-image: linear-gradient(135deg, #153E2A 0%, #235c3f 50%, #8BA448 100%);
   }
-  .text-gradient-coral {
+  .text-gradient-gold {
     background-clip: text;
     -webkit-background-clip: text;
     color: transparent;
     -webkit-text-fill-color: transparent;
-    background-image: linear-gradient(135deg, #f49390 0%, #f45866 50%, #631a86 100%);
+    background-image: linear-gradient(135deg, #153E2A 0%, #8BA448 70%, #d4e27e 100%);
   }
   .bg-sheeba-gradient {
-    background: linear-gradient(135deg, #f49390 0%, #a2666f 25%, #631a86 75%, #1e0b97 100%);
+    background: linear-gradient(135deg, #153E2A 0%, #1c4e35 40%, #286948 75%, #8BA448 100%);
   }
 }
 
@@ -74,9 +77,9 @@
   background: #fcfafc;
 }
 ::-webkit-scrollbar-thumb {
-  background: #a2666f;
+  background: #8BA448;
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #631a86;
+  background: #153E2A;
 }

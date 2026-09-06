@@ -72,13 +72,13 @@ export const LoginPage: React.FC = () => {
     <div className="min-h-[85vh] flex flex-col justify-center max-w-md mx-auto pt-28 sm:pt-32 pb-20 px-4 space-y-6">
       {/* Header */}
       <div className="text-center space-y-2">
-        <div className="w-12 h-12 rounded-2xl bg-[#63474D] flex items-center justify-center text-[#FFA686] mx-auto shadow-sm">
+        <div className="w-12 h-12 rounded-2xl bg-[#F9FF46] flex items-center justify-center text-[#153E2A] mx-auto shadow-md">
           <Award className="w-6 h-6" />
         </div>
-        <h1 className="font-serif text-3xl font-extrabold text-[#2D1F23]">
+        <h1 className="font-serif text-3xl font-extrabold text-white">
           Sign in to Sheba
         </h1>
-        <p className="text-xs text-[#756366]">
+        <p className="text-xs text-white/80">
           Verifiable attendance credentials and community tech events in Ethiopia.
         </p>
       </div>

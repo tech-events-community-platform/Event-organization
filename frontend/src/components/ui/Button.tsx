@@ -23,21 +23,21 @@ export const Button: React.FC<ButtonProps> = ({
   ...props
 }) => {
   const baseStyles =
-    'inline-flex items-center justify-center font-medium rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none cursor-pointer';
+    'inline-flex items-center justify-center font-medium rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 active:scale-[0.97] hover:-translate-y-0.5 disabled:opacity-50 disabled:pointer-events-none disabled:transform-none cursor-pointer';
 
   const variantStyles: Record<ButtonVariant, string> = {
     primary:
-      'bg-[#63474D] text-white hover:bg-[#523a3f] focus:ring-[#63474D] shadow-xs hover:shadow-sm',
+      'bg-[#153E2A] text-white hover:bg-[#1c4e35] focus:ring-[#153E2A] shadow-sm hover:shadow-md border border-white/10',
     secondary:
-      'bg-[#AA767C] text-white hover:bg-[#966369] focus:ring-[#AA767C]',
+      'bg-[#8BA448] text-white hover:bg-[#7a933b] focus:ring-[#8BA448] shadow-xs hover:shadow-sm font-semibold',
     accent:
-      'bg-[#FFA686] text-[#2D1F23] hover:bg-[#ff9570] focus:ring-[#FFA686] font-bold shadow-xs',
+      'bg-[#F9FF46] text-[#153E2A] hover:bg-[#f3fb29] focus:ring-[#F9FF46] font-bold shadow-sm hover:shadow-md border border-[#153E2A]/10',
     outline:
-      'border border-[#63474D] text-[#63474D] hover:bg-[#63474D]/10 focus:ring-[#63474D]',
+      'border border-[#153E2A]/80 text-[#153E2A] hover:bg-[#153E2A] hover:text-white focus:ring-[#153E2A] shadow-2xs hover:shadow-xs',
     ghost:
-      'text-[#2D1F23] hover:bg-[#E8DDD7]/50 focus:ring-[#AA767C]',
+      'text-[#153E2A] hover:bg-[#153E2A]/10 focus:ring-[#8BA448]',
     danger:
-      'bg-[#B91C1C] text-white hover:bg-[#991B1B] focus:ring-[#B91C1C]',
+      'bg-[#B91C1C] text-white hover:bg-[#991B1B] focus:ring-[#B91C1C] shadow-xs hover:shadow-sm',
   };
 
   const sizeStyles: Record<ButtonSize, string> = {

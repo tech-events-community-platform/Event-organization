@@ -15,7 +15,6 @@ import {
   Calendar,
   BarChart3,
   Shield,
-  Clock,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -70,6 +69,7 @@ export default function Header() {
     if (!user) return '/app';
     if (user.role === 'ADMIN') return '/admin';
     if (user.role === 'ORGANIZER') return '/organizer';
+    if (user.role === 'SPONSOR') return '/sponsor';
     return '/app';
   };
 
@@ -99,8 +99,8 @@ export default function Header() {
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         scrolled
-          ? 'bg-white/95 backdrop-blur-md shadow-sm border-b border-gray-100'
-          : 'bg-white/90 backdrop-blur-sm border-b border-gray-100/80 shadow-2xs'
+          ? 'bg-[#153E2A]/95 backdrop-blur-md shadow-md border-b border-white/10'
+          : 'bg-[#153E2A]/90 backdrop-blur-sm border-b border-white/10 shadow-2xs'
       }`}
     >
       {/* Top Navbar Row */}
@@ -111,13 +111,13 @@ export default function Header() {
             <img
               src="/logo.jpg"
               alt="Sheeba Logo"
-              className="h-8 sm:h-10 w-auto object-contain group-hover:scale-105 transition-transform duration-200"
+              className="h-8 sm:h-10 w-auto object-contain group-hover:scale-105 transition-transform duration-200 rounded"
             />
             <div className="flex flex-col">
-              <span className="font-serif text-xl sm:text-2xl font-bold tracking-tight text-[#2D1F23] group-hover:text-[#63474D] transition-colors leading-none">
+              <span className="font-serif text-xl sm:text-2xl font-extrabold tracking-tight text-white group-hover:text-[#F9FF46] transition-colors leading-none">
                 Sheeba
               </span>
-              <span className="text-[8px] uppercase font-bold tracking-widest text-[#AA767C] mt-0.5">
+              <span className="text-[8px] uppercase font-bold tracking-widest text-[#F9FF46] mt-0.5">
                 Event Infrastructure
               </span>
             </div>
@@ -131,7 +131,7 @@ export default function Header() {
                   <a
                     key={link.name}
                     href={link.href}
-                    className="text-xs sm:text-sm font-medium text-gray-700 hover:text-[#63474D] transition-colors py-1 relative after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-0.5 after:bg-[#63474D] hover:after:w-full after:transition-all after:duration-200"
+                    className="text-xs sm:text-sm font-semibold text-white/85 hover:text-[#F9FF46] transition-colors py-1 relative after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-0.5 after:bg-[#F9FF46] hover:after:w-full after:transition-all after:duration-200"
                   >
                     {link.name}
                   </a>
@@ -139,7 +139,7 @@ export default function Header() {
                   <Link
                     key={link.name}
                     to={link.href}
-                    className="text-xs sm:text-sm font-medium text-gray-700 hover:text-[#63474D] transition-colors py-1 relative after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-0.5 after:bg-[#63474D] hover:after:w-full after:transition-all after:duration-200"
+                    className="text-xs sm:text-sm font-semibold text-white/85 hover:text-[#F9FF46] transition-colors py-1 relative after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-0.5 after:bg-[#F9FF46] hover:after:w-full after:transition-all after:duration-200"
                   >
                     {link.name}
                   </Link>
@@ -156,32 +156,32 @@ export default function Header() {
                 <button
                   type="button"
                   onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                  className="flex items-center gap-2.5 pl-2 pr-3 py-1.5 rounded-full bg-white border border-[#E8DDD7] hover:border-[#63474D]/40 hover:shadow-xs transition-all cursor-pointer"
+                  className="flex items-center gap-2.5 pl-2 pr-3 py-1.5 rounded-full bg-white/10 border border-white/20 hover:border-[#F9FF46]/50 hover:bg-white/15 transition-all cursor-pointer text-white"
                 >
                   <img
                     src={user.avatarUrl || defaultAvatar}
                     alt={user.name}
-                    className="w-7 h-7 rounded-full object-cover border border-[#FFA686]/60 shadow-xs"
+                    className="w-7 h-7 rounded-full object-cover border border-[#F9FF46]/60 shadow-xs"
                     onError={(e) => {
                       (e.target as HTMLImageElement).src = defaultAvatar;
                     }}
                   />
                   <div className="flex flex-col text-left">
-                    <span className="text-xs font-bold text-[#2D1F23] max-w-[130px] truncate leading-tight">
+                    <span className="text-xs font-bold text-white max-w-[130px] truncate leading-tight">
                       {user.name}
                     </span>
-                    <span className="text-[9px] uppercase tracking-wider font-semibold text-[#AA767C]">
-                      {user.role === 'ADMIN' ? 'Super Admin' : user.role === 'ORGANIZER' ? 'Organizer' : 'Attendee'}
+                    <span className="text-[9px] uppercase tracking-wider font-semibold text-[#F9FF46]">
+                      {user.role === 'ADMIN' ? 'Super Admin' : user.role === 'ORGANIZER' ? 'Organizer' : user.role === 'SPONSOR' ? 'Sponsor' : 'Attendee'}
                     </span>
                   </div>
-                  <ChevronDown className="w-3.5 h-3.5 text-gray-500 transition-transform duration-200" />
+                  <ChevronDown className="w-3.5 h-3.5 text-gray-300 transition-transform duration-200" />
                 </button>
 
                 {/* Profile Dropdown Menu */}
                 {userDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-60 bg-white rounded-2xl shadow-xl border border-[#E8DDD7] py-2 z-50 animate-fade-in">
-                    <div className="px-4 py-2.5 border-b border-[#E8DDD7]/60">
-                      <p className="text-xs font-bold text-[#2D1F23] truncate">{user.name}</p>
+                  <div className="absolute right-0 mt-2 w-60 bg-white rounded-2xl shadow-xl border border-gray-200 py-2 z-50 animate-fade-in text-gray-800">
+                    <div className="px-4 py-2.5 border-b border-gray-100">
+                      <p className="text-xs font-bold text-[#153E2A] truncate">{user.name}</p>
                       <p className="text-[11px] text-gray-500 truncate">{user.email}</p>
                     </div>
 
@@ -189,9 +189,9 @@ export default function Header() {
                       <Link
                         to={getDashboardPath()}
                         onClick={() => setUserDropdownOpen(false)}
-                        className="flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-gray-700 hover:bg-[#FAF7F5] hover:text-[#63474D] transition-colors"
+                        className="flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-gray-700 hover:bg-[#f6f9f7] hover:text-[#153E2A] transition-colors"
                       >
-                        <LayoutDashboard className="w-4 h-4 text-[#AA767C]" />
+                        <LayoutDashboard className="w-4 h-4 text-[#153E2A]" />
                         <span>Go to Dashboard</span>
                       </Link>
 
@@ -199,9 +199,9 @@ export default function Header() {
                         <Link
                           to={getProfilePath()}
                           onClick={() => setUserDropdownOpen(false)}
-                          className="flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-gray-700 hover:bg-[#FAF7F5] hover:text-[#63474D] transition-colors"
+                          className="flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-gray-700 hover:bg-[#f6f9f7] hover:text-[#153E2A] transition-colors"
                         >
-                          <Award className="w-4 h-4 text-[#FFA686]" />
+                          <Award className="w-4 h-4 text-[#8BA448]" />
                           <span>My Profile & Badges</span>
                         </Link>
                       )}
@@ -209,14 +209,14 @@ export default function Header() {
                       <Link
                         to="/search"
                         onClick={() => setUserDropdownOpen(false)}
-                        className="flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-gray-700 hover:bg-[#FAF7F5] hover:text-[#63474D] transition-colors"
+                        className="flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-gray-700 hover:bg-[#f6f9f7] hover:text-[#153E2A] transition-colors"
                       >
-                        <Compass className="w-4 h-4 text-[#AA767C]" />
+                        <Compass className="w-4 h-4 text-[#153E2A]" />
                         <span>Explore Events</span>
                       </Link>
                     </div>
 
-                    <div className="pt-1 border-t border-[#E8DDD7]/60">
+                    <div className="pt-1 border-t border-gray-100">
                       <button
                         type="button"
                         onClick={handleLogout}
@@ -232,7 +232,7 @@ export default function Header() {
             ) : isAuthPage ? (
               <Link
                 to="/"
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-gray-300 text-gray-700 text-xs font-semibold hover:bg-gray-100 transition-colors"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-white/30 text-white text-xs font-semibold hover:bg-white/10 transition-colors"
               >
                 <span>Back to Home</span>
               </Link>
@@ -240,16 +240,16 @@ export default function Header() {
               <div className="flex items-center gap-2.5">
                 <Link
                   to="/login"
-                  className="inline-flex items-center px-4 py-2 rounded-xl text-xs font-semibold text-gray-700 hover:text-[#63474D] hover:bg-gray-100 transition-colors"
+                  className="inline-flex items-center px-4 py-2 rounded-xl text-xs font-semibold text-white/90 hover:text-white hover:bg-white/10 transition-colors"
                 >
                   Sign In
                 </Link>
                 <Link
                   to="/register"
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#63474D] text-white text-xs font-bold hover:bg-[#523a3f] shadow-xs hover:shadow-sm transition-all duration-200"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#F9FF46] text-[#153E2A] text-xs font-bold hover:bg-[#e0e63c] shadow-xs hover:shadow-sm transition-all duration-200"
                 >
                   <span>Register</span>
-                  <ArrowRight className="w-3.5 h-3.5 text-white" />
+                  <ArrowRight className="w-3.5 h-3.5 text-[#153E2A]" />
                 </Link>
               </div>
             )}
@@ -284,7 +284,7 @@ export default function Header() {
 
       {/* 1-LINE QUICK NAVIGATION SUBNAV (Visible When Logged In) */}
       {isAuthenticated && user && (
-        <div className="bg-[#FAF7F5] border-t border-b border-[#E8DDD7]/70 py-1 px-4 sm:px-6 lg:px-8 overflow-x-auto scrollbar-none">
+        <div className="bg-[#153E2A]/95 border-t border-b border-white/10 py-1 px-4 sm:px-6 lg:px-8 overflow-x-auto scrollbar-none">
           <div className="max-w-7xl mx-auto flex items-center justify-start sm:justify-center gap-2 sm:gap-4 whitespace-nowrap min-w-max text-xs">
             {user.role === 'ATTENDEE' && (
               <>
@@ -292,8 +292,8 @@ export default function Header() {
                   to="/app"
                   className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold transition-all ${
                     location.pathname === '/app'
-                      ? 'bg-[#63474D] text-white shadow-xs'
-                      : 'text-[#63474D] hover:bg-[#63474D]/10'
+                      ? 'bg-[#F9FF46] text-[#153E2A] shadow-xs'
+                      : 'text-white/90 hover:bg-white/10'
                   }`}
                 >
                   <LayoutDashboard className="w-3.5 h-3.5" />
@@ -304,8 +304,8 @@ export default function Header() {
                   to="/app/events"
                   className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold transition-all ${
                     isTabActive('/app/events') || isTabActive('/app/ticket')
-                      ? 'bg-[#63474D] text-white shadow-xs'
-                      : 'text-[#63474D] hover:bg-[#63474D]/10'
+                      ? 'bg-[#F9FF46] text-[#153E2A] shadow-xs'
+                      : 'text-white/90 hover:bg-white/10'
                   }`}
                 >
                   <Ticket className="w-3.5 h-3.5" />
@@ -316,8 +316,8 @@ export default function Header() {
                   to="/app/record"
                   className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold transition-all ${
                     isTabActive('/app/record')
-                      ? 'bg-[#63474D] text-white shadow-xs'
-                      : 'text-[#63474D] hover:bg-[#63474D]/10'
+                      ? 'bg-[#F9FF46] text-[#153E2A] shadow-xs'
+                      : 'text-white/90 hover:bg-white/10'
                   }`}
                 >
                   <Award className="w-3.5 h-3.5" />
@@ -328,8 +328,8 @@ export default function Header() {
                   to="/app/explore"
                   className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold transition-all ${
                     isTabActive('/app/explore') || isTabActive('/search')
-                      ? 'bg-[#63474D] text-white shadow-xs'
-                      : 'text-[#63474D] hover:bg-[#63474D]/10'
+                      ? 'bg-[#F9FF46] text-[#153E2A] shadow-xs'
+                      : 'text-white/90 hover:bg-white/10'
                   }`}
                 >
                   <Compass className="w-3.5 h-3.5" />
@@ -340,8 +340,8 @@ export default function Header() {
                   to="/app/profile"
                   className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold transition-all ${
                     isTabActive('/app/profile') && location.pathname !== '/app/profile/attendance'
-                      ? 'bg-[#63474D] text-white shadow-xs'
-                      : 'text-[#63474D] hover:bg-[#63474D]/10'
+                      ? 'bg-[#F9FF46] text-[#153E2A] shadow-xs'
+                      : 'text-white/90 hover:bg-white/10'
                   }`}
                 >
                   <UserIcon className="w-3.5 h-3.5" />
@@ -356,8 +356,8 @@ export default function Header() {
                   to="/organizer/events"
                   className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold transition-all ${
                     isTabActive('/organizer/events') && location.pathname !== '/organizer/events/create'
-                      ? 'bg-[#63474D] text-white shadow-xs'
-                      : 'text-[#63474D] hover:bg-[#63474D]/10'
+                      ? 'bg-[#F9FF46] text-[#153E2A] shadow-xs'
+                      : 'text-white/90 hover:bg-white/10'
                   }`}
                 >
                   <Calendar className="w-3.5 h-3.5" />
@@ -368,8 +368,8 @@ export default function Header() {
                   to="/organizer/events/create"
                   className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold transition-all ${
                     isTabActive('/organizer/events/create')
-                      ? 'bg-[#63474D] text-white shadow-xs'
-                      : 'text-[#63474D] hover:bg-[#63474D]/10'
+                      ? 'bg-[#F9FF46] text-[#153E2A] shadow-xs'
+                      : 'text-white/90 hover:bg-white/10'
                   }`}
                 >
                   <PlusCircle className="w-3.5 h-3.5" />
@@ -380,8 +380,8 @@ export default function Header() {
                   to="/organizer"
                   className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold transition-all ${
                     location.pathname === '/organizer'
-                      ? 'bg-[#63474D] text-white shadow-xs'
-                      : 'text-[#63474D] hover:bg-[#63474D]/10'
+                      ? 'bg-[#F9FF46] text-[#153E2A] shadow-xs'
+                      : 'text-white/90 hover:bg-white/10'
                   }`}
                 >
                   <LayoutDashboard className="w-3.5 h-3.5" />
@@ -392,8 +392,8 @@ export default function Header() {
                   to="/organizer/reports"
                   className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold transition-all ${
                     isTabActive('/organizer/reports')
-                      ? 'bg-[#63474D] text-white shadow-xs'
-                      : 'text-[#63474D] hover:bg-[#63474D]/10'
+                      ? 'bg-[#F9FF46] text-[#153E2A] shadow-xs'
+                      : 'text-white/90 hover:bg-white/10'
                   }`}
                 >
                   <BarChart3 className="w-3.5 h-3.5" />
@@ -404,8 +404,8 @@ export default function Header() {
                   to="/search"
                   className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold transition-all ${
                     isTabActive('/search')
-                      ? 'bg-[#63474D] text-white shadow-xs'
-                      : 'text-[#63474D] hover:bg-[#63474D]/10'
+                      ? 'bg-[#F9FF46] text-[#153E2A] shadow-xs'
+                      : 'text-white/90 hover:bg-white/10'
                   }`}
                 >
                   <Compass className="w-3.5 h-3.5" />
@@ -420,8 +420,8 @@ export default function Header() {
                   to="/admin"
                   className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold transition-all ${
                     location.pathname === '/admin'
-                      ? 'bg-[#63474D] text-white shadow-xs'
-                      : 'text-[#63474D] hover:bg-[#63474D]/10'
+                      ? 'bg-[#F9FF46] text-[#153E2A] shadow-xs'
+                      : 'text-white/90 hover:bg-white/10'
                   }`}
                 >
                   <Shield className="w-3.5 h-3.5" />
@@ -432,8 +432,8 @@ export default function Header() {
                   to="/admin/users"
                   className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold transition-all ${
                     isTabActive('/admin/users')
-                      ? 'bg-[#63474D] text-white shadow-xs'
-                      : 'text-[#63474D] hover:bg-[#63474D]/10'
+                      ? 'bg-[#F9FF46] text-[#153E2A] shadow-xs'
+                      : 'text-white/90 hover:bg-white/10'
                   }`}
                 >
                   <UserIcon className="w-3.5 h-3.5" />
@@ -444,8 +444,8 @@ export default function Header() {
                   to="/admin/events"
                   className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold transition-all ${
                     isTabActive('/admin/events')
-                      ? 'bg-[#63474D] text-white shadow-xs'
-                      : 'text-[#63474D] hover:bg-[#63474D]/10'
+                      ? 'bg-[#F9FF46] text-[#153E2A] shadow-xs'
+                      : 'text-white/90 hover:bg-white/10'
                   }`}
                 >
                   <Calendar className="w-3.5 h-3.5" />
@@ -456,8 +456,8 @@ export default function Header() {
                   to="/search"
                   className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold transition-all ${
                     isTabActive('/search')
-                      ? 'bg-[#63474D] text-white shadow-xs'
-                      : 'text-[#63474D] hover:bg-[#63474D]/10'
+                      ? 'bg-[#F9FF46] text-[#153E2A] shadow-xs'
+                      : 'text-white/90 hover:bg-white/10'
                   }`}
                 >
                   <Compass className="w-3.5 h-3.5" />
@@ -471,20 +471,20 @@ export default function Header() {
 
       {/* Mobile Drawer */}
       {isOpen && (
-        <div className="md:hidden fixed inset-x-0 top-[57px] bg-white/98 backdrop-blur-xl border-b border-gray-200 shadow-xl px-6 py-6 transition-all duration-300 max-h-[85vh] overflow-y-auto">
+        <div className="md:hidden fixed inset-x-0 top-[57px] bg-[#153E2A]/98 backdrop-blur-xl border-b border-[#8BA448]/30 shadow-xl px-6 py-6 transition-all duration-300 max-h-[85vh] overflow-y-auto text-white">
           <div className="flex flex-col gap-4">
             {isAuthenticated && user ? (
               /* Mobile Logged-in User Card */
-              <div className="pb-3 border-b border-gray-100 space-y-2">
+              <div className="pb-3 border-b border-white/10 space-y-2">
                 <div className="flex items-center gap-3">
                   <img
                     src={user.avatarUrl || defaultAvatar}
                     alt={user.name}
-                    className="w-10 h-10 rounded-full object-cover border border-[#FFA686]/60"
+                    className="w-10 h-10 rounded-full object-cover border border-[#F9FF46]/60"
                   />
                   <div className="flex flex-col">
-                    <span className="text-sm font-bold text-[#2D1F23]">{user.name}</span>
-                    <span className="text-xs text-gray-500">{user.email}</span>
+                    <span className="text-sm font-bold text-white">{user.name}</span>
+                    <span className="text-xs text-[#F9FF46]">{user.email}</span>
                   </div>
                 </div>
 
@@ -494,7 +494,7 @@ export default function Header() {
                       <Link
                         to="/app/events"
                         onClick={() => setIsOpen(false)}
-                        className="flex items-center gap-2 py-2 px-3 rounded-xl bg-[#FAF7F5] text-xs font-semibold text-[#63474D]"
+                        className="flex items-center gap-2 py-2 px-3 rounded-xl bg-white/10 text-xs font-semibold text-[#F9FF46]"
                       >
                         <Ticket className="w-4 h-4" />
                         <span>🎟️ My Tickets & Passes</span>
@@ -503,18 +503,18 @@ export default function Header() {
                       <Link
                         to="/app/record"
                         onClick={() => setIsOpen(false)}
-                        className="flex items-center gap-2 py-2 px-3 rounded-xl hover:bg-gray-50 text-xs font-medium text-gray-700"
+                        className="flex items-center gap-2 py-2 px-3 rounded-xl hover:bg-white/10 text-xs font-medium text-white/90"
                       >
-                        <Award className="w-4 h-4 text-[#FFA686]" />
+                        <Award className="w-4 h-4 text-[#8BA448]" />
                         <span>🏆 My Badges & Records</span>
                       </Link>
 
                       <Link
                         to="/app"
                         onClick={() => setIsOpen(false)}
-                        className="flex items-center gap-2 py-2 px-3 rounded-xl hover:bg-gray-50 text-xs font-medium text-gray-700"
+                        className="flex items-center gap-2 py-2 px-3 rounded-xl hover:bg-white/10 text-xs font-medium text-white/90"
                       >
-                        <LayoutDashboard className="w-4 h-4 text-[#AA767C]" />
+                        <LayoutDashboard className="w-4 h-4 text-[#8BA448]" />
                         <span>📊 Dashboard</span>
                       </Link>
                     </>
@@ -525,7 +525,7 @@ export default function Header() {
                       <Link
                         to="/organizer/events"
                         onClick={() => setIsOpen(false)}
-                        className="flex items-center gap-2 py-2 px-3 rounded-xl bg-[#FAF7F5] text-xs font-semibold text-[#63474D]"
+                        className="flex items-center gap-2 py-2 px-3 rounded-xl bg-white/10 text-xs font-semibold text-[#F9FF46]"
                       >
                         <Calendar className="w-4 h-4" />
                         <span>📅 My Events</span>
@@ -533,9 +533,9 @@ export default function Header() {
                       <Link
                         to="/organizer/events/create"
                         onClick={() => setIsOpen(false)}
-                        className="flex items-center gap-2 py-2 px-3 rounded-xl hover:bg-gray-50 text-xs font-medium text-gray-700"
+                        className="flex items-center gap-2 py-2 px-3 rounded-xl hover:bg-white/10 text-xs font-medium text-white/90"
                       >
-                        <PlusCircle className="w-4 h-4 text-[#FFA686]" />
+                        <PlusCircle className="w-4 h-4 text-[#8BA448]" />
                         <span>➕ Create Event</span>
                       </Link>
                     </>
@@ -544,9 +544,9 @@ export default function Header() {
                   <Link
                     to="/search"
                     onClick={() => setIsOpen(false)}
-                    className="flex items-center gap-2 py-2 px-3 rounded-xl hover:bg-gray-50 text-xs font-medium text-gray-700"
+                    className="flex items-center gap-2 py-2 px-3 rounded-xl hover:bg-white/10 text-xs font-medium text-white/90"
                   >
-                    <Compass className="w-4 h-4 text-[#AA767C]" />
+                    <Compass className="w-4 h-4 text-[#8BA448]" />
                     <span>🔍 Explore Events</span>
                   </Link>
                 </div>
@@ -562,7 +562,7 @@ export default function Header() {
                       key={link.name}
                       href={link.href}
                       onClick={() => setIsOpen(false)}
-                      className="text-sm font-medium text-gray-800 hover:text-[#63474D] py-1.5 transition-colors"
+                      className="text-sm font-medium text-white hover:text-[#F9FF46] py-1.5 transition-colors"
                     >
                       {link.name}
                     </a>
@@ -571,7 +571,7 @@ export default function Header() {
                       key={link.name}
                       to={link.href}
                       onClick={() => setIsOpen(false)}
-                      className="text-sm font-medium text-gray-800 hover:text-[#63474D] py-1.5 transition-colors"
+                      className="text-sm font-medium text-white hover:text-[#F9FF46] py-1.5 transition-colors"
                     >
                       {link.name}
                     </Link>
@@ -581,7 +581,7 @@ export default function Header() {
             )}
 
             {/* Mobile Auth Actions */}
-            <div className="pt-4 border-t border-gray-100">
+            <div className="pt-4 border-t border-white/10">
               {isAuthenticated && user ? (
                 <button
                   type="button"
@@ -589,7 +589,7 @@ export default function Header() {
                     handleLogout();
                     setIsOpen(false);
                   }}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-red-200 bg-red-50/50 text-red-600 font-semibold text-xs transition-colors cursor-pointer"
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-red-400/40 bg-red-950/40 text-red-300 font-semibold text-xs transition-colors cursor-pointer"
                 >
                   <LogOut className="w-4 h-4" />
                   <span>Sign Out</span>
@@ -599,17 +599,17 @@ export default function Header() {
                   <Link
                     to="/login"
                     onClick={() => setIsOpen(false)}
-                    className="flex items-center justify-center py-2.5 rounded-xl border border-gray-300 text-gray-800 font-semibold text-xs hover:bg-gray-50 transition-colors"
+                    className="flex items-center justify-center py-2.5 rounded-xl border border-white/30 text-white font-semibold text-xs hover:bg-white/10 transition-colors"
                   >
                     Sign In
                   </Link>
                   <Link
                     to="/register"
                     onClick={() => setIsOpen(false)}
-                    className="flex items-center justify-center gap-1 py-2.5 rounded-xl bg-[#63474D] text-white font-bold text-xs shadow-xs hover:bg-[#523a3f] transition-colors"
+                    className="flex items-center justify-center gap-1 py-2.5 rounded-xl bg-[#F9FF46] text-[#153E2A] font-bold text-xs shadow-xs hover:bg-[#e0e63c] transition-colors"
                   >
                     <span>Register</span>
-                    <ArrowRight className="w-3.5 h-3.5 text-white" />
+                    <ArrowRight className="w-3.5 h-3.5 text-[#153E2A]" />
                   </Link>
                 </div>
               )}

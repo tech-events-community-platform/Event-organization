@@ -16,23 +16,23 @@ export const Badge: React.FC<BadgeProps> = ({
   icon,
 }) => {
   const variantStyles: Record<BadgeVariant, string> = {
-    primary: 'bg-[#63474D]/15 text-[#63474D] border border-[#63474D]/30 font-semibold',
-    secondary: 'bg-[#AA767C]/15 text-[#AA767C] border border-[#AA767C]/30 font-semibold',
-    tertiary: 'bg-[#D6A184]/20 text-[#7D4930] border border-[#D6A184]/40 font-semibold',
-    accent: 'bg-[#FFA686]/25 text-[#913F21] border border-[#FFA686]/50 font-bold',
-    light: 'bg-[#FEC196]/30 text-[#8C461F] border border-[#FEC196]/60 font-semibold',
-    outline: 'border border-[#E8DDD7] text-[#2D1F23] font-medium bg-white',
-    gray: 'bg-[#F4EFEB] text-[#756366] border border-[#E8DDD7] font-medium',
-    success: 'bg-[#2A7B5F]/15 text-[#2A7B5F] border border-[#2A7B5F]/30 font-semibold',
-    error: 'bg-[#B91C1C]/10 text-[#B91C1C] border border-[#B91C1C]/30 font-medium',
+    primary: 'bg-[#153E2A]/10 text-[#153E2A] border border-[#153E2A]/25 font-semibold shadow-2xs',
+    secondary: 'bg-[#8BA448]/15 text-[#546820] border border-[#8BA448]/35 font-semibold shadow-2xs',
+    tertiary: 'bg-[#153E2A]/15 text-[#153E2A] border border-[#153E2A]/30 font-semibold shadow-2xs',
+    accent: 'bg-[#F9FF46] text-[#153E2A] border border-[#153E2A]/30 font-bold shadow-2xs',
+    light: 'bg-[#8BA448]/20 text-[#153E2A] border border-[#8BA448]/40 font-semibold shadow-2xs',
+    outline: 'border border-[#153E2A]/20 text-[#153E2A] font-medium bg-white/80 backdrop-blur-xs shadow-2xs',
+    gray: 'bg-gray-100 text-gray-700 border border-gray-200 font-medium shadow-2xs',
+    success: 'bg-[#153E2A]/15 text-[#153E2A] border border-[#153E2A]/35 font-bold shadow-2xs',
+    error: 'bg-[#B91C1C]/10 text-[#991B1B] border border-[#B91C1C]/30 font-medium shadow-2xs',
   };
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs transition-colors ${variantStyles[variant]} ${className}`}
+      className={`inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs transition-all duration-200 ${variantStyles[variant]} ${className}`}
     >
-      {icon && <span className="w-3 h-3 flex items-center justify-center">{icon}</span>}
-      {children}
+      {icon && <span className="w-3 h-3 flex items-center justify-center shrink-0">{icon}</span>}
+      <span>{children}</span>
     </span>
   );
 };

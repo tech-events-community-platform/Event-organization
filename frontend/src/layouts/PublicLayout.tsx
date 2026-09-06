@@ -8,7 +8,7 @@ export const PublicLayout: React.FC = () => {
   const isHome = location.pathname === '/';
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#fcfafc]">
+    <div className="min-h-screen flex flex-col bg-[#153E2A] text-white">
       <Header />
       <main className={`flex-1 ${!isHome ? 'pt-24 sm:pt-28' : ''}`}>
         <Outlet />

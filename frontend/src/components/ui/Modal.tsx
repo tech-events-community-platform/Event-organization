@@ -40,22 +40,22 @@ export const Modal: React.FC<ModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
       <div
-        className={`bg-white rounded-2xl shadow-xl w-full ${widthClasses[maxWidth]} overflow-hidden border border-[#E8DDD7] transform transition-all`}
+        className={`bg-white rounded-3xl shadow-2xl w-full ${widthClasses[maxWidth]} overflow-hidden border border-[#E8DDD7] transform transition-all duration-300 scale-100`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#E8DDD7] bg-[#FAF7F5]">
+        <div className="flex items-center justify-between px-6 py-4.5 border-b border-[#E8DDD7]/80 bg-[#FAF7F5]">
           {title && <h3 className="font-serif font-bold text-lg text-[#2D1F23]">{title}</h3>}
           <button
             onClick={onClose}
-            className="p-1.5 text-[#756366] hover:text-[#2D1F23] rounded-lg hover:bg-[#F4EFEB] transition-colors"
+            className="p-2 text-[#756366] hover:text-[#2D1F23] rounded-xl hover:bg-[#E8DDD7]/50 transition-all cursor-pointer"
             aria-label="Close modal"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
-        <div className="p-6">{children}</div>
+        <div className="p-6 sm:p-7">{children}</div>
       </div>
     </div>
   );

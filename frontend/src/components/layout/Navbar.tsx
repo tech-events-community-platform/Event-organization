@@ -19,7 +19,7 @@ interface NavbarProps {
   onOpenAttendeeDrawer?: () => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ onOpenAttendeeDrawer }) => {
+export const Navbar: React.FC<NavbarProps> = ({ onOpenAttendeeDrawer: _onOpenAttendeeDrawer }) => {
   const { user, role, isAuthenticated, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
@@ -59,10 +59,10 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAttendeeDrawer }) => {
               className="h-10 sm:h-12 w-auto object-contain transition-transform group-hover:scale-105"
             />
             <div className="flex flex-col">
-              <span className="font-serif font-bold text-xl tracking-tight text-sheeba-dark leading-none">
+              <span className="font-serif font-extrabold text-xl tracking-tight text-[#153E2A] group-hover:text-[#8BA448] transition-colors leading-none">
                 Sheeba
               </span>
-              <span className="text-[8.5px] font-sans font-bold text-sheeba-rose tracking-[0.18em] uppercase mt-0.5">
+              <span className="text-[8.5px] font-sans font-bold text-[#8BA448] tracking-[0.18em] uppercase mt-0.5">
                 EVENT INFRASTRUCTURE
               </span>
             </div>
@@ -75,35 +75,35 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAttendeeDrawer }) => {
                 <button
                   type="button"
                   onClick={() => scrollToSection('features')}
-                  className="px-3 py-1.5 text-sm font-medium text-[#4B5563] hover:text-[#111827] transition-colors cursor-pointer rounded-lg hover:bg-black/5"
+                  className="px-3 py-1.5 text-sm font-semibold text-[#153E2A]/80 hover:text-[#153E2A] transition-colors cursor-pointer rounded-xl hover:bg-[#153E2A]/10"
                 >
                   Features
                 </button>
                 <button
                   type="button"
                   onClick={() => scrollToSection('how-it-works')}
-                  className="px-3 py-1.5 text-sm font-medium text-[#4B5563] hover:text-[#111827] transition-colors cursor-pointer rounded-lg hover:bg-black/5"
+                  className="px-3 py-1.5 text-sm font-semibold text-[#153E2A]/80 hover:text-[#153E2A] transition-colors cursor-pointer rounded-xl hover:bg-[#153E2A]/10"
                 >
                   How It Works
                 </button>
                 <button
                   type="button"
                   onClick={() => scrollToSection('interactive-demo')}
-                  className="px-3 py-1.5 text-sm font-medium text-[#4B5563] hover:text-[#111827] transition-colors cursor-pointer rounded-lg hover:bg-black/5"
+                  className="px-3 py-1.5 text-sm font-semibold text-[#153E2A]/80 hover:text-[#153E2A] transition-colors cursor-pointer rounded-xl hover:bg-[#153E2A]/10"
                 >
                   Interactive Demo
                 </button>
                 <button
                   type="button"
                   onClick={() => scrollToSection('audiences')}
-                  className="px-3 py-1.5 text-sm font-medium text-[#4B5563] hover:text-[#111827] transition-colors cursor-pointer rounded-lg hover:bg-black/5"
+                  className="px-3 py-1.5 text-sm font-semibold text-[#153E2A]/80 hover:text-[#153E2A] transition-colors cursor-pointer rounded-xl hover:bg-[#153E2A]/10"
                 >
                   Audiences
                 </button>
                 <button
                   type="button"
                   onClick={() => scrollToSection('team')}
-                  className="px-3 py-1.5 text-sm font-medium text-[#4B5563] hover:text-[#111827] transition-colors cursor-pointer rounded-lg hover:bg-black/5"
+                  className="px-3 py-1.5 text-sm font-semibold text-[#153E2A]/80 hover:text-[#153E2A] transition-colors cursor-pointer rounded-xl hover:bg-[#153E2A]/10"
                 >
                   Team
                 </button>
@@ -305,6 +305,26 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAttendeeDrawer }) => {
                       className="px-3 py-2 rounded-lg text-sm font-semibold text-[#2D1F23] hover:bg-white"
                     >
                       Account & Export Data
+                    </Link>
+                  </>
+                )}
+                {role === 'SPONSOR' && (
+                  <>
+                    <Link
+                      to="/sponsor"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="px-3 py-2 rounded-lg text-sm font-semibold text-[#153E2A] bg-[#153E2A]/10 flex items-center gap-2"
+                    >
+                      <Compass className="w-4 h-4 text-[#153E2A]" />
+                      Sponsor Portal
+                    </Link>
+                    <Link
+                      to="/search"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="px-3 py-2 rounded-lg text-sm font-semibold text-[#2D1F23] hover:bg-white flex items-center gap-2"
+                    >
+                      <Ticket className="w-4 h-4 text-[#8BA448]" />
+                      All Tech Events
                     </Link>
                   </>
                 )}

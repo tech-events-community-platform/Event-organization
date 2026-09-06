@@ -28,6 +28,9 @@ export const mockEvents: Event[] = [
       { id: 'q1', questionText: 'What is your primary programming language or frontend experience level?', isRequired: true, order: 1 },
       { id: 'q2', questionText: 'Do you require special accessibility or seating accommodations?', isRequired: false, order: 2 },
     ],
+    sponsorshipGoal: 120000,
+    sponsorshipRaised: 75000,
+    sponsorshipStatus: 'Partially Sponsored',
     createdAt: '2026-08-01T10:00:00Z',
   },
   {
@@ -56,6 +59,9 @@ export const mockEvents: Event[] = [
     customQuestions: [
       { id: 'q_ai_1', questionText: 'What AI/ML frameworks do you actively use (PyTorch, LangChain, Ollama)?', isRequired: true, order: 1 },
     ],
+    sponsorshipGoal: 180000,
+    sponsorshipRaised: 0,
+    sponsorshipStatus: 'Looking for Sponsors',
     createdAt: '2026-08-10T14:00:00Z',
   },
   {
@@ -85,6 +91,9 @@ export const mockEvents: Event[] = [
       { id: 'q_hk_1', questionText: 'Team Name & GitHub Repository links (if applicable):', isRequired: true, order: 1 },
       { id: 'q_hk_2', questionText: 'Which payment or core API do you plan to build against?', isRequired: false, order: 2 },
     ],
+    sponsorshipGoal: 300000,
+    sponsorshipRaised: 300000,
+    sponsorshipStatus: 'Fully Sponsored',
     createdAt: '2026-08-15T09:30:00Z',
   },
   {
@@ -111,6 +120,9 @@ export const mockEvents: Event[] = [
     shareLinkToken: 'shb-oss-assembly-2026',
     bannerUrl: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1200&q=80',
     customQuestions: [],
+    sponsorshipGoal: 90000,
+    sponsorshipRaised: 90000,
+    sponsorshipStatus: 'Fully Sponsored',
     createdAt: '2026-07-20T08:00:00Z',
   },
 ];

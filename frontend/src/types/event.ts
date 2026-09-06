@@ -2,6 +2,8 @@ export type EventType = 'hackathon' | 'workshop' | 'meetup';
 
 export type EventStatus = 'open' | 'closed' | 'canceled' | 'postponed' | 'completed';
 
+export type SponsorshipStatus = 'Looking for Sponsors' | 'Partially Sponsored' | 'Fully Sponsored';
+
 export interface RegistrationQuestion {
   id: string;
   eventId?: string;
@@ -34,5 +36,8 @@ export interface Event {
   shareLinkToken: string;
   customQuestions: RegistrationQuestion[];
   bannerUrl?: string;
+  sponsorshipGoal?: number;
+  sponsorshipRaised?: number;
+  sponsorshipStatus?: SponsorshipStatus;
   createdAt?: string;
 }
