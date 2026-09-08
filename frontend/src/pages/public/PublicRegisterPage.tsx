@@ -14,9 +14,6 @@ import {
   Award,
   CheckCircle2,
   ArrowRight,
-  ShieldCheck,
-  AlertCircle,
-  CreditCard,
   ArrowLeft,
   Ticket as TicketIcon,
 } from 'lucide-react';

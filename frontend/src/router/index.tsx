@@ -18,7 +18,7 @@ import { BadgeDetailPage } from '../pages/public/BadgeDetailPage';
 import { PublicSearchPage } from '../pages/public/PublicSearchPage';
 
 // Attendee Pages
-import { BadgesPage } from '../pages/attendee/BadgesPage';
+//import { BadgesPage } from '../pages/attendee/BadgesPage';
 import { AttendeeDashboardPage } from '../pages/attendee/DashboardPage';
 import { RecordPage } from '../pages/attendee/RecordPage';
 import { MyEventsPage } from '../pages/attendee/MyEventsPage';
