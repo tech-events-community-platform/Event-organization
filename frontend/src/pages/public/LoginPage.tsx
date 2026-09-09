@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/api';
 import { Button } from '../../components/ui/Button';
+import { GoogleLogin } from '@react-oauth/google';
 import {
   Award,
   Lock,
@@ -22,7 +23,7 @@ export const LoginPage: React.FC = () => {
   const redirectTarget = searchParams.get('redirect');
   const initialMode = searchParams.get('mode') === 'signup' ? 'signup' : 'login';
 
-  const { user, isAuthenticated, login, register } = useAuth();
+  const { user, isAuthenticated, login, loginWithGoogle, register } = useAuth();
 
   const [authMode, setAuthMode] = useState<'login' | 'signup'>(initialMode);
   const [email, setEmail] = useState('');
@@ -219,6 +220,55 @@ export const LoginPage: React.FC = () => {
           </div>
         )}
 
+        {/* Google Sign-In Button */}
+        <div className="flex justify-center w-full my-3">
+          <GoogleLogin
+            onSuccess={async (credentialResponse) => {
+              if (credentialResponse.credential) {
+                try {
+                  setIsLoading(true);
+                  setErrorMsg(null);
+                  const loggedUser = await loginWithGoogle(
+                    credentialResponse.credential,
+                    undefined,
+                    authMode === 'signup' ? 'register' : 'login'
+                  );
+                  if (redirectTarget) {
+                    navigate(redirectTarget);
+                  } else if (loggedUser.role === 'ORGANIZER') {
+                    navigate('/organizer');
+                  } else if (loggedUser.role === 'ADMIN') {
+                    navigate('/admin');
+                  } else {
+                    navigate('/app');
+                  }
+                } catch (err: any) {
+                  console.error('Google Auth Error:', err);
+                  setErrorMsg(err.message || 'Google authentication failed.');
+                } finally {
+                  setIsLoading(false);
+                }
+              }
+            }}
+            onError={() => {
+              setErrorMsg('Google login was cancelled or failed.');
+            }}
+            text={authMode === 'login' ? 'signin_with' : 'signup_with'}
+            shape="pill"
+            width="100%"
+          />
+        </div>
+
+        {/* Divider */}
+        <div className="relative my-3 text-center">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-[#E8DDD7]" />
+          </div>
+          <span className="relative bg-white px-3 text-[11px] text-[#756366] uppercase font-bold tracking-wider">
+            Or continue with email
+          </span>
+        </div>
+
         <form onSubmit={handleSubmit} className="space-y-3.5">
           {authMode === 'signup' && (
             <div>
@@ -382,3 +432,5 @@ export const LoginPage: React.FC = () => {
     </div>
   );
 };
+
+

@@ -4,6 +4,8 @@ import { query } from '../config/db';
 import { IUser, IUserSafe, UserRole } from '../types';
 import { signAuthToken } from '../utils/jwt.util';
 import { EmailService } from './email.service';
+import { OAuth2Client } from 'google-auth-library';
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 export class AuthService {
   static formatUserResponse(user: any, stats?: any) {
@@ -76,14 +78,62 @@ export class AuthService {
 
     // Check existing email
     const existing = await query<IUser>(
-      'SELECT id FROM users WHERE LOWER(email) = LOWER($1)',
+      'SELECT id, role, approval_status, is_active FROM users WHERE LOWER(email) = LOWER($1)',
       [email]
     );
 
     if (existing.rowCount && existing.rowCount > 0) {
-      const err: any = new Error('An account with this email already exists.');
-      err.statusCode = 409;
-      throw err;
+      const existingUser = existing.rows[0];
+      const existingRole = (existingUser.role || 'attendee').toLowerCase();
+
+      // If already registered with the same role, show error:
+      if (existingRole === normalizedRole) {
+        const err: any = new Error('You are already registered! Please sign in.');
+        err.statusCode = 409;
+        throw err;
+      }
+
+      // Vice versa: allow registration for the other role!
+      const salt = await bcrypt.genSalt(10);
+      const passwordHash = await bcrypt.hash(password, salt);
+      const updated = await query<IUser>(
+        `UPDATE users 
+         SET role = $1,
+             password_hash = COALESCE($2, password_hash),
+             full_name = COALESCE($3, full_name),
+             phone = COALESCE($4, phone),
+             bio = COALESCE($5, bio),
+             organization = COALESCE($6, organization),
+             approval_status = $7,
+             is_active = $8,
+             updated_at = NOW()
+         WHERE id = $9
+         RETURNING id, email, full_name, role, phone, bio, organization, avatar_url, visibility, member_since, is_active, approval_status, created_at, updated_at`,
+        [normalizedRole, passwordHash, full_name, phone, bio, organization, initialApprovalStatus, initialIsActive, existingUser.id]
+      );
+
+      const rawUser = updated.rows[0];
+      if (isOrganizer) {
+        const user = this.formatUserResponse(rawUser);
+        return {
+          user,
+          token: '',
+          isPendingApproval: true,
+          message: 'you will be using this sytem in 1 hour',
+        };
+      }
+
+      const token = signAuthToken({
+        userId: rawUser.id,
+        email: rawUser.email,
+        role: rawUser.role as UserRole,
+        fullName: rawUser.full_name,
+      });
+      const stats = await this.computeUserStats(rawUser.id);
+      return {
+        user: this.formatUserResponse(rawUser, stats),
+        token,
+      };
     }
 
     const salt = await bcrypt.genSalt(10);
@@ -260,6 +310,113 @@ export class AuthService {
     return {
       success: true,
       message: 'Password has been reset successfully. You may now log in.',
-    };
+    };    
   }
+
+  
+  static async loginWithGoogle(credential: string, role?: string, mode: 'login' | 'register' = 'login') {
+    // 1. Verify the ID token directly with Google
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    if (!payload || !payload.email) {
+      const err: any = new Error('Invalid Google credential.');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    if (!payload.email_verified) {
+      const err: any = new Error('Google email is not verified.');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const googleId = payload.sub;
+    const email = payload.email.toLowerCase().trim();
+    const fullName = payload.name || email.split('@')[0];
+    const avatarUrl = payload.picture;
+
+    // 2. Search database: first by google_id, then by email
+    let userRes = await query('SELECT * FROM users WHERE google_id = $1', [googleId]);
+    let user = userRes.rows[0];
+
+    if (!user) {
+      const emailRes = await query('SELECT * FROM users WHERE LOWER(email) = LOWER($1)', [email]);
+      if (emailRes.rows.length > 0) {
+        user = emailRes.rows[0];
+        // Link Google ID to their existing account
+        await query(
+          'UPDATE users SET google_id = $1, avatar_url = COALESCE(avatar_url, $2) WHERE id = $3',
+          [googleId, avatarUrl, user.id]
+        );
+        user.google_id = googleId;
+      }
+    }
+
+    // Check mode rules:
+    // If attempting to login but user doesn't exist -> reject
+    if (mode === 'login' && !user) {
+      const err: any = new Error('You have not registered yet. Please register first.');
+      err.statusCode = 404;
+      throw err;
+    }
+
+    const requestedRole = (role || 'attendee').toLowerCase();
+
+    // If attempting to register but user already exists:
+    if (mode === 'register' && user) {
+      const currentRole = (user.role || 'attendee').toLowerCase();
+
+      // If already registered with the SAME role -> reject
+      if (currentRole === requestedRole) {
+        const err: any = new Error('You are already registered! Please sign in.');
+        err.statusCode = 409;
+        throw err;
+      }
+
+      // Vice versa: allow registration for the other role!
+      const approvalStatus = requestedRole === 'organizer' ? 'pending' : 'approved';
+      await query(
+        'UPDATE users SET role = $1, approval_status = $2, updated_at = NOW() WHERE id = $3',
+        [requestedRole, approvalStatus, user.id]
+      );
+      user.role = requestedRole;
+      user.approval_status = approvalStatus;
+    }
+
+    // If registering and user does not exist, create the account
+    if (!user) {
+      const normalizedRole = (role || 'attendee').toLowerCase();
+      const approvalStatus = normalizedRole === 'organizer' ? 'pending' : 'approved';
+      const insertRes = await query(
+        `INSERT INTO users (email, full_name, role, avatar_url, google_id, approval_status, member_since)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         RETURNING *`,
+        [email, fullName, normalizedRole, avatarUrl, googleId, approvalStatus, 'September 2026']
+      );
+      user = insertRes.rows[0];
+
+      // Send welcome email
+      EmailService.sendWelcomeEmail(email, fullName).catch((e) =>
+        console.error('Welcome email dispatch failed:', e)
+      );
+    }
+
+    // 3. Generate your Sheeba JWT token
+    const token = signAuthToken({
+      userId: user.id,
+      email: user.email,
+      role: (user.role || 'attendee').toUpperCase() as UserRole,
+      fullName: user.full_name,
+    });
+    const stats = await AuthService.computeUserStats(user.id);
+    return {
+      user: AuthService.formatUserResponse(user, stats),
+      token,
+    };
+  } 
+  
 }

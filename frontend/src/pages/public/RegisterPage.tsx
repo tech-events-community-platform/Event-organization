@@ -15,6 +15,7 @@ import {
   Briefcase,
   ArrowLeft,
 } from 'lucide-react';
+import { GoogleLogin } from '@react-oauth/google';
 import type { UserRole } from '../../types/user';
 
 export const RegisterPage: React.FC = () => {
@@ -22,7 +23,7 @@ export const RegisterPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const redirectTarget = searchParams.get('redirect');
   const roleParam = searchParams.get('role');
-  const { user, isAuthenticated, register } = useAuth();
+  const { user, isAuthenticated, loginWithGoogle, register } = useAuth();
 
   const [selectedRole, setSelectedRole] = useState<UserRole>(
     roleParam?.toUpperCase() === 'ORGANIZER' ? 'ORGANIZER' : 'ATTENDEE'
@@ -165,6 +166,51 @@ export const RegisterPage: React.FC = () => {
             <span>{errorMsg}</span>
           </div>
         )}
+
+        {/* Google Registration Button */}
+        <div className="flex justify-center w-full my-2">
+          <GoogleLogin
+            onSuccess={async (credentialResponse) => {
+              if (credentialResponse.credential) {
+                try {
+                  setIsLoading(true);
+                  setErrorMsg(null);
+                  const loggedUser = await loginWithGoogle(credentialResponse.credential, selectedRole, 'register');
+                  if (redirectTarget) {
+                    navigate(redirectTarget);
+                  } else if (loggedUser.role === 'ORGANIZER') {
+                    navigate('/organizer');
+                  } else if (loggedUser.role === 'ADMIN') {
+                    navigate('/admin');
+                  } else {
+                    navigate('/app');
+                  }
+                } catch (err: any) {
+                  console.error('Google Registration Error:', err);
+                  setErrorMsg(err.message || 'Google registration failed.');
+                } finally {
+                  setIsLoading(false);
+                }
+              }
+            }}
+            onError={() => {
+              setErrorMsg('Google registration was cancelled or failed.');
+            }}
+            text="signup_with"
+            shape="pill"
+            width="100%"
+          />
+        </div>
+
+        {/* Divider */}
+        <div className="relative my-3 text-center">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-[#E8DDD7]" />
+          </div>
+          <span className="relative bg-white px-3 text-[11px] text-[#756366] uppercase font-bold tracking-wider">
+            Or register with email
+          </span>
+        </div>
 
         <form onSubmit={handleRegister} className="space-y-3.5">
           <div>
