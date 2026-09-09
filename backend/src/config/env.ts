@@ -9,5 +9,6 @@ export const ENV = {
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '7d',
   TICKET_SIGNING_SECRET: process.env.TICKET_SIGNING_SECRET || 'sheba_default_ticket_secret_change_in_prod',
   CORS_ORIGIN: process.env.CORS_ORIGIN || '*',
+  GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || '',
 };
 

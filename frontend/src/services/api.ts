@@ -956,6 +956,28 @@ export const api = {
   // Attendee GDPR Account Self-Service
   userAccount: {
     updateProfile: async (_userId: string, data: Partial<User>): Promise<User> => {
+      try {
+        const payload: any = {};
+        if (data.name !== undefined) payload.full_name = data.name;
+        if (data.phone !== undefined) payload.phone = data.phone;
+        if (data.bio !== undefined) payload.bio = data.bio;
+        if (data.visibility !== undefined) payload.visibility = data.visibility;
+        if (data.organization !== undefined) payload.organization = data.organization;
+        if (data.avatarUrl !== undefined) payload.avatar_url = data.avatarUrl;
+
+        const res = await requestApi('/users/me', {
+          method: 'PATCH',
+          body: JSON.stringify(payload),
+        });
+
+        if (res.data) {
+          localStorage.setItem('sheba_auth_user', JSON.stringify(res.data));
+          return res.data;
+        }
+      } catch (err) {
+        console.warn('Backend update profile failed, updating local state:', err);
+      }
+
       const savedUserStr = localStorage.getItem('sheba_auth_user');
       let userObj = savedUserStr ? JSON.parse(savedUserStr) : null;
       if (userObj) {
@@ -966,6 +988,14 @@ export const api = {
     },
 
     updateVisibility: async (_userId: string, visibility: ProfileVisibility): Promise<boolean> => {
+      try {
+        await requestApi('/users/me/visibility', {
+          method: 'PATCH',
+          body: JSON.stringify({ visibility }),
+        });
+      } catch (err) {
+        console.warn('Backend visibility update failed, updating local state:', err);
+      }
       const savedUserStr = localStorage.getItem('sheba_auth_user');
       if (savedUserStr) {
         const userObj = JSON.parse(savedUserStr);

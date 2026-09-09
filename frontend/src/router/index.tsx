@@ -27,6 +27,7 @@ import { TicketPage } from '../pages/attendee/TicketPage';
 import { ProfilePage } from '../pages/attendee/ProfilePage';
 import { AttendanceHistoryPage } from '../pages/attendee/AttendanceHistoryPage';
 import { AccountSettingsPage } from '../pages/attendee/AccountSettingsPage';
+import { AttendeeSettingsPage } from '../pages/attendee/AttendeeSettingsPage';
 
 // Organizer Pages (Section 1: 6 Tabs)
 import { OrganizerDashboardPage } from '../pages/organizer/OrganizerDashboardPage';
@@ -75,7 +76,7 @@ export const router = createBrowserRouter([
           { path: 'events', element: <MyEventsPage /> },
           { path: 'registrations', element: <MyEventsPage /> },
           { path: 'ticket/:eventId', element: <TicketPage /> },
-          { path: 'settings', element: <AccountSettingsPage /> },
+          { path: 'settings', element: <AttendeeSettingsPage /> },
           { path: 'profile', element: <ProfilePage /> },
           { path: 'profile/attendance', element: <AttendanceHistoryPage /> },
           { path: 'record', element: <RecordPage /> },
