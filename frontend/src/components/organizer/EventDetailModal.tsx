@@ -4,7 +4,6 @@ import type { Event } from '../../types/event';
 import { Badge } from '../ui/Badge';
 import {
   X,
-  Calendar,
   Users,
   QrCode,
   Award,
@@ -94,7 +93,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, isOpe
               <tbody className="divide-y divide-gray-100">
                 <tr className="hover:bg-gray-50/70">
                   <td className="py-3 px-4 font-semibold text-sheeba-dark flex items-center gap-1.5">
-                    <Calendar className="w-3.5 h-3.5 text-sheeba-purple" /> Schedule & Time
+                    <img src="/calendar.png" alt="Calendar" className="w-3.5 h-3.5 object-contain shrink-0" /> Schedule & Time
                   </td>
                   <td className="py-3 px-4 font-medium text-gray-800">
                     {event.date} • {event.time || `${event.startTime} - ${event.endTime}`}

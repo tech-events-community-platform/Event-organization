@@ -20,11 +20,15 @@ import {
   ChevronDown,
   CheckCircle2,
   AlertCircle,
+  Briefcase,
+  Building2,
+  Clock,
+  X,
 } from 'lucide-react';
 import type { ProfileVisibility } from '../../types/user';
 
 export const AttendeeSettingsPage: React.FC = () => {
-  const { user, logout, refreshUser } = useAuth();
+  const { user, logout, refreshUser, applyForOrganizer, switchRole } = useAuth();
   const navigate = useNavigate();
 
   const [name, setName] = useState(user?.name || '');
@@ -32,6 +36,24 @@ export const AttendeeSettingsPage: React.FC = () => {
   const [phone, setPhone] = useState(user?.phone || '');
   const [bio, setBio] = useState(user?.bio || '');
   const [visibility, setVisibility] = useState<ProfileVisibility>(user?.visibility || 'public');
+
+  // Organizer Application & Credentials State
+  const [orgName, setOrgName] = useState(user?.organization || '');
+  const [orgBio, setOrgBio] = useState(user?.bio || '');
+  const [orgPhone, setOrgPhone] = useState(user?.phone || '');
+  const [telegram, setTelegram] = useState(user?.socials?.telegram || '');
+  const [xHandle, setXHandle] = useState(user?.socials?.x || '');
+  const [applyPassword, setApplyPassword] = useState('');
+  const [isApplying, setIsApplying] = useState(false);
+  const [applyError, setApplyError] = useState<string | null>(null);
+  const [applySuccess, setApplySuccess] = useState<string | null>(null);
+  const [showApplyForm, setShowApplyForm] = useState(false);
+
+  // Switch Role State
+  const [showSwitchModal, setShowSwitchModal] = useState(false);
+  const [switchPassword, setSwitchPassword] = useState('');
+  const [isSwitching, setIsSwitching] = useState(false);
+  const [switchError, setSwitchError] = useState<string | null>(null);
 
   // Preferences
   const [emailReminders, setEmailReminders] = useState(true);
@@ -53,8 +75,70 @@ export const AttendeeSettingsPage: React.FC = () => {
       setPhone(user.phone || '');
       setBio(user.bio || '');
       setVisibility(user.visibility || 'public');
+      if (user.organization) setOrgName(user.organization);
+      if (user.socials?.telegram) setTelegram(user.socials.telegram);
+      if (user.socials?.x) setXHandle(user.socials.x);
     }
   }, [user]);
+
+  const handleApplyOrganizer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!orgName.trim()) {
+      setApplyError('Please provide an organization or community name.');
+      return;
+    }
+    if (!applyPassword) {
+      setApplyError('Please enter your account password to authorize your application.');
+      return;
+    }
+
+    setIsApplying(true);
+    setApplyError(null);
+    setApplySuccess(null);
+
+    try {
+      const res = await applyForOrganizer({
+        organization: orgName.trim(),
+        bio: orgBio.trim(),
+        phone: orgPhone.trim(),
+        password: applyPassword,
+        socials: {
+          telegram: telegram.trim(),
+          x: xHandle.trim(),
+        },
+      });
+
+      setApplySuccess(res.message || 'Organizer application submitted for administrative review.');
+      setApplyPassword('');
+      setShowApplyForm(false);
+      if (refreshUser) await refreshUser();
+    } catch (err: any) {
+      setApplyError(err.message || 'Failed to submit organizer application.');
+    } finally {
+      setIsApplying(false);
+    }
+  };
+
+  const handleSwitchToOrganizer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!switchPassword) {
+      setSwitchError('Please enter your account password.');
+      return;
+    }
+
+    setIsSwitching(true);
+    setSwitchError(null);
+
+    try {
+      await switchRole('ORGANIZER', switchPassword);
+      setShowSwitchModal(false);
+      navigate('/organizer');
+    } catch (err: any) {
+      setSwitchError(err.message || 'Authentication failed. Please verify your password.');
+    } finally {
+      setIsSwitching(false);
+    }
+  };
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -253,7 +337,284 @@ export const AttendeeSettingsPage: React.FC = () => {
         </form>
       </div>
 
-      {/* 2. Public Profile Verifiability & Privacy */}
+      {/* 2. Organizer Credentials & Community Application */}
+      <div className="pt-6 border-t border-[#E8DDD7] space-y-4 max-w-2xl">
+        <div>
+          <h2 className="font-serif font-bold text-base text-[#2D1F23] flex items-center gap-2">
+            <Briefcase className="w-4 h-4 text-[#63474D]" />
+            Organizer Credentials & Privileges
+          </h2>
+          <p className="text-xs text-[#756366] mt-0.5">
+            Organize tech meetups, workshops, and hackathons using this same account. Your attendee profile and earned badges remain completely intact.
+          </p>
+        </div>
+
+        {/* Status: Approved / Verified Organizer */}
+        {(user.isOrganizer || user.organizerApprovalStatus === 'approved') && (
+          <div className="p-5 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl space-y-3 shadow-xs">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5 text-emerald-700 shrink-0" />
+                <div>
+                  <h3 className="text-xs font-bold text-emerald-950">Verified Community Organizer</h3>
+                  <p className="text-[11px] text-emerald-800">
+                    {user.organization ? `Authorized for: ${user.organization}` : 'Authorized to host community events'}
+                  </p>
+                </div>
+              </div>
+              <span className="text-[10px] font-extrabold uppercase tracking-wider bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full border border-emerald-200">
+                Approved
+              </span>
+            </div>
+
+            <p className="text-xs text-emerald-900 leading-relaxed">
+              Your account has full administrative access to create events, configure check-in scanners, and award verifiable credentials. Switch to your Organizer Workspace below.
+            </p>
+
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowSwitchModal(true);
+                  setSwitchPassword('');
+                  setSwitchError(null);
+                }}
+                className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#63474D] hover:bg-[#4E373C] text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
+              >
+                <Briefcase className="w-4 h-4 text-[#FFA686]" />
+                <span>Launch Organizer Workspace</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Status: Pending Approval */}
+        {user.organizerApprovalStatus === 'pending' && !user.isOrganizer && (
+          <div className="p-5 bg-amber-50 border border-amber-200 rounded-2xl space-y-3 shadow-xs">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Clock className="w-5 h-5 text-amber-700 shrink-0 animate-pulse" />
+                <div>
+                  <h3 className="text-xs font-bold text-amber-950">Organizer Application Under Review</h3>
+                  <p className="text-[11px] text-amber-800">
+                    {user.organization ? `Application submitted for: ${user.organization}` : 'Awaiting administrative verification'}
+                  </p>
+                </div>
+              </div>
+              <span className="text-[10px] font-extrabold uppercase tracking-wider bg-amber-100 text-amber-800 px-2.5 py-1 rounded-full border border-amber-200">
+                Pending
+              </span>
+            </div>
+
+            <p className="text-xs text-amber-900 leading-relaxed">
+              Your application has been received and is currently in the Sheba Admin queue for verification. Once approved, you will be able to launch the Organizer Workspace from this page.
+            </p>
+          </div>
+        )}
+
+        {/* Status: Rejected */}
+        {user.organizerApprovalStatus === 'rejected' && !user.isOrganizer && !showApplyForm && (
+          <div className="p-5 bg-rose-50 border border-rose-200 rounded-2xl space-y-3 shadow-xs">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-rose-700 shrink-0" />
+                <div>
+                  <h3 className="text-xs font-bold text-rose-950">Organizer Application Declined</h3>
+                  <p className="text-[11px] text-rose-800">
+                    Your previous application was not approved by the admin team.
+                  </p>
+                </div>
+              </div>
+              <span className="text-[10px] font-extrabold uppercase tracking-wider bg-rose-100 text-rose-800 px-2.5 py-1 rounded-full border border-rose-200">
+                Rejected
+              </span>
+            </div>
+
+            <p className="text-xs text-rose-900 leading-relaxed">
+              You can review your community details and submit an updated application for consideration.
+            </p>
+
+            <div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowApplyForm(true);
+                  setApplyError(null);
+                  setApplySuccess(null);
+                }}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-rose-700 hover:bg-rose-800 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
+              >
+                <span>Update & Re-apply</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Status: None (or Re-applying) */}
+        {(!user.organizerApprovalStatus || user.organizerApprovalStatus === 'none' || showApplyForm) && !user.isOrganizer && (
+          <div className="p-5 bg-[#FAF7F5] border border-[#E8DDD7] rounded-2xl space-y-4">
+            {!showApplyForm ? (
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <h3 className="text-xs font-bold text-[#2D1F23] flex items-center gap-1.5">
+                    <Building2 className="w-4 h-4 text-[#63474D]" />
+                    Apply to Become a Community Organizer
+                  </h3>
+                  <p className="text-[11px] text-[#756366] leading-relaxed max-w-lg">
+                    Hosting community tech meetups, hackathons, or workshops? Submit an application to have your organizer status reviewed by the Sheba team.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowApplyForm(true);
+                    setApplyError(null);
+                    setApplySuccess(null);
+                  }}
+                  className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-[#63474D] hover:bg-[#4E373C] text-white rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer shadow-xs"
+                >
+                  <Building2 className="w-3.5 h-3.5 text-[#FFA686]" />
+                  <span>Start Application</span>
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleApplyOrganizer} className="space-y-4">
+                <div className="flex items-center justify-between pb-2 border-b border-[#E8DDD7]">
+                  <h3 className="font-serif font-bold text-sm text-[#2D1F23] flex items-center gap-2">
+                    <Building2 className="w-4 h-4 text-[#63474D]" />
+                    Community Organizer Application
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => setShowApplyForm(false)}
+                    className="text-xs text-[#756366] hover:text-[#2D1F23]"
+                  >
+                    Cancel
+                  </button>
+                </div>
+
+                {applyError && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                    <span>{applyError}</span>
+                  </div>
+                )}
+
+                {applySuccess && (
+                  <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <span>{applySuccess}</span>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-bold text-[#2D1F23] mb-1">
+                      Organization / Initiative Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Addis Tech Hub, GDG Addis, Sheba Labs"
+                      value={orgName}
+                      onChange={(e) => setOrgName(e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-white border border-[#E8DDD7] rounded-xl text-xs text-[#2D1F23] focus:outline-none focus:ring-2 focus:ring-[#63474D]"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-bold text-[#2D1F23] mb-1">
+                      Organizer Bio & Mission
+                    </label>
+                    <textarea
+                      rows={2}
+                      placeholder="Briefly describe your community's purpose and upcoming events..."
+                      value={orgBio}
+                      onChange={(e) => setOrgBio(e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-white border border-[#E8DDD7] rounded-xl text-xs text-[#2D1F23] focus:outline-none focus:ring-2 focus:ring-[#63474D]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-[#2D1F23] mb-1">
+                      Contact Phone
+                    </label>
+                    <input
+                      type="tel"
+                      placeholder="+251 9... (optional)"
+                      value={orgPhone}
+                      onChange={(e) => setOrgPhone(e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-white border border-[#E8DDD7] rounded-xl text-xs text-[#2D1F23] focus:outline-none focus:ring-2 focus:ring-[#63474D]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-[#2D1F23] mb-1">
+                      Telegram Community / Channel
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="@addistech (optional)"
+                      value={telegram}
+                      onChange={(e) => setTelegram(e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-white border border-[#E8DDD7] rounded-xl text-xs text-[#2D1F23] focus:outline-none focus:ring-2 focus:ring-[#63474D]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-[#2D1F23] mb-1">
+                      X / Twitter Handle
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="@addistech (optional)"
+                      value={xHandle}
+                      onChange={(e) => setXHandle(e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-white border border-[#E8DDD7] rounded-xl text-xs text-[#2D1F23] focus:outline-none focus:ring-2 focus:ring-[#63474D]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-[#2D1F23] mb-1 flex items-center gap-1">
+                      <Lock className="w-3 h-3 text-[#63474D]" />
+                      Account Password Verification *
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      placeholder="••••••••"
+                      value={applyPassword}
+                      onChange={(e) => setApplyPassword(e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-white border border-[#E8DDD7] rounded-xl text-xs text-[#2D1F23] focus:outline-none focus:ring-2 focus:ring-[#63474D]"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 pt-2">
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    size="sm"
+                    disabled={isApplying}
+                  >
+                    {isApplying ? 'Submitting Application...' : 'Submit Application for Admin Review'}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowApplyForm(false)}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* 3. Public Profile Verifiability & Privacy */}
       <div className="pt-6 border-t border-[#E8DDD7] space-y-4 max-w-2xl">
         <div>
           <h2 className="font-serif font-bold text-base text-[#2D1F23] flex items-center gap-2">
@@ -507,6 +868,82 @@ export const AttendeeSettingsPage: React.FC = () => {
           <span>Sign Out of Attendee Account</span>
         </button>
       </div>
+
+      {/* Switch to Organizer Credential Verification Modal */}
+      {showSwitchModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4">
+          <div
+            onClick={() => setShowSwitchModal(false)}
+            className="fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity"
+          />
+          <div className="relative bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-[#E8DDD7] z-10 space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-[#E8DDD7]">
+              <div className="flex items-center gap-2">
+                <Briefcase className="w-4 h-4 text-[#63474D]" />
+                <h3 className="font-serif font-bold text-base text-[#2D1F23]">Organizer Workspace</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowSwitchModal(false)}
+                className="p-1 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-[#756366] leading-relaxed">
+              Enter your account password to securely authenticate and launch your Organizer Workspace.
+            </p>
+
+            {switchError && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                <span>{switchError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSwitchToOrganizer} className="space-y-3.5">
+              <div>
+                <label className="block text-xs font-bold text-[#2D1F23] mb-1">
+                  Account Password
+                </label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#756366]" />
+                  <input
+                    type="password"
+                    required
+                    autoFocus
+                    placeholder="••••••••"
+                    value={switchPassword}
+                    onChange={(e) => setSwitchPassword(e.target.value)}
+                    className="w-full pl-10 pr-3.5 py-2.5 bg-[#FAF7F5] border border-[#E8DDD7] rounded-xl text-xs text-[#2D1F23] focus:outline-none focus:ring-2 focus:ring-[#63474D]"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 pt-1">
+                <Button
+                  type="submit"
+                  fullWidth
+                  variant="primary"
+                  size="sm"
+                  disabled={isSwitching}
+                >
+                  {isSwitching ? 'Authenticating...' : 'Authenticate & Enter'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowSwitchModal(false)}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

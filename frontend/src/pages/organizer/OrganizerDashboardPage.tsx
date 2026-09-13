@@ -6,7 +6,6 @@ import type { Event } from '../../types/event';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import {
-  Calendar,
   QrCode,
   PlusCircle,
   Copy,
@@ -141,7 +140,7 @@ export const OrganizerDashboardPage: React.FC = () => {
           ) : sortedEvents.length === 0 ? (
             <div className="bg-white rounded-3xl p-10 border border-[#E8DDD7] text-center space-y-4 shadow-xs">
               <div className="w-14 h-14 rounded-2xl bg-[#63474D]/10 text-[#63474D] flex items-center justify-center mx-auto">
-                <Calendar className="w-7 h-7" />
+                <img src="/calendar.png" alt="Calendar" className="w-7 h-7 object-contain" />
               </div>
               <div className="space-y-1">
                 <h3 className="font-serif font-bold text-lg text-[#2D1F23]">No Events Created Yet</h3>
@@ -235,7 +234,7 @@ export const OrganizerDashboardPage: React.FC = () => {
                       {/* Date, hour (time), and place (location) */}
                       <div className="flex flex-wrap items-center gap-x-4 gap-y-0.5 text-[11px] text-[#756366] font-normal pt-1 border-t border-gray-100">
                         <span className="flex items-center gap-1">
-                          <Calendar className="w-3 h-3 text-[#AA767C]" />
+                          <img src="/calendar.png" alt="Calendar" className="w-3 h-3 object-contain shrink-0" />
                           {evt.date}
                         </span>
                         <span className="flex items-center gap-1">

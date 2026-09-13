@@ -12,7 +12,6 @@ import {
   Compass,
   Ticket,
   PlusCircle,
-  Calendar,
   BarChart3,
   Shield,
 } from 'lucide-react';
@@ -376,8 +375,8 @@ export default function Header() {
                       : 'text-[#63474D] hover:bg-[#63474D]/10'
                   }`}
                 >
-                  <Calendar className="w-3.5 h-3.5" />
-                  <span>📅 My Events</span>
+                  <img src="/calendar.png" alt="Calendar" className="w-3.5 h-3.5 object-contain" />
+                  <span>My Events</span>
                 </Link>
 
                 <Link
@@ -464,8 +463,8 @@ export default function Header() {
                       : 'text-[#63474D] hover:bg-[#63474D]/10'
                   }`}
                 >
-                  <Calendar className="w-3.5 h-3.5" />
-                  <span>📅 Events Moderation</span>
+                  <img src="/calendar.png" alt="Calendar" className="w-3.5 h-3.5 object-contain" />
+                  <span>Events Moderation</span>
                 </Link>
 
                 <Link
@@ -543,8 +542,8 @@ export default function Header() {
                         onClick={() => setIsOpen(false)}
                         className="flex items-center gap-2 py-2 px-3 rounded-xl bg-[#FAF7F5] text-xs font-semibold text-[#63474D]"
                       >
-                        <Calendar className="w-4 h-4" />
-                        <span>📅 My Events</span>
+                        <img src="/calendar.png" alt="Calendar" className="w-4 h-4 object-contain" />
+                        <span>My Events</span>
                       </Link>
                       <Link
                         to="/organizer/events/create"

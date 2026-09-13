@@ -7,7 +7,6 @@ import { Button } from '../../components/ui/Button';
 import {
   Award,
   ShieldCheck,
-  Calendar,
   Download,
   Sparkles,
   Ticket as TicketIcon,
@@ -312,7 +311,7 @@ export const BadgesPage: React.FC = () => {
                 {/* Logistics */}
                 <div className="flex flex-wrap items-center gap-y-1 gap-x-4 text-xs text-[#756366] pt-1">
                   <span className="flex items-center gap-1">
-                    <Calendar className="w-3.5 h-3.5 text-[#AA767C]" />
+                    <img src="/calendar.png" alt="Calendar" className="w-3.5 h-3.5 object-contain shrink-0" />
                     {b.eventDate}
                   </span>
                   <span className="flex items-center gap-1">

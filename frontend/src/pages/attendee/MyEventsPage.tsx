@@ -8,7 +8,6 @@ import type { Event } from '../../types/event';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import {
-  Calendar,
   QrCode,
   ShieldCheck,
   Clock,
@@ -103,7 +102,7 @@ export const MyEventsPage: React.FC = () => {
               : 'border-transparent text-[#756366] hover:text-[#2D1F23]'
           }`}
         >
-          <Calendar className="w-4 h-4" />
+          <img src="/calendar.png" alt="Calendar" className="w-4 h-4 object-contain" />
           <span>Upcoming ({registeredEvents.length})</span>
         </button>
 
@@ -133,7 +132,7 @@ export const MyEventsPage: React.FC = () => {
         <div className="space-y-4">
           {registeredEvents.length === 0 ? (
             <div className="bg-white rounded-3xl p-10 text-center border border-[#E8DDD7] space-y-3 shadow-xs">
-              <Calendar className="w-10 h-10 text-[#FFA686] mx-auto" />
+              <img src="/calendar.png" alt="Calendar" className="w-10 h-10 object-contain mx-auto" />
               <h3 className="font-serif text-base font-bold text-[#2D1F23]">No Upcoming Registrations</h3>
               <p className="text-xs text-[#756366] font-light max-w-md mx-auto">
                 You haven't registered for any upcoming events yet. Once you register for workshops, hackathons, or meetups, they will appear here so you can prepare to attend.
@@ -173,7 +172,7 @@ export const MyEventsPage: React.FC = () => {
 
                     <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs text-[#756366] pt-1">
                       <div className="flex items-center gap-1.5">
-                        <Calendar className="w-3.5 h-3.5 text-[#63474D]" />
+                        <img src="/calendar.png" alt="Calendar" className="w-3.5 h-3.5 object-contain shrink-0" />
                         <span className="font-medium text-[#2D1F23]">{event.date || ticket.eventDate}</span>
                       </div>
 
@@ -310,7 +309,7 @@ export const MyEventsPage: React.FC = () => {
                           {/* Event Date & Location */}
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-[#2D1F23] pt-1">
                             <div className="flex items-start gap-2">
-                              <Calendar className="w-4 h-4 text-[#63474D] mt-0.5 shrink-0" />
+                              <img src="/calendar.png" alt="Calendar" className="w-4 h-4 object-contain mt-0.5 shrink-0" />
                               <div>
                                 <p className="font-semibold">{ticket.eventDate}</p>
                                 <p className="text-[#756366] text-[11px]">{ticket.eventTime}</p>

@@ -9,7 +9,6 @@ import { Button } from '../../components/ui/Button';
 import {
   Search as SearchIcon,
   User as UserIcon,
-  Calendar,
   Clock,
   Users,
   ArrowRight,
@@ -115,7 +114,7 @@ export const PublicSearchPage: React.FC = () => {
                 : 'border-transparent text-[#756366] hover:text-[#2D1F23]'
             }`}
           >
-            <Calendar className="w-4 h-4" />
+            <img src="/calendar.png" alt="Calendar" className="w-4 h-4 object-contain" />
             All Events ({events.length})
           </button>
           <button
@@ -162,7 +161,7 @@ export const PublicSearchPage: React.FC = () => {
       ) : activeTab === 'events' ? (
         filteredEvents.length === 0 ? (
           <div className="bg-white rounded-3xl p-12 text-center border border-[#E8DDD7] space-y-3 shadow-xs">
-            <Calendar className="w-12 h-12 text-[#AA767C] mx-auto" />
+            <img src="/calendar.png" alt="Calendar" className="w-12 h-12 object-contain mx-auto" />
             <h3 className="font-serif text-lg font-bold text-[#2D1F23]">No Events Found</h3>
             <p className="text-xs text-[#756366]">
               Try adjusting your search terms or filter criteria.
@@ -213,7 +212,7 @@ export const PublicSearchPage: React.FC = () => {
                   <div className="space-y-3 pt-3 border-t border-[#E8DDD7]">
                     <div className="grid grid-cols-2 gap-2 text-xs text-[#756366]">
                       <div className="flex items-center gap-1.5">
-                        <Calendar className="w-3.5 h-3.5 text-[#63474D]" />
+                        <img src="/calendar.png" alt="Calendar" className="w-3.5 h-3.5 object-contain shrink-0" />
                         <span>{ev.date}</span>
                       </div>
                       <div className="flex items-center gap-1.5">

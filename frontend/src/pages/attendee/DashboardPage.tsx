@@ -6,7 +6,6 @@ import type { Ticket } from '../../types/ticket';
 import {
   Download,
   Share2,
-  Calendar,
   Clock,
   QrCode,
   ShieldCheck,
@@ -354,7 +353,7 @@ export const AttendeeDashboardPage: React.FC = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-black/10 text-xs text-gray-800">
                     <div className="space-y-0.5">
                       <span className="text-[11px] uppercase tracking-wider font-bold text-gray-600 flex items-center gap-1">
-                        <Calendar className="w-3 h-3 text-[#4f0820]" /> Schedule
+                        <img src="/calendar.png" alt="Calendar" className="w-3 h-3 object-contain shrink-0" /> Schedule
                       </span>
                       <p className="font-bold text-[#0e0622]">{t.eventDate}</p>
                       <p className="text-gray-600 font-light flex items-center gap-1">

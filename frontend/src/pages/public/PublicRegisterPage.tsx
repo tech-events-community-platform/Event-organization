@@ -237,12 +237,17 @@ export const PublicRegisterPage: React.FC = () => {
                   {isAuthenticated && user ? (
                     <div className="space-y-1 text-left">
                       <p className="font-serif text-sm sm:text-base font-bold text-[#2D1F23]">
-                        Welcome, {user.name}! To join the event, register below.
+                        Welcome, {user.name}!
                       </p>
+                      {user.role === 'ORGANIZER' && (
+                        <p className="text-xs text-[#756366]">
+                          Signed in with Organizer account. Registering will link to your personal Attendee profile so you can collect verified badges.
+                        </p>
+                      )}
                     </div>
                   ) : (
                     <p className="font-serif text-sm sm:text-base font-bold text-[#2D1F23] text-left">
-                      Welcome! To join the event, register below.
+                      Welcome! Create an attendee account or sign in to register and earn verifiable badges.
                     </p>
                   )}
 

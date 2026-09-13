@@ -208,9 +208,9 @@ export const ScannerPage: React.FC = () => {
           {surfacedAttendee.answers && Object.keys(surfacedAttendee.answers).length > 0 && (
             <div className="p-3 bg-[#FAF7F5] rounded-xl border border-[#E8DDD7] text-xs space-y-1">
               <span className="text-[10px] uppercase font-bold text-[#756366]">Registration Answers:</span>
-              {Object.entries(surfacedAttendee.answers).map(([q, a]) => (
+              {Object.entries(surfacedAttendee.answers).map(([q, a], idx) => (
                 <p key={q} className="text-[#2D1F23]">
-                  <strong>{q}:</strong> {a}
+                  <strong>Q{idx + 1}:</strong> {a}
                 </p>
               ))}
             </div>

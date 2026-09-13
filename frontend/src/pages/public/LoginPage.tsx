@@ -8,13 +8,15 @@ import {
   Award,
   Lock,
   Mail,
-  User,
+  User as UserIcon,
   AlertCircle,
   Clock,
   ArrowLeft,
   CheckCircle2,
   HelpCircle,
   X,
+  Briefcase,
+  UserCheck,
 } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
@@ -22,10 +24,12 @@ export const LoginPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const redirectTarget = searchParams.get('redirect');
   const initialMode = searchParams.get('mode') === 'signup' ? 'signup' : 'login';
+  const initialRole = (searchParams.get('role')?.toUpperCase() === 'ORGANIZER' || searchParams.get('portal') === 'organizer') ? 'ORGANIZER' : 'ATTENDEE';
 
   const { user, isAuthenticated, login, loginWithGoogle, register } = useAuth();
 
   const [authMode, setAuthMode] = useState<'login' | 'signup'>(initialMode);
+  const [loginRole, setLoginRole] = useState<'ATTENDEE' | 'ORGANIZER'>(initialRole);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
@@ -64,7 +68,7 @@ export const LoginPage: React.FC = () => {
 
     try {
       if (authMode === 'login') {
-        const loggedUser = await login(email.trim(), password);
+        const loggedUser = await login(email.trim(), password, loginRole);
         if (redirectTarget) {
           navigate(redirectTarget);
         } else if (loggedUser.role === 'ORGANIZER') {
@@ -105,7 +109,7 @@ export const LoginPage: React.FC = () => {
         message.toLowerCase().includes('pending')
       ) {
         setIsPendingNotice(true);
-        setErrorMsg('you will be using this sytem in 1 hour');
+        setErrorMsg('Your organizer registration is pending admin approval.');
       } else {
         setErrorMsg(message);
       }
@@ -134,21 +138,33 @@ export const LoginPage: React.FC = () => {
       {/* Header */}
       <div className="text-center space-y-2">
         <div className="w-12 h-12 rounded-2xl bg-[#63474D] flex items-center justify-center text-[#FFA686] mx-auto shadow-sm">
-          <Award className="w-6 h-6" />
+          {authMode === 'login' && loginRole === 'ORGANIZER' ? (
+            <Briefcase className="w-6 h-6" />
+          ) : (
+            <Award className="w-6 h-6" />
+          )}
         </div>
         <h1 className="font-serif text-3xl font-extrabold text-[#2D1F23]">
-          {authMode === 'login' ? 'Sign in to Sheba' : 'Create Attendee Account'}
+          {authMode === 'login'
+            ? loginRole === 'ORGANIZER'
+              ? 'Organizer Portal'
+              : 'Attendee Portal'
+            : 'Create Attendee Account'}
         </h1>
         <p className="text-xs text-[#756366]">
           {redirectTarget
-            ? "Sign in or create your account to proceed directly with your event registration."
-            : "Verifiable attendance credentials and community tech events in Ethiopia."}
+            ? 'Sign in or create your account to proceed directly with your event registration.'
+            : authMode === 'login'
+            ? loginRole === 'ORGANIZER'
+              ? 'Sign in to access your event dashboard, attendee check-ins, and credentials.'
+              : 'Sign in to view your registered events, attendance history, and verifiable badges.'
+            : 'Verifiable attendance credentials and community tech events in Ethiopia.'}
         </p>
       </div>
 
       {/* Form Card */}
       <div className="bg-white p-6 rounded-3xl border border-[#E8DDD7] shadow-sm space-y-4">
-        {/* Toggle Switch between Login and Sign Up (Section 2) */}
+        {/* Toggle Switch between Login and Sign Up */}
         <div className="flex bg-[#FAF7F5] p-1 rounded-2xl border border-[#E8DDD7]">
           <button
             type="button"
@@ -180,6 +196,54 @@ export const LoginPage: React.FC = () => {
           </button>
         </div>
 
+        {/* Portal Switcher when in Login Mode */}
+        {authMode === 'login' && (
+          <div className="space-y-1.5 pt-0.5">
+            <label className="block text-[11px] font-bold text-[#756366] uppercase tracking-wider">
+              Account Role
+            </label>
+            <div className="grid grid-cols-2 gap-2 p-1 bg-[#FAF7F5] rounded-2xl border border-[#E8DDD7]">
+              <button
+                type="button"
+                onClick={() => {
+                  setLoginRole('ATTENDEE');
+                  setErrorMsg(null);
+                  setIsPendingNotice(false);
+                }}
+                className={`flex items-center justify-center gap-2 py-2 px-3 text-xs font-bold rounded-xl transition-all ${
+                  loginRole === 'ATTENDEE'
+                    ? 'bg-[#63474D] text-white shadow-xs'
+                    : 'text-[#756366] hover:text-[#2D1F23]'
+                }`}
+              >
+                <UserCheck className="w-3.5 h-3.5" />
+                <span>Attendee</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setLoginRole('ORGANIZER');
+                  setErrorMsg(null);
+                  setIsPendingNotice(false);
+                }}
+                className={`flex items-center justify-center gap-2 py-2 px-3 text-xs font-bold rounded-xl transition-all ${
+                  loginRole === 'ORGANIZER'
+                    ? 'bg-[#63474D] text-white shadow-xs'
+                    : 'text-[#756366] hover:text-[#2D1F23]'
+                }`}
+              >
+                <Briefcase className="w-3.5 h-3.5" />
+                <span>Organizer</span>
+              </button>
+            </div>
+            <p className="text-[11px] text-[#756366] px-1">
+              {loginRole === 'ORGANIZER'
+                ? 'Requires admin-approved organizer status. Attendees can apply in their Settings.'
+                : 'Sign in to your personal attendee profile using your email and password.'}
+            </p>
+          </div>
+        )}
+
         {/* Pending Approval Notice Banner */}
         {isPendingNotice && (
           <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-900 space-y-2.5">
@@ -188,20 +252,24 @@ export const LoginPage: React.FC = () => {
               <span>Organizer Approval Pending</span>
             </div>
             <p className="text-[11px] text-amber-800">
-              Your organizer registration has been received and is in the Admin verification queue.
+              Your organizer application has been submitted and is currently in the admin verification queue.
             </p>
             <p className="font-extrabold text-xs text-[#63474D]">
-              you will be using this sytem in 1 hour
+              You will be able to access the organizer workspace as soon as admin approves your profile.
             </p>
             <Button
               type="button"
               variant="outline"
               size="sm"
               fullWidth
-              onClick={() => navigate('/pending-approval', { state: { email } })}
+              onClick={() => {
+                setLoginRole('ATTENDEE');
+                setIsPendingNotice(false);
+                setErrorMsg(null);
+              }}
               className="mt-1"
             >
-              View Approval Status Screen
+              Sign In as Attendee Instead
             </Button>
           </div>
         )}
@@ -209,7 +277,23 @@ export const LoginPage: React.FC = () => {
         {errorMsg && !isPendingNotice && (
           <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-start gap-2">
             <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-            <span>{errorMsg}</span>
+            <div className="flex-1">
+              <span>{errorMsg}</span>
+              {loginRole === 'ORGANIZER' && errorMsg.includes('Settings') && (
+                <div className="mt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLoginRole('ATTENDEE');
+                      setErrorMsg(null);
+                    }}
+                    className="text-xs font-bold text-[#63474D] underline hover:text-[#2D1F23]"
+                  >
+                    Switch to Attendee Portal
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -230,7 +314,7 @@ export const LoginPage: React.FC = () => {
                   setErrorMsg(null);
                   const loggedUser = await loginWithGoogle(
                     credentialResponse.credential,
-                    undefined,
+                    loginRole,
                     authMode === 'signup' ? 'register' : 'login'
                   );
                   if (redirectTarget) {
@@ -274,7 +358,7 @@ export const LoginPage: React.FC = () => {
             <div>
               <label className="block text-xs font-bold text-[#2D1F23] mb-1">Full Name</label>
               <div className="relative">
-                <User className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#756366]" />
+                <UserIcon className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#756366]" />
                 <input
                   type="text"
                   required
