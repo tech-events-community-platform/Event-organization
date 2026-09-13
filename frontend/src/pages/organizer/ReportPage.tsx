@@ -7,7 +7,6 @@ import type { SponsorReportData } from '../../types/attendance';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import {
-  Calendar,
   Award,
   BarChart3,
   FileSpreadsheet,
@@ -188,7 +187,7 @@ export const ReportPage: React.FC = () => {
 
             <div className="flex flex-wrap items-center gap-6 text-xs text-gray-600 pt-1 font-medium">
               <span className="flex items-center gap-1.5">
-                <Calendar className="w-4 h-4 text-[#63474D]" />
+                <img src="/calendar.png" alt="Calendar" className="w-4 h-4 object-contain shrink-0" />
                 {report.eventDate}
               </span>
               <span className="flex items-center gap-1.5">

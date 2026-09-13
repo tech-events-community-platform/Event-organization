@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useLocation } from 'react-router-dom';
 import { api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import type { Event } from '../../types/event';
@@ -9,11 +9,14 @@ import {
   ArrowLeft,
   AlertCircle,
   Clock,
+  ShieldCheck,
+  Lock,
 } from 'lucide-react';
 
 export const EventRegistrationCheckoutPage: React.FC = () => {
   const { token, id } = useParams<{ token?: string; id?: string }>();
-  const { user, isAuthenticated } = useAuth();
+  const location = useLocation();
+  const { user, isAuthenticated, register, switchRole } = useAuth();
 
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
@@ -23,7 +26,13 @@ export const EventRegistrationCheckoutPage: React.FC = () => {
   // Guest attendee fields (if not authenticated)
   const [guestName, setGuestName] = useState('');
   const [guestEmail, setGuestEmail] = useState('');
+  const [guestPassword, setGuestPassword] = useState('');
   const [confirmedEmail, setConfirmedEmail] = useState('');
+
+  // Organizer role switch states
+  const [organizerSwitchPassword, setOrganizerSwitchPassword] = useState('');
+  const [isSwitchingRole, setIsSwitchingRole] = useState(false);
+  const [switchError, setSwitchError] = useState<string | null>(null);
 
   // Form states
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -64,6 +73,24 @@ export const EventRegistrationCheckoutPage: React.FC = () => {
     fetchEventAndStatus();
   }, [token, id, user]);
 
+  const handleOrganizerSwitchToAttendee = async () => {
+    if (!organizerSwitchPassword) {
+      setSwitchError('Please enter your account password.');
+      return;
+    }
+
+    setIsSwitchingRole(true);
+    setSwitchError(null);
+    try {
+      await switchRole('ATTENDEE', organizerSwitchPassword);
+      setOrganizerSwitchPassword('');
+    } catch (err: any) {
+      setSwitchError(err.message || 'Authentication failed. Please verify your password.');
+    } finally {
+      setIsSwitchingRole(false);
+    }
+  };
+
   const handleAnswerChange = (questionId: string, val: string) => {
     setAnswers((prev) => ({ ...prev, [questionId]: val }));
   };
@@ -77,6 +104,10 @@ export const EventRegistrationCheckoutPage: React.FC = () => {
     // Validate guest fields if logged out
     let attendeeToRegister: User;
     if (isAuthenticated && user) {
+      if (user.role === 'ORGANIZER') {
+        setErrorMsg('Please confirm your password above to switch to your Attendee profile before submitting registration.');
+        return;
+      }
       attendeeToRegister = user;
     } else {
       if (!guestName.trim()) {
@@ -87,13 +118,27 @@ export const EventRegistrationCheckoutPage: React.FC = () => {
         setErrorMsg('Please enter a valid email address.');
         return;
       }
-      attendeeToRegister = {
-        id: `guest_${Date.now()}`,
-        name: guestName.trim(),
-        email: guestEmail.trim(),
-        role: 'ATTENDEE',
-        memberSince: new Date().toISOString(),
-      };
+      if (!guestPassword || guestPassword.length < 6) {
+        setErrorMsg('Please enter a password with at least 6 characters for your attendee account.');
+        return;
+      }
+
+      try {
+        const regRes = await register({
+          email: guestEmail.trim(),
+          password: guestPassword,
+          full_name: guestName.trim(),
+          role: 'ATTENDEE',
+        });
+        attendeeToRegister = regRes.user;
+      } catch (regErr: any) {
+        if (regErr.message?.includes('already registered') || regErr.status === 409 || regErr.statusCode === 409) {
+          setErrorMsg('An account with this email already exists. Please sign in to register for this event.');
+        } else {
+          setErrorMsg(regErr.message || 'Failed to create attendee account.');
+        }
+        return;
+      }
     }
 
     // Validate required custom questions
@@ -205,8 +250,9 @@ export const EventRegistrationCheckoutPage: React.FC = () => {
 
           {/* Logistics Line (Unboxed, location icon uses location.png, text black) */}
           <div className="pt-2 space-y-1 text-xs sm:text-sm text-black max-w-sm mx-auto">
-            <p className="font-semibold text-black">
-              {cal.weekday ? `${cal.weekday}, ${cal.fullDate}` : event.date} • {event.time || `${event.startTime} - ${event.endTime}`}
+            <p className="font-semibold text-black flex items-center justify-center gap-1.5">
+              <img src="/calendar.png" alt="Calendar" className="w-4 h-4 object-contain shrink-0" />
+              <span>{cal.weekday ? `${cal.weekday}, ${cal.fullDate}` : event.date} • {event.time || `${event.startTime} - ${event.endTime}`}</span>
             </p>
             <p className="flex items-center justify-center gap-1.5 text-black">
               <img src="/location.png" alt="Location" className="w-4 h-4 object-contain shrink-0" />
@@ -252,7 +298,10 @@ export const EventRegistrationCheckoutPage: React.FC = () => {
             {event.title}
           </p>
           <p className="text-xs text-gray-700 flex items-center gap-2 pt-0.5">
-            <span>{cal.weekday ? `${cal.weekday}, ${cal.fullDate}` : event.date}</span>
+            <span className="flex items-center gap-1">
+              <img src="/calendar.png" alt="Date" className="w-3.5 h-3.5 object-contain shrink-0" />
+              <span>{cal.weekday ? `${cal.weekday}, ${cal.fullDate}` : event.date}</span>
+            </span>
             <span>•</span>
             <span className="flex items-center gap-1">
               <Clock className="w-3.5 h-3.5 text-[#AA767C]" />
@@ -277,41 +326,121 @@ export const EventRegistrationCheckoutPage: React.FC = () => {
 
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* User Identity Info */}
-        <div className="space-y-1.5 pb-2 border-b border-gray-300">
+        <div className="space-y-2 pb-4 border-b border-gray-300">
           <span className="text-[11px] uppercase font-bold tracking-wider text-gray-600 block">
             Attendee Information
           </span>
+
           {isAuthenticated && user ? (
-            <p className="text-sm font-bold text-black">
-              {user.name} ({user.email})
-            </p>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-              <div className="space-y-1">
-                <label className="block text-xs font-bold text-black">
-                  Full Name <span className="text-red-600">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={guestName}
-                  onChange={(e) => setGuestName(e.target.value)}
-                  placeholder="Enter your full name"
-                  className="w-full px-3.5 py-2.5 bg-white/70 border border-gray-300 rounded-xl text-xs text-black focus:outline-none focus:ring-2 focus:ring-[#63474D]"
-                />
+            user.role === 'ORGANIZER' ? (
+              <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl space-y-3">
+                <div className="flex items-start gap-2.5">
+                  <ShieldCheck className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+                  <div className="space-y-0.5">
+                    <h3 className="text-xs font-bold text-amber-950">Organizer Account Active</h3>
+                    <p className="text-[11px] text-amber-800 leading-relaxed">
+                      You are currently signed in with your Organizer account (<strong>{user.organization || user.name}</strong>). Event tickets and verifiable badges attach to personal <strong>Attendee profiles</strong>. Confirm your password to authenticate as Attendee.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="pt-1 space-y-1.5">
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <div className="relative flex-1">
+                      <Lock className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                      <input
+                        type="password"
+                        placeholder="Enter your account password"
+                        value={organizerSwitchPassword}
+                        onChange={(e) => setOrganizerSwitchPassword(e.target.value)}
+                        className="w-full pl-9 pr-3 py-2 bg-white border border-amber-300 rounded-xl text-xs text-black focus:outline-none focus:ring-2 focus:ring-amber-500"
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="primary"
+                      disabled={isSwitchingRole || !organizerSwitchPassword}
+                      onClick={handleOrganizerSwitchToAttendee}
+                    >
+                      {isSwitchingRole ? 'Authenticating...' : 'Authenticate as Attendee'}
+                    </Button>
+                  </div>
+                  {switchError && (
+                    <p className="text-xs text-red-600 font-semibold">{switchError}</p>
+                  )}
+                </div>
               </div>
-              <div className="space-y-1">
-                <label className="block text-xs font-bold text-black">
-                  Email Address <span className="text-red-600">*</span>
-                </label>
-                <input
-                  type="email"
-                  required
-                  value={guestEmail}
-                  onChange={(e) => setGuestEmail(e.target.value)}
-                  placeholder="name@example.com"
-                  className="w-full px-3.5 py-2.5 bg-white/70 border border-gray-300 rounded-xl text-xs text-black focus:outline-none focus:ring-2 focus:ring-[#63474D]"
+            ) : (
+              <div className="flex items-center gap-3 py-1">
+                <img
+                  src={user.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=63474D&color=fff`}
+                  alt={user.name}
+                  className="w-10 h-10 rounded-full object-cover border border-[#E8DDD7]"
                 />
+                <div>
+                  <p className="text-sm font-bold text-black">{user.name}</p>
+                  <p className="text-xs text-gray-600">{user.email} • Personal Attendee Profile</p>
+                </div>
+              </div>
+            )
+          ) : (
+            <div className="space-y-3 pt-1">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 pb-1">
+                <p className="text-xs text-gray-600">
+                  Create your attendee account to receive your event pass and earn verifiable badges.
+                </p>
+                <Link
+                  to={`/login?redirect=${encodeURIComponent(location.pathname)}`}
+                  className="text-xs font-bold text-[#63474D] hover:underline shrink-0"
+                >
+                  Already have an account? Sign In
+                </Link>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-black">
+                    Full Name <span className="text-red-600">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={guestName}
+                    onChange={(e) => setGuestName(e.target.value)}
+                    placeholder="Enter your full name"
+                    className="w-full px-3.5 py-2.5 bg-white/70 border border-gray-300 rounded-xl text-xs text-black focus:outline-none focus:ring-2 focus:ring-[#63474D]"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-black">
+                    Email Address <span className="text-red-600">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={guestEmail}
+                    onChange={(e) => setGuestEmail(e.target.value)}
+                    placeholder="name@example.com"
+                    className="w-full px-3.5 py-2.5 bg-white/70 border border-gray-300 rounded-xl text-xs text-black focus:outline-none focus:ring-2 focus:ring-[#63474D]"
+                  />
+                </div>
+                <div className="sm:col-span-2 space-y-1">
+                  <label className="block text-xs font-bold text-black">
+                    Create Attendee Password <span className="text-red-600">*</span>
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    value={guestPassword}
+                    onChange={(e) => setGuestPassword(e.target.value)}
+                    placeholder="Enter at least 6 characters"
+                    className="w-full px-3.5 py-2.5 bg-white/70 border border-gray-300 rounded-xl text-xs text-black focus:outline-none focus:ring-2 focus:ring-[#63474D]"
+                  />
+                  <p className="text-[10px] text-gray-500">
+                    Your password enables you to log in anytime to access your attendance badges and event history.
+                  </p>
+                </div>
               </div>
             </div>
           )}

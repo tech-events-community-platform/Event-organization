@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/api';
 import type { BadgeAward } from '../../types/attendance';
 import { Badge } from '../../components/ui/Badge';
-import { Award, Calendar, ArrowLeft } from 'lucide-react';
+import { Award, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export const AttendanceHistoryPage: React.FC = () => {
@@ -93,7 +93,7 @@ export const AttendanceHistoryPage: React.FC = () => {
 
                 <div className="pt-2 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500 font-light">
                   <span className="flex items-center gap-1">
-                    <Calendar className="w-3.5 h-3.5 text-sheeba-purple" />
+                    <img src="/calendar.png" alt="Calendar" className="w-3.5 h-3.5 object-contain shrink-0" />
                     Event Date: {record.eventDate}
                   </span>
                   <span className="flex items-center gap-1">

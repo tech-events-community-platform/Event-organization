@@ -6,7 +6,6 @@ import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import {
   Award,
-  Calendar,
   User,
   ShieldCheck,
   ArrowLeft,
@@ -110,7 +109,7 @@ export const BadgeDetailPage: React.FC = () => {
           <div className="flex justify-between items-center pb-2 border-b border-[#E8DDD7]">
             <span className="text-[#756366]">Event Date</span>
             <span className="font-semibold text-[#2D1F23] flex items-center gap-1">
-              <Calendar className="w-3.5 h-3.5 text-[#63474D]" /> {badge.eventDate}
+              <img src="/calendar.png" alt="Calendar" className="w-3.5 h-3.5 object-contain shrink-0" /> {badge.eventDate}
             </span>
           </div>
 

@@ -1,6 +1,7 @@
 export type UserRole = 'ATTENDEE' | 'ORGANIZER' | 'ADMIN';
 export type ProfileVisibility = 'public' | 'private';
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected';
+export type OrganizerApprovalStatus = 'none' | 'pending' | 'approved' | 'rejected';
 
 export interface AttendeeStats {
   meetupsCount: number;
@@ -29,6 +30,9 @@ export interface User {
   organization?: string;
   socials?: OrganizerSocials;
   approvalStatus?: ApprovalStatus;
+  isOrganizer?: boolean;
+  organizerApprovalStatus?: OrganizerApprovalStatus;
+  roles?: UserRole[];
   isActive?: boolean;
   stats?: AttendeeStats;
 }

@@ -11,7 +11,6 @@ import {
   Square,
   Sparkles,
   Search,
-  Calendar,
   X,
   Users,
 } from 'lucide-react';
@@ -247,7 +246,7 @@ export const BadgesPage: React.FC = () => {
             </h2>
             <div className="flex flex-wrap items-center gap-4 text-xs text-[#E8DDD7]">
               <span className="flex items-center gap-1">
-                <Calendar className="w-3.5 h-3.5 text-[#FFA686]" />
+                <img src="/calendar.png" alt="Calendar" className="w-3.5 h-3.5 object-contain shrink-0" />
                 {currentEvent.date}
               </span>
               <span className="flex items-center gap-1">

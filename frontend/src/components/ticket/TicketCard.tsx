@@ -2,7 +2,7 @@ import React from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import type { Ticket } from '../../types/ticket';
 import { Badge } from '../ui/Badge';
-import { Award, Calendar, Download, ShieldCheck } from 'lucide-react';
+import { Award, Download, ShieldCheck } from 'lucide-react';
 
 interface TicketCardProps {
   ticket: Ticket;
@@ -56,7 +56,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({ ticket, onDownload }) =>
 
           <div className="space-y-2 pt-2 border-t border-[#E8DDD7] text-xs text-[#2D1F23]">
             <div className="flex items-start gap-2.5">
-              <Calendar className="w-4 h-4 text-[#63474D] mt-0.5 flex-shrink-0" />
+              <img src="/calendar.png" alt="Calendar" className="w-4 h-4 object-contain mt-0.5 shrink-0" />
               <div>
                 <p className="font-semibold text-[#2D1F23]">{ticket.eventDate}</p>
                 <p className="text-[#756366]">{ticket.eventTime}</p>

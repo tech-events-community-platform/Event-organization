@@ -12,11 +12,14 @@ import {
   AlertCircle,
   LogOut,
   ChevronDown,
+  UserCheck,
+  Lock,
+  X,
 } from 'lucide-react';
 import { TelegramIcon, XIcon, TikTokIcon, YouTubeIcon } from '../../components/ui/SocialIcons';
 
 export const AccountSettingsPage: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, switchRole } = useAuth();
   const navigate = useNavigate();
 
   const [name, setName] = useState(user?.name || '');
@@ -31,6 +34,33 @@ export const AccountSettingsPage: React.FC = () => {
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isDangerZoneOpen, setIsDangerZoneOpen] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  // Switch to Attendee state
+  const [showSwitchModal, setShowSwitchModal] = useState(false);
+  const [switchPassword, setSwitchPassword] = useState('');
+  const [isSwitching, setIsSwitching] = useState(false);
+  const [switchError, setSwitchError] = useState<string | null>(null);
+
+  const handleSwitchToAttendee = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!switchPassword) {
+      setSwitchError('Please enter your account password.');
+      return;
+    }
+
+    setIsSwitching(true);
+    setSwitchError(null);
+
+    try {
+      await switchRole('ATTENDEE', switchPassword);
+      setShowSwitchModal(false);
+      navigate('/app');
+    } catch (err: any) {
+      setSwitchError(err.message || 'Authentication failed. Please verify your password.');
+    } finally {
+      setIsSwitching(false);
+    }
+  };
 
   useEffect(() => {
     if (user) {
@@ -255,7 +285,47 @@ export const AccountSettingsPage: React.FC = () => {
         </form>
       </div>
 
-      {/* 2. Danger Zone as a Dropdown (Logout and Do an account deletion) */}
+      {/* 2. Personal Attendee Account */}
+      <div className="pt-6 border-t border-[#E8DDD7] space-y-4 max-w-3xl">
+        <div>
+          <h2 className="font-serif font-bold text-base text-[#2D1F23] flex items-center gap-2">
+            <UserCheck className="w-4 h-4 text-[#63474D]" />
+            Personal Attendee Account
+          </h2>
+          <p className="text-xs text-[#756366] mt-0.5">
+            Your single account includes both Organizer capabilities and a personal Attendee profile.
+          </p>
+        </div>
+
+        <div className="p-5 bg-[#FAF7F5] border border-[#E8DDD7] rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-[#2D1F23]">Personal Attendee Profile</span>
+              <span className="text-[10px] font-bold text-[#2A7B5F] bg-[#2A7B5F]/10 px-2 py-0.5 rounded-full">
+                Active
+              </span>
+            </div>
+            <p className="text-[11px] text-[#756366] leading-relaxed max-w-lg">
+              Want to attend community meetups, view your registered tickets, or earn verifiable attendance badges? Switch your active session to your Attendee Workspace.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              setShowSwitchModal(true);
+              setSwitchPassword('');
+              setSwitchError(null);
+            }}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-[#63474D] hover:bg-[#4E373C] text-white rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer shadow-xs"
+          >
+            <UserCheck className="w-3.5 h-3.5 text-[#FFA686]" />
+            <span>Launch Attendee Workspace</span>
+          </button>
+        </div>
+      </div>
+
+      {/* 3. Danger Zone as a Dropdown (Logout and Do an account deletion) */}
       <div className="pt-6 border-t border-red-200/80 space-y-4 max-w-3xl">
         <button
           type="button"
@@ -366,6 +436,82 @@ export const AccountSettingsPage: React.FC = () => {
                 Yes, Delete My Account
               </Button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Switch to Attendee Credential Verification Modal */}
+      {showSwitchModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4">
+          <div
+            onClick={() => setShowSwitchModal(false)}
+            className="fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity"
+          />
+          <div className="relative bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-[#E8DDD7] z-10 space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-[#E8DDD7]">
+              <div className="flex items-center gap-2">
+                <UserCheck className="w-4 h-4 text-[#63474D]" />
+                <h3 className="font-serif font-bold text-base text-[#2D1F23]">Attendee Workspace</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowSwitchModal(false)}
+                className="p-1 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-[#756366] leading-relaxed">
+              Enter your account password to authenticate and enter your personal Attendee Workspace.
+            </p>
+
+            {switchError && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                <span>{switchError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSwitchToAttendee} className="space-y-3.5">
+              <div>
+                <label className="block text-xs font-bold text-[#2D1F23] mb-1">
+                  Account Password
+                </label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#756366]" />
+                  <input
+                    type="password"
+                    required
+                    autoFocus
+                    placeholder="••••••••"
+                    value={switchPassword}
+                    onChange={(e) => setSwitchPassword(e.target.value)}
+                    className="w-full pl-10 pr-3.5 py-2.5 bg-[#FAF7F5] border border-[#E8DDD7] rounded-xl text-xs text-[#2D1F23] focus:outline-none focus:ring-2 focus:ring-[#63474D]"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 pt-1">
+                <Button
+                  type="submit"
+                  fullWidth
+                  variant="primary"
+                  size="sm"
+                  disabled={isSwitching}
+                >
+                  {isSwitching ? 'Authenticating...' : 'Authenticate & Enter'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowSwitchModal(false)}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
           </div>
         </div>
       )}

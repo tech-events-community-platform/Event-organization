@@ -89,7 +89,7 @@ export async function requestApi<T = any>(endpoint: string, options: RequestInit
 export const api = {
   // Authentication
   auth: {
-    login: async (creds: { email: string; password: string }): Promise<{ user: User; token: string }> => {
+    login: async (creds: { email: string; password: string; role?: string }): Promise<{ user: User; token: string }> => {
       try {
         const res = await requestApi('/auth/login', {
           method: 'POST',
@@ -110,7 +110,7 @@ export const api = {
         console.warn('Backend login fallback to local session:', err.message);
         const lowerEmail = creds.email.toLowerCase();
         const isAdmin = lowerEmail === 'admin@sheba.et' || lowerEmail.includes('admin');
-        const isOrganizer = lowerEmail.includes('organizer');
+        const isOrganizer = creds.role?.toUpperCase() === 'ORGANIZER' || lowerEmail.includes('organizer');
         const role: UserRole = isAdmin ? 'ADMIN' : isOrganizer ? 'ORGANIZER' : 'ATTENDEE';
 
         const localUser: User = {
@@ -127,6 +127,38 @@ export const api = {
         setAuthToken(token);
         return { user: localUser, token };
       }
+    },
+
+    applyOrganizer: async (data: {
+      organization: string;
+      bio?: string;
+      phone?: string;
+      password?: string;
+      socials?: Record<string, string>;
+    }): Promise<{ user: User; message: string }> => {
+      const res = await requestApi('/auth/apply-organizer', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+      return res.data;
+    },
+
+    switchRole: async (data: {
+      targetRole: 'ATTENDEE' | 'ORGANIZER';
+      password?: string;
+    }): Promise<{ user: User; token: string }> => {
+      const res = await requestApi('/auth/switch-role', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+
+      if (res.data?.token) {
+        setAuthToken(res.data.token);
+      }
+      return {
+        user: res.data.user,
+        token: res.data.token,
+      };
     },
 
     googleLogin: async (data: { credential: string; role?: string; mode?: 'login' | 'register' }): Promise<{ user: User; token: string }> => {
