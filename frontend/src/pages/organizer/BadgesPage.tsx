@@ -9,7 +9,6 @@ import {
   Award,
   CheckSquare,
   Square,
-  Sparkles,
   Search,
   X,
   Users,
@@ -376,17 +375,17 @@ export const BadgesPage: React.FC = () => {
                           {/* Higher Badges */}
                           {heldBadges.includes('participant') && (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase bg-blue-100 text-blue-800 border border-blue-200">
-                              🎖️ Participant
+                              Participant
                             </span>
                           )}
                           {heldBadges.includes('winner') && (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase bg-amber-100 text-amber-800 border border-amber-200">
-                              🏆 Winner
+                              Winner
                             </span>
                           )}
                           {heldBadges.includes('speaker') && (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase bg-purple-100 text-purple-800 border border-purple-200">
-                              🎤 Speaker
+                              Speaker
                             </span>
                           )}
                         </div>
@@ -437,26 +436,79 @@ export const BadgesPage: React.FC = () => {
               <label className="text-xs font-bold text-[#2D1F23] block">
                 Choose Badge Type to Approve:
               </label>
-              <div className="grid grid-cols-3 gap-2.5">
+              <div className="flex flex-col gap-3">
                 {[
-                  { code: 'winner' as BadgeCode, label: 'Winner', icon: '🏆' },
-                  { code: 'participant' as BadgeCode, label: 'Participant', icon: '🎖️' },
-                  { code: 'speaker' as BadgeCode, label: 'Speaker', icon: '🎤' },
-                ].map((b) => (
-                  <button
-                    key={b.code}
-                    type="button"
-                    onClick={() => setSelectedBadgeCode(b.code)}
-                    className={`p-3.5 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center gap-1.5 ${
-                      selectedBadgeCode === b.code
-                        ? 'border-[#63474D] bg-[#63474D]/10 text-[#63474D] font-bold shadow-xs'
-                        : 'border-gray-200 text-gray-600 hover:bg-gray-50'
-                    }`}
-                  >
-                    <span className="text-2xl">{b.icon}</span>
-                    <span className="text-xs">{b.label}</span>
-                  </button>
-                ))}
+                  {
+                    code: 'winner' as BadgeCode,
+                    label: 'Winner',
+                    image: '/badges/hackathon-winner-badge.jpg',
+                    description: 'Awarded for podium placement and competitive track achievements.',
+                  },
+                  {
+                    code: 'participant' as BadgeCode,
+                    label: 'Participant',
+                    image: '/badges/participant-badge.jpg',
+                    description: 'Awarded for active project submission and verified participation.',
+                  },
+                  {
+                    code: 'speaker' as BadgeCode,
+                    label: 'Speaker',
+                    image: '/badges/speaker-badge.jpg',
+                    description: 'Awarded to keynote speakers, workshop hosts, and mentors.',
+                  },
+                ].map((b) => {
+                  const isSelected = selectedBadgeCode === b.code;
+                  return (
+                    <div
+                      key={b.code}
+                      onClick={() => setSelectedBadgeCode(b.code)}
+                      className={`flex items-center gap-4 p-3 rounded-2xl cursor-pointer transition-all ${
+                        isSelected
+                          ? 'bg-[#FAF7F5] border-2 border-[#63474D]'
+                          : 'border border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      {/* Badge Image - Unboxed with no rectangle background behind it, taking vertical space */}
+                      <img
+                        src={b.image}
+                        alt={`${b.label} Badge`}
+                        className="w-16 h-16 sm:w-20 sm:h-20 object-contain rounded-xl shrink-0"
+                      />
+
+                      {/* Details */}
+                      <div className="flex-1 min-w-0 space-y-0.5">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-serif font-bold text-base text-[#2D1F23]">
+                            {b.label}
+                          </h4>
+                          {isSelected && (
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-[#63474D] bg-[#63474D]/10 px-2 py-0.5 rounded-md">
+                              Selected
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-500 leading-snug">
+                          {b.description}
+                        </p>
+                      </div>
+
+                      {/* Radio Indicator */}
+                      <div className="shrink-0 pr-1">
+                        <div
+                          className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                            isSelected
+                              ? 'border-[#63474D] bg-[#63474D]'
+                              : 'border-gray-300'
+                          }`}
+                        >
+                          {isSelected && (
+                            <div className="w-2 h-2 rounded-full bg-white" />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
@@ -474,7 +526,6 @@ export const BadgesPage: React.FC = () => {
                 isLoading={isSubmittingAward}
                 variant="primary"
                 size="sm"
-                icon={<Sparkles className="w-4 h-4" />}
               >
                 Confirm & Approve Badge
               </Button>

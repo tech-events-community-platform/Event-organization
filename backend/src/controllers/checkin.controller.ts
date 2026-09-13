@@ -17,7 +17,7 @@ export class CheckinController {
 
   static async markAttended(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const { eventId, attendeeRosterId, attendeeId } = req.body;
+      const { eventId, attendeeRosterId, attendeeId, notes, organizerNote } = req.body;
       const approvedByOrganizerId = req.user!.userId;
       const userRole = req.user!.role;
 
@@ -26,6 +26,7 @@ export class CheckinController {
         attendeeId: attendeeId || attendeeRosterId,
         approvedByOrganizerId,
         userRole,
+        notes: notes || organizerNote,
       });
 
       return sendSuccess(res, result, 'Check-in approved and Attended badge granted.');

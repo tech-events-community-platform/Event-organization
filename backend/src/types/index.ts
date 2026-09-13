@@ -146,6 +146,7 @@ export interface IBadgeAward {
   revoked_at?: Date | null;
   revoked_by?: string | null;
   revocation_reason?: string | null;
+  organizer_note?: string | null;
   created_at: Date;
   updated_at: Date;
   // Joined fields

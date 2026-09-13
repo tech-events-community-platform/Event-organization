@@ -44,7 +44,8 @@ export const AttendeeDashboardPage: React.FC = () => {
     const t = (type || '').toLowerCase();
     if (t.includes('hackathon')) return '/badges/hackathon-badge.jpg';
     if (t.includes('workshop')) return '/badges/workshop-badge.jpg';
-    return '/badges/meetup-badge.jpg';
+    if (t.includes('meetup')) return '/badges/meetup-badge.jpg';
+    return '/badges/other.jpg';
   };
 
   const userProfession = user?.organization || user?.bio || '';
