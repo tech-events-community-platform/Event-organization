@@ -166,10 +166,14 @@ CREATE TABLE IF NOT EXISTS badge_awards (
     revoked_at TIMESTAMPTZ,
     revoked_by UUID REFERENCES users(id),
     revocation_reason TEXT,
+    organizer_note TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT unique_event_user_badge UNIQUE (event_id, user_id, badge_code)
 );
+
+ALTER TABLE badge_awards ADD COLUMN IF NOT EXISTS organizer_note TEXT;
+ALTER TABLE check_ins ADD COLUMN IF NOT EXISTS notes TEXT;
 
 -- Payments / Chapa Settlement Table (SRS Section 5 & 11.1)
 CREATE TABLE IF NOT EXISTS payments (

@@ -634,11 +634,12 @@ export const api = {
     markAttended: async (params: {
       eventId: string;
       attendeeId: string;
+      notes?: string;
     }): Promise<{ success: boolean; message: string; badgeAwarded?: BadgeAward; rosterItem?: AttendeeRosterItem }> => {
       try {
         const res = await requestApi('/checkin/mark-attended', {
           method: 'POST',
-          body: JSON.stringify({ eventId: params.eventId, attendeeId: params.attendeeId }),
+          body: JSON.stringify({ eventId: params.eventId, attendeeId: params.attendeeId, notes: params.notes }),
         });
         if (res.data) {
           return {
@@ -741,6 +742,7 @@ export const api = {
       attendeeId: string;
       badgeCode: BadgeCode;
       awardedByOrganizerId?: string;
+      notes?: string;
     }): Promise<BadgeAward> => {
       try {
         const res = await requestApi('/badges/award', {
@@ -749,6 +751,7 @@ export const api = {
             eventId: params.eventId,
             attendeeId: params.attendeeId,
             badgeCode: params.badgeCode,
+            notes: params.notes,
           }),
         });
         if (res.data) {

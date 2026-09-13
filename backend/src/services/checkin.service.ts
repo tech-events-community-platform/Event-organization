@@ -98,8 +98,9 @@ export class CheckinService {
     attendeeId: string;
     approvedByOrganizerId: string;
     userRole?: UserRole;
+    notes?: string;
   }) {
-    const { eventId, attendeeId, approvedByOrganizerId, userRole } = params;
+    const { eventId, attendeeId, approvedByOrganizerId, userRole, notes } = params;
 
     const event = await EventService.getEventById(eventId);
     if (!event) {
@@ -143,25 +144,31 @@ export class CheckinService {
       let checkInId: string;
       if (existingCheckIn.rowCount && existingCheckIn.rowCount > 0) {
         checkInId = existingCheckIn.rows[0].id;
+        if (notes) {
+          await client.query(
+            `UPDATE check_ins SET notes = $1, updated_at = $2 WHERE id = $3`,
+            [notes.trim(), now, checkInId]
+          );
+        }
       } else {
         // Insert CheckIn row
         const ciRes = await client.query(
-          `INSERT INTO check_ins (registration_id, event_id, user_id, approved_by, approved_at)
-           VALUES ($1, $2, $3, $4, $5)
+          `INSERT INTO check_ins (registration_id, event_id, user_id, approved_by, approved_at, notes)
+           VALUES ($1, $2, $3, $4, $5, $6)
            RETURNING id`,
-          [registration.id, realEventId, attendeeId, approvedByOrganizerId, now]
+          [registration.id, realEventId, attendeeId, approvedByOrganizerId, now, notes?.trim() || null]
         );
         checkInId = ciRes.rows[0].id;
       }
 
       // 3. Atomically award "Attended" badge (SRS Section 4 & 7.1)
       const badgeRes = await client.query(
-        `INSERT INTO badge_awards (badge_code, badge_label, event_id, user_id, awarded_by, awarded_at)
-         VALUES ('attended', 'Attended', $1, $2, $3, $4)
+        `INSERT INTO badge_awards (badge_code, badge_label, event_id, user_id, awarded_by, awarded_at, organizer_note)
+         VALUES ('attended', 'Attended', $1, $2, $3, $4, $5)
          ON CONFLICT (event_id, user_id, badge_code)
-         DO UPDATE SET revoked_at = NULL, awarded_at = $4, revocation_reason = NULL
-         RETURNING id, badge_code, badge_label, event_id, user_id, awarded_by, awarded_at`,
-        [realEventId, attendeeId, approvedByOrganizerId, now]
+         DO UPDATE SET revoked_at = NULL, awarded_at = $4, revocation_reason = NULL, organizer_note = COALESCE($5, badge_awards.organizer_note)
+         RETURNING id, badge_code, badge_label, event_id, user_id, awarded_by, awarded_at, organizer_note`,
+        [realEventId, attendeeId, approvedByOrganizerId, now, notes?.trim() || null]
       );
 
       // 4. Update ticket status if exists

@@ -1,25 +1,21 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/api';
 import type { BadgeAward } from '../../types/attendance';
 import { Button } from '../../components/ui/Button';
 import {
-  Award,
-  ShieldCheck,
-  Download,
   Sparkles,
   Ticket as TicketIcon,
+  Clock,
+  ChevronRight,
 } from 'lucide-react';
 
 export const BadgesPage: React.FC = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [badges, setBadges] = useState<BadgeAward[]>([]);
   const [loading, setLoading] = useState(true);
-  const [exportingBadgeId, setExportingBadgeId] = useState<string | null>(null);
-
-  // Hidden canvas reference for client-side badge export
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
     const fetchBadges = async () => {
@@ -39,120 +35,25 @@ export const BadgesPage: React.FC = () => {
     fetchBadges();
   }, [user]);
 
-  // Section 7: Client-side Badge Export to PNG image
-  const handleExportBadge = (badge: BadgeAward) => {
-    setExportingBadgeId(badge.id);
-
-    const canvas = canvasRef.current || document.createElement('canvas');
-    canvas.width = 1200;
-    canvas.height = 630;
-    const ctx = canvas.getContext('2d');
-
-    if (!ctx) {
-      setExportingBadgeId(null);
-      return;
-    }
-
-    // Background gradient
-    const bgGradient = ctx.createLinearGradient(0, 0, 1200, 630);
-    bgGradient.addColorStop(0, '#2D1F23');
-    bgGradient.addColorStop(1, '#63474D');
-    ctx.fillStyle = bgGradient;
-    ctx.fillRect(0, 0, 1200, 630);
-
-    // Card border
-    ctx.strokeStyle = '#AA767C';
-    ctx.lineWidth = 6;
-    ctx.strokeRect(30, 30, 1140, 570);
-
-    // Inner card background
-    ctx.fillStyle = '#FAF7F5';
-    ctx.fillRect(40, 40, 1120, 550);
-
-    // Header bar
-    ctx.fillStyle = '#63474D';
-    ctx.fillRect(40, 40, 1120, 90);
-
-    // Brand title
-    ctx.fillStyle = '#FFFFFF';
-    ctx.font = 'bold 36px serif';
-    ctx.fillText('SHEEBA • OFFICIAL VERIFIED CREDENTIAL', 80, 98);
-
-    // Badge Type Stamp
-    ctx.fillStyle = '#AA767C';
-    ctx.font = 'bold 24px monospace';
-    ctx.fillText(`TIER: ${badge.badgeLabel.toUpperCase()}`, 80, 180);
-
-    // Event Title
-    ctx.fillStyle = '#2D1F23';
-    ctx.font = 'bold 44px serif';
-    ctx.fillText(badge.eventTitle, 80, 245);
-
-    // Given by Organizer (Section 5 & 7 requirement)
-    const givenByText = `Given by ${badge.givenBy || badge.issuerName || badge.organizerName || 'Organizer'}`;
-    ctx.fillStyle = '#63474D';
-    ctx.font = 'bold 26px sans-serif';
-    ctx.fillText(givenByText, 80, 295);
-
-    // Divider line
-    ctx.strokeStyle = '#E8DDD7';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(80, 330);
-    ctx.lineTo(1100, 330);
-    ctx.stroke();
-
-    // Recipient line
-    ctx.fillStyle = '#756366';
-    ctx.font = '20px sans-serif';
-    ctx.fillText('Awarded To Verified Attendee:', 80, 375);
-
-    ctx.fillStyle = '#2D1F23';
-    ctx.font = 'bold 30px serif';
-    ctx.fillText(badge.attendeeName, 80, 415);
-
-    // Logistics
-    ctx.fillStyle = '#756366';
-    ctx.font = '20px sans-serif';
-    ctx.fillText(`Event Date: ${badge.eventDate}`, 80, 470);
-    ctx.fillText(`Location: ${badge.eventLocation}`, 80, 505);
-
-    // Security badge seal on right
-    ctx.fillStyle = '#1b4332';
-    ctx.beginPath();
-    ctx.arc(1020, 450, 55, 0, 2 * Math.PI);
-    ctx.fill();
-
-    ctx.fillStyle = '#FFFFFF';
-    ctx.font = 'bold 16px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('VERIFIED', 1020, 445);
-    ctx.fillText('PRESENCE', 1020, 465);
-    ctx.textAlign = 'left';
-
-    // Download trigger
-    const link = document.createElement('a');
-    const safeTitle = badge.eventTitle.toLowerCase().replace(/[^a-z0-9]/g, '-');
-    link.download = `sheba-badge-${badge.badgeCode}-${safeTitle}.png`;
-    link.href = canvas.toDataURL('image/png');
-    link.click();
-
-    setTimeout(() => {
-      setExportingBadgeId(null);
-    }, 600);
+  const getBadgeImage = (type?: string) => {
+    const t = (type || '').toLowerCase();
+    if (t.includes('hackathon')) return '/badges/hackathon-badge.jpg';
+    if (t.includes('workshop')) return '/badges/workshop-badge.jpg';
+    if (t.includes('meetup')) return '/badges/meetup-badge.jpg';
+    return '/badges/other.jpg';
   };
 
-  const getBadgeIcon = (code: string) => {
-    switch (code) {
+  const getStatusLabel = (code: string) => {
+    switch (code?.toLowerCase()) {
       case 'winner':
-        return '🏆';
-      case 'speaker':
-        return '🎙️';
+        return 'Won';
       case 'participant':
-        return '⭐';
+        return 'Participated';
+      case 'speaker':
+        return 'Speaker';
       case 'attended':
       default:
-        return '🏅';
+        return 'Attended';
     }
   };
 
@@ -184,14 +85,11 @@ export const BadgesPage: React.FC = () => {
 
   return (
     <div className="max-w-5xl mx-auto py-8 px-4 space-y-8 pb-24">
-      {/* Hidden canvas for client-side rendering */}
-      <canvas ref={canvasRef} className="hidden" />
-
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-3 border-b border-gray-100 pb-5">
         <div>
           <div className="flex items-center gap-2">
-            <Award className="w-7 h-7 text-[#63474D]" />
+
             <h1 className="font-serif text-3xl sm:text-4xl font-extrabold text-[#2D1F23]">
               My Badges
             </h1>
@@ -227,32 +125,32 @@ export const BadgesPage: React.FC = () => {
 
           {/* Educational 4-Badge Tier Preview Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 text-left">
-            <div className="p-3.5 rounded-2xl bg-[#FAF7F5] border border-[#E8DDD7] space-y-1">
-              <span className="text-2xl block">🏅</span>
+            <div className="p-3.5 rounded-2xl bg-[#FAF7F5] border border-[#E8DDD7] space-y-2">
+              <img src="/badges/attended-badge.jpg" alt="Attended" className="w-10 h-10 object-contain rounded-lg" />
               <p className="font-bold text-xs text-[#2D1F23]">Attended</p>
               <p className="text-[10px] text-[#756366] leading-tight">
                 Awarded instantly upon door check-in scan.
               </p>
             </div>
 
-            <div className="p-3.5 rounded-2xl bg-[#FAF7F5] border border-[#E8DDD7] space-y-1">
-              <span className="text-2xl block">⭐</span>
+            <div className="p-3.5 rounded-2xl bg-[#FAF7F5] border border-[#E8DDD7] space-y-2">
+              <img src="/badges/participant-badge.jpg" alt="Participant" className="w-10 h-10 object-contain rounded-lg" />
               <p className="font-bold text-xs text-[#2D1F23]">Participant</p>
               <p className="text-[10px] text-[#756366] leading-tight">
                 Awarded for active project submission.
               </p>
             </div>
 
-            <div className="p-3.5 rounded-2xl bg-[#FAF7F5] border border-[#E8DDD7] space-y-1">
-              <span className="text-2xl block">🏆</span>
+            <div className="p-3.5 rounded-2xl bg-[#FAF7F5] border border-[#E8DDD7] space-y-2">
+              <img src="/badges/hackathon-winner-badge.jpg" alt="Winner" className="w-10 h-10 object-contain rounded-lg" />
               <p className="font-bold text-xs text-[#2D1F23]">Winner</p>
               <p className="text-[10px] text-[#756366] leading-tight">
                 Awarded for podium and track achievements.
               </p>
             </div>
 
-            <div className="p-3.5 rounded-2xl bg-[#FAF7F5] border border-[#E8DDD7] space-y-1">
-              <span className="text-2xl block">🎙️</span>
+            <div className="p-3.5 rounded-2xl bg-[#FAF7F5] border border-[#E8DDD7] space-y-2">
+              <img src="/badges/speaker-badge.jpg" alt="Speaker" className="w-10 h-10 object-contain rounded-lg" />
               <p className="font-bold text-xs text-[#2D1F23]">Speaker</p>
               <p className="text-[10px] text-[#756366] leading-tight">
                 Awarded to keynote speakers & mentors.
@@ -270,76 +168,92 @@ export const BadgesPage: React.FC = () => {
           </div>
         </div>
       ) : (
-        /* SECTION 5: STATE 2 — Non-Empty State: Badge Cards */
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {badges.map((b) => (
-            <div
-              key={b.id}
-              className="bg-white rounded-3xl border border-[#E8DDD7] p-6 shadow-xs hover:shadow-md transition-all duration-200 flex flex-col justify-between space-y-4 relative overflow-hidden"
-            >
-              {/* Card Accent Glow */}
-              <div className="absolute top-0 right-0 w-32 h-32 bg-[#63474D]/5 rounded-full -mr-10 -mt-10 pointer-events-none" />
+        /* SECTION 5: STATE 2 — Horizontal Badge Rows */
+        <div className="space-y-3.5">
+          {badges.map((b) => {
+            const badgeImg = getBadgeImage(b.eventType);
+            const statusLabel = getStatusLabel(b.badgeCode);
+            const pillStyle = getBadgePillStyle(b.badgeCode);
 
-              <div className="space-y-3">
-                {/* Top Row: Badge Pill + Glyph */}
-                <div className="flex items-center justify-between">
-                  <span
-                    className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-mono font-bold border ${getBadgePillStyle(
-                      b.badgeCode
-                    )}`}
-                  >
-                    <span>{getBadgeIcon(b.badgeCode)}</span>
-                    <span className="uppercase">{b.badgeLabel}</span>
-                  </span>
-
-                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-200">
-                    <ShieldCheck className="w-3.5 h-3.5" />
-                    Verified
-                  </span>
+            return (
+              <div
+                key={b.id}
+                onClick={() => navigate(`/badge/${b.id}`)}
+                className="bg-white rounded-2xl border border-gray-200 shadow-2xs hover:border-[#63474D] hover:shadow-xs transition-all overflow-hidden flex flex-row items-stretch cursor-pointer group min-h-[140px] sm:min-h-[148px]"
+              >
+                {/* Left Badge Container: bigger size, uncropped high-fidelity badge image */}
+                <div className="w-32 sm:w-44 shrink-0 overflow-hidden bg-[#FAF7F5] border-r border-gray-100 flex items-center justify-center p-3 sm:p-4">
+                  <img
+                    src={badgeImg}
+                    alt={`${statusLabel} Badge`}
+                    className="w-full h-full max-h-28 sm:max-h-32 object-contain rounded-xl drop-shadow-xs group-hover:scale-105 transition-transform duration-300"
+                  />
                 </div>
 
-                {/* Event Name */}
-                <h3 className="font-serif text-xl sm:text-2xl font-bold text-[#2D1F23] leading-snug">
-                  {b.eventTitle}
-                </h3>
+                {/* Rest of the Row */}
+                <div className="flex-1 px-4 sm:px-5 py-3 flex flex-col justify-between min-w-0">
+                  {/* Top Row: Status (Attended, Won, Participated, etc.) + Verified + Chevron */}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span
+                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${pillStyle}`}
+                      >
+                        <span>{statusLabel}</span>
+                      </span>
 
-                {/* Given by [Organizer] line (Section 5 requirement) */}
-                <p className="text-xs font-bold text-[#63474D]">
-                  Given by {b.givenBy || b.issuerName || b.organizerName || 'Organizer'}
-                </p>
+                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                        <img src="/tick.png" alt="Verified" className="w-3.5 h-3.5 object-contain shrink-0" />
+                        Verified
+                      </span>
 
-                {/* Logistics */}
-                <div className="flex flex-wrap items-center gap-y-1 gap-x-4 text-xs text-[#756366] pt-1">
-                  <span className="flex items-center gap-1">
-                    <img src="/calendar.png" alt="Calendar" className="w-3.5 h-3.5 object-contain shrink-0" />
-                    {b.eventDate}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <img src="/location.png" alt="Location" className="w-3.5 h-3.5 object-contain shrink-0" />
-                    {b.eventLocation}
-                  </span>
+                      <span className="text-[10px] text-gray-400 font-mono hidden sm:inline-block">
+                        #{b.id.substring(0, 8)}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <div className="hidden sm:flex items-center text-[#AA767C] group-hover:text-[#63474D] group-hover:translate-x-0.5 transition-all">
+                        <ChevronRight className="w-4 h-4" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Middle: Event Title + Given by + Note snippet */}
+                  <div className="space-y-0.5 my-1">
+                    <h3 className="font-serif font-bold text-base sm:text-lg text-[#2D1F23] group-hover:text-[#63474D] transition-colors truncate">
+                      {b.eventTitle}
+                    </h3>
+                    <p className="text-xs font-semibold text-[#63474D]">
+                      Given by {b.givenBy || b.issuerName || b.organizerName || 'Organizer'}
+                    </p>
+                    {b.organizerNote && (
+                      <p className="text-xs text-gray-500 italic truncate line-clamp-1">
+                        Note: &ldquo;{b.organizerNote}&rdquo;
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Bottom Row: Date and Location (when and where it took place) */}
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[#756366] font-normal pt-1.5 border-t border-gray-100">
+                    <span className="flex items-center gap-1">
+                      <img src="/calendar.png" alt="Calendar" className="w-3.5 h-3.5 object-contain shrink-0" />
+                      {b.eventDate}
+                    </span>
+                    {b.eventTime && (
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-3.5 h-3.5 text-[#AA767C]" />
+                        {b.eventTime}
+                      </span>
+                    )}
+                    <span className="flex items-center gap-1 truncate">
+                      <img src="/location.png" alt="Location" className="w-3.5 h-3.5 object-contain shrink-0" />
+                      {b.eventLocation}
+                    </span>
+                  </div>
                 </div>
               </div>
-
-              {/* Bottom Action: Client-Side Export (Section 7) */}
-              <div className="pt-3 border-t border-[#E8DDD7] flex items-center justify-between">
-                <span className="text-[10px] text-[#756366] font-mono">
-                  Credential #{b.id.substring(0, 8)}
-                </span>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleExportBadge(b)}
-                  isLoading={exportingBadgeId === b.id}
-                  className="flex items-center gap-1.5 text-xs"
-                >
-                  <Download className="w-3.5 h-3.5 text-[#63474D]" />
-                  <span>Export Badge</span>
-                </Button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

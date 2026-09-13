@@ -46,7 +46,7 @@ export class BadgeController {
   // Section 7: Single shared badge-award controller
   static async awardBadge(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const { eventId, event_id, attendeeId, attendee_id, badgeCode, badge_type } = req.body;
+      const { eventId, event_id, attendeeId, attendee_id, badgeCode, badge_type, notes, organizerNote, organizer_note } = req.body;
       const organizerId = req.user!.userId;
       const userRole = req.user!.role;
 
@@ -67,6 +67,7 @@ export class BadgeController {
         badgeCode: targetBadgeCode,
         awardedByOrganizerId: organizerId,
         userRole,
+        notes: notes || organizerNote || organizer_note,
       });
 
       return sendSuccess(res, badge, `Badge "${targetBadgeCode}" awarded successfully.`);

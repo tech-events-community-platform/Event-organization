@@ -44,6 +44,11 @@ export const CheckInPage: React.FC = () => {
     attendeeId: string;
   } | null>(null);
 
+  // Note Modal State for Mark Attended
+  const [noteModalAttendee, setNoteModalAttendee] = useState<AttendeeRosterItem | null>(null);
+  const [organizerNoteInput, setOrganizerNoteInput] = useState('');
+  const [isSubmittingNote, setIsSubmittingNote] = useState(false);
+
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // 1. Fetch Events and auto-select default (Ongoing first, then nearest upcoming)
@@ -112,7 +117,7 @@ export const CheckInPage: React.FC = () => {
   };
 
   // Section 4: Mark Attended (Single atomic write on backend: CheckIn + Attended BadgeAward)
-  const handleMarkAttended = async (attendee: AttendeeRosterItem) => {
+  const handleMarkAttended = async (attendee: AttendeeRosterItem, note?: string) => {
     if (!selectedEventId) return;
     setActionInProgressId(attendee.attendeeId || attendee.id);
 
@@ -134,6 +139,7 @@ export const CheckInPage: React.FC = () => {
       await api.checkIn.markAttended({
         eventId: selectedEventId,
         attendeeId: attendee.attendeeId || attendee.id,
+        notes: note,
       });
 
       setLastActionToast({
@@ -448,7 +454,10 @@ export const CheckInPage: React.FC = () => {
                       <button
                         type="button"
                         disabled={isBusy}
-                        onClick={() => handleMarkAttended(att)}
+                        onClick={() => {
+                          setOrganizerNoteInput('');
+                          setNoteModalAttendee(att);
+                        }}
                         className="px-5 py-2.5 rounded-xl bg-[#2A7B5F] hover:bg-[#236850] active:scale-98 text-white text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                       >
                         <img src="/tick.png" alt="Check In" className="w-4 h-4 object-contain" />
@@ -577,6 +586,85 @@ export const CheckInPage: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Note Prompt Modal on Mark Attended */}
+      {noteModalAttendee && (
+        <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4">
+          <div
+            onClick={() => !isSubmittingNote && setNoteModalAttendee(null)}
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
+          />
+
+          <div className="relative bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-gray-100 z-10 space-y-5 animate-fade-in">
+            <div className="flex items-start justify-between pb-3 border-b border-gray-100">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#2A7B5F]">
+                  Attendance Verification
+                </span>
+                <h3 className="font-serif font-bold text-xl text-[#2D1F23]">
+                  Mark Attended
+                </h3>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Confirm attendance for <strong className="text-[#2D1F23]">{noteModalAttendee.name}</strong> ({noteModalAttendee.email})
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => !isSubmittingNote && setNoteModalAttendee(null)}
+                className="text-gray-400 hover:text-gray-600 p-1 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-bold text-[#2D1F23] mb-1.5">
+                  Organizer's Note <span className="text-gray-400 font-normal">(Optional)</span>
+                </label>
+                <textarea
+                  rows={3}
+                  placeholder="e.g. Participated actively in the design sprint, contributed insightful ideas..."
+                  value={organizerNoteInput}
+                  onChange={(e) => setOrganizerNoteInput(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-[#FAF7F5] border border-[#E8DDD7] rounded-xl text-xs text-[#2D1F23] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#63474D] resize-none"
+                />
+                <p className="text-[11px] text-gray-500 mt-1">
+                  This note will be permanently attached to the attendee's badge credential page.
+                </p>
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-gray-100 flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                disabled={isSubmittingNote}
+                onClick={() => setNoteModalAttendee(null)}
+                className="px-4 py-2 rounded-xl border border-gray-200 text-gray-600 text-xs font-semibold hover:bg-gray-50 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isSubmittingNote}
+                onClick={async () => {
+                  setIsSubmittingNote(true);
+                  try {
+                    await handleMarkAttended(noteModalAttendee, organizerNoteInput.trim() || undefined);
+                    setNoteModalAttendee(null);
+                  } finally {
+                    setIsSubmittingNote(false);
+                  }
+                }}
+                className="px-5 py-2 rounded-xl bg-[#2A7B5F] hover:bg-[#236850] text-white text-xs font-bold shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                <img src="/tick.png" alt="Confirm" className="w-4 h-4 object-contain" />
+                <span>{isSubmittingNote ? 'Marking...' : 'Mark Attended'}</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
