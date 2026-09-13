@@ -5,9 +5,9 @@ export class AdminService {
     const countsRes = await query(`
       SELECT 
         (SELECT COUNT(*)::INTEGER FROM events) AS total_events,
-        (SELECT COUNT(*)::INTEGER FROM users WHERE role = 'attendee') AS total_attendees,
-        (SELECT COUNT(*)::INTEGER FROM users WHERE role = 'organizer') AS total_organizers,
-        (SELECT COUNT(*)::INTEGER FROM users WHERE role = 'organizer' AND approval_status = 'pending') AS pending_organizers,
+        (SELECT COUNT(*)::INTEGER FROM users WHERE role = 'attendee' OR role IS NULL) AS total_attendees,
+        (SELECT COUNT(*)::INTEGER FROM users WHERE role = 'organizer' OR is_organizer = TRUE) AS total_organizers,
+        (SELECT COUNT(*)::INTEGER FROM users WHERE (role = 'organizer' AND approval_status = 'pending') OR organizer_approval_status = 'pending') AS pending_organizers,
         (SELECT COUNT(*)::INTEGER FROM registrations WHERE status = 'registered') AS total_registrations,
         (SELECT COUNT(*)::INTEGER FROM tickets WHERE status = 'CHECKED_IN') AS total_check_ins,
         (SELECT COUNT(*)::INTEGER FROM badge_awards WHERE revoked_at IS NULL) AS total_badges
@@ -41,23 +41,24 @@ export class AdminService {
       FROM users u
       LEFT JOIN registrations r ON u.id = r.user_id AND r.status = 'registered'
       LEFT JOIN tickets t ON u.id = t.user_id
-      WHERE u.role = 'attendee'
+      WHERE u.role = 'attendee' OR u.role IS NULL OR u.role != 'admin'
       GROUP BY u.id
       ORDER BY u.created_at DESC
     `);
 
     const organizersRes = await query(`
       SELECT 
-        u.id, u.full_name, u.email, u.phone, u.organization, u.role, u.is_active, u.approval_status, u.created_at,
+        u.id, u.full_name, u.email, u.phone, u.organization, u.role, u.is_active, u.approval_status,
+        u.is_organizer, u.organizer_approval_status, u.created_at,
         COUNT(DISTINCT e.id)::INTEGER AS events_count,
         COUNT(DISTINCT CASE WHEN t.status = 'CHECKED_IN' THEN t.id END)::INTEGER AS total_check_ins
       FROM users u
       LEFT JOIN events e ON u.id = e.organizer_id
       LEFT JOIN tickets t ON e.id = t.event_id
-      WHERE u.role = 'organizer'
+      WHERE u.role = 'organizer' OR u.is_organizer = TRUE OR (u.organizer_approval_status IS NOT NULL AND u.organizer_approval_status != 'none')
       GROUP BY u.id
       ORDER BY 
-        CASE WHEN u.approval_status = 'pending' THEN 0 ELSE 1 END,
+        CASE WHEN (u.organizer_approval_status = 'pending' OR u.approval_status = 'pending') THEN 0 ELSE 1 END,
         u.created_at DESC
     `);
 
@@ -74,23 +75,29 @@ export class AdminService {
       registeredAt: u.created_at,
     }));
 
-    const organizers = organizersRes.rows.map((o) => ({
-      id: o.id,
-      name: o.full_name,
-      email: o.email,
-      phone: o.phone,
-      organization: o.organization || o.full_name,
-      eventsCount: o.events_count || 0,
-      totalCheckIns: o.total_check_ins || 0,
-      status: o.approval_status === 'pending'
-        ? 'Pending Approval'
-        : o.is_active
-        ? 'Active'
-        : 'Inactive',
-      approvalStatus: o.approval_status || 'pending',
-      isActive: o.is_active,
-      registeredAt: o.created_at,
-    }));
+    const organizers = organizersRes.rows.map((o) => {
+      const effApproval = (o.organizer_approval_status && o.organizer_approval_status !== 'none')
+        ? o.organizer_approval_status
+        : (o.approval_status || 'pending');
+
+      return {
+        id: o.id,
+        name: o.full_name,
+        email: o.email,
+        phone: o.phone,
+        organization: o.organization || o.full_name,
+        eventsCount: o.events_count || 0,
+        totalCheckIns: o.total_check_ins || 0,
+        status: effApproval === 'pending'
+          ? 'Pending Approval'
+          : effApproval === 'approved'
+          ? 'Active'
+          : 'Rejected',
+        approvalStatus: effApproval,
+        isActive: effApproval === 'approved',
+        registeredAt: o.created_at,
+      };
+    });
 
     return { attendees, organizers };
   }
@@ -99,10 +106,12 @@ export class AdminService {
     const res = await query(
       `UPDATE users
        SET approval_status = 'approved',
+           organizer_approval_status = 'approved',
+           is_organizer = TRUE,
            is_active = TRUE,
            updated_at = NOW()
-       WHERE id = $1 AND role = 'organizer'
-       RETURNING id, full_name, email, role, is_active, approval_status`,
+       WHERE id = $1 AND (role = 'organizer' OR is_organizer = TRUE OR organizer_approval_status IS NOT NULL)
+       RETURNING id, full_name, email, role, is_active, approval_status, organizer_approval_status`,
       [userId]
     );
 
@@ -119,10 +128,10 @@ export class AdminService {
     const res = await query(
       `UPDATE users
        SET approval_status = 'rejected',
-           is_active = FALSE,
+           organizer_approval_status = 'rejected',
            updated_at = NOW()
-       WHERE id = $1 AND role = 'organizer'
-       RETURNING id, full_name, email, role, is_active, approval_status`,
+       WHERE id = $1 AND (role = 'organizer' OR is_organizer = TRUE OR organizer_approval_status IS NOT NULL)
+       RETURNING id, full_name, email, role, is_active, approval_status, organizer_approval_status`,
       [userId]
     );
 

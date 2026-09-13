@@ -9,13 +9,10 @@ import { EventDetailModal } from '../../components/organizer/EventDetailModal';
 import {
   Search,
   PlusCircle,
-  Calendar,
-  MapPin,
   QrCode,
   BarChart3,
   Award,
   Copy,
-  Check,
   Trash2,
   AlertTriangle,
   X,
@@ -153,7 +150,7 @@ export const EventListPage: React.FC = () => {
         </div>
       ) : filteredEvents.length === 0 ? (
         <div className="bg-white rounded-3xl p-10 text-center border border-gray-200 space-y-3 shadow-2xs">
-          <Calendar className="w-10 h-10 text-[#AA767C] mx-auto" />
+          <img src="/calendar.png" alt="Calendar" className="w-10 h-10 object-contain mx-auto" />
           <h3 className="font-serif text-base font-bold text-[#2D1F23]">No events found</h3>
           <p className="text-xs text-gray-500 font-light">Set up registration, door QR scanner, and sponsor reports.</p>
           <Link to="/organizer/events/create">
@@ -187,11 +184,11 @@ export const EventListPage: React.FC = () => {
                 </h3>
                 <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500 font-light">
                   <span className="flex items-center gap-1">
-                    <Calendar className="w-3.5 h-3.5 text-[#63474D]" />
+                    <img src="/calendar.png" alt="Calendar" className="w-3.5 h-3.5 object-contain shrink-0" />
                     {evt.date} • {evt.time}
                   </span>
                   <span className="flex items-center gap-1">
-                    <MapPin className="w-3.5 h-3.5 text-[#63474D]" />
+                    <img src="/location.png" alt="Location" className="w-3.5 h-3.5 object-contain shrink-0" />
                     {evt.location}
                   </span>
                 </div>
@@ -204,28 +201,28 @@ export const EventListPage: React.FC = () => {
               >
                 <div className="flex items-center gap-4 text-xs pr-2">
                   <div>
-                    <span className="text-[10px] uppercase text-gray-400 font-bold block">Turnout</span>
-                    <span className="font-bold text-[#2A7B5F] text-sm">
-                      {evt.checkedInCount} / {evt.registeredCount}
+                    <span className="text-gray-400 block text-[10px]">Registered</span>
+                    <span className="font-bold text-[#2D1F23]">
+                      {evt.registeredCount} / {evt.capacity}
                     </span>
                   </div>
                   <div>
-                    <span className="text-[10px] uppercase text-gray-400 font-bold block">Capacity</span>
-                    <span className="font-bold text-[#2D1F23] text-sm">{evt.capacity}</span>
+                    <span className="text-gray-400 block text-[10px]">Checked In</span>
+                    <span className="font-bold text-[#2A7B5F]">{evt.checkedInCount}</span>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                   <button
                     type="button"
                     onClick={(e) => handleCopyLink(evt.shareLinkToken, e)}
-                    className="p-2 bg-gray-50 border border-gray-200 hover:bg-gray-100 rounded-xl text-xs font-semibold text-[#2D1F23] cursor-pointer transition-colors"
-                    title="Copy Share Link"
+                    className="p-2 text-gray-500 hover:text-[#63474D] hover:bg-gray-100 rounded-xl transition-colors"
+                    title="Copy Registration Link"
                   >
                     {copiedId === evt.shareLinkToken ? (
-                      <Check className="w-4 h-4 text-[#2A7B5F]" />
+                      <img src="/tick.png" alt="Copied" className="w-4 h-4 object-contain shrink-0" />
                     ) : (
-                      <Copy className="w-4 h-4 text-[#AA767C]" />
+                      <Copy className="w-4 h-4" />
                     )}
                   </button>
                   <Link to={`/organizer/events/${evt.id}/scanner`}>

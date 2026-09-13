@@ -7,7 +7,12 @@ const router = Router();
 
 router.post('/register', validateRegistration, AuthController.register);
 router.post('/login', validateLogin, AuthController.login);
+router.post('/forgot-password', AuthController.forgotPassword);
+router.post('/google', AuthController.googleLogin);
+router.post('/reset-password', AuthController.resetPassword);
 router.get('/me', authenticate, AuthController.getMe);
+router.post('/apply-organizer', authenticate, AuthController.applyForOrganizer);
+router.post('/switch-role', authenticate, AuthController.switchRole);
 router.post('/logout', authenticate, AuthController.logout);
 
 export default router;

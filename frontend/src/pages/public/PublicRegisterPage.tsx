@@ -3,22 +3,18 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import type { Event } from '../../types/event';
-import type { Ticket } from '../../types/ticket';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
-import { TicketCard } from '../../components/ticket/TicketCard';
 import {
-  Calendar,
   Clock,
-  MapPin,
-  Users,
-  ShieldCheck,
-  CheckCircle2,
   AlertCircle,
-  CreditCard,
-  QrCode,
-  ArrowLeft,
 } from 'lucide-react';
+import {
+  TelegramIcon,
+  XIcon,
+  TikTokIcon,
+  YouTubeIcon,
+} from '../../components/ui/SocialIcons';
 
 export const PublicRegisterPage: React.FC = () => {
   const { token, id } = useParams<{ token?: string; id?: string }>();
@@ -27,17 +23,10 @@ export const PublicRegisterPage: React.FC = () => {
 
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [issuedTicket, setIssuedTicket] = useState<Ticket | null>(null);
-
-  // Chapa payment modal simulation state
-  const [showChapaModal, setShowChapaModal] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'Telebirr' | 'CBE_Birr' | 'Local_Card'>('Telebirr');
+  const [isAlreadyRegistered, setIsAlreadyRegistered] = useState(false);
 
   useEffect(() => {
-    const fetchEvent = async () => {
+    const fetchEventAndStatus = async () => {
       setLoading(true);
       try {
         let fetched: Event | null = null;
@@ -50,103 +39,70 @@ export const PublicRegisterPage: React.FC = () => {
 
         if (fetched && user) {
           try {
-            const existing = await api.registration.getTicketByEvent(fetched.id, user.id);
-            if (existing) {
-              navigate(`/app/ticket/${fetched.id}`);
-              return;
+            const ticket = await api.registration.getTicketByEvent(fetched.id, user.id);
+            if (ticket) {
+              setIsAlreadyRegistered(true);
             }
           } catch {
-            // Ignore lookup error
+            // Not registered
           }
         }
       } catch (e) {
-        console.error(e);
+        console.error('Failed to load event:', e);
       } finally {
         setLoading(false);
       }
     };
-    fetchEvent();
-  }, [token, id, user, navigate]);
 
-  const handleAnswerChange = (questionId: string, val: string) => {
-    setAnswers((prev) => ({ ...prev, [questionId]: val }));
-  };
+    fetchEventAndStatus();
+  }, [token, id, user]);
 
-  const handleRegisterSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMsg(null);
-
-    if (!isAuthenticated || !user) {
-      navigate('/login');
-      return;
-    }
-
-    if (!event) return;
-
-    // Check required custom questions
-    for (const q of event.customQuestions || []) {
-      if (q.isRequired && !answers[q.id]?.trim()) {
-        setErrorMsg(`Please answer the required question: "${q.questionText}"`);
-        return;
-      }
-    }
-
-    // If paid event, trigger Chapa checkout modal
-    if (event.isPaid && event.ticketPrice > 0) {
-      setShowChapaModal(true);
-      return;
-    }
-
-    // Free event registration
-    setIsSubmitting(true);
+  const organizerSocials = React.useMemo(() => {
+    if (event?.organizerSocials) return event.organizerSocials;
     try {
-      const res = await api.registration.registerForEvent({
-        eventId: event.id,
-        attendee: user,
-        answers,
-      });
-      if (res.ticket) {
-        navigate(`/app/ticket/${event.id}`);
-        return;
-      }
-      setIssuedTicket(res.ticket);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Registration failed.');
-    } finally {
-      setIsSubmitting(false);
+      const stored =
+        (event?.organizerId && localStorage.getItem(`sheeba_organizer_socials_${event.organizerId}`)) ||
+        localStorage.getItem('sheeba_organizer_socials');
+      if (stored) return JSON.parse(stored);
+    } catch {
+      // ignore
     }
-  };
+    return null;
+  }, [event]);
 
-  const handleConfirmChapaPayment = async () => {
-    if (!event || !user) return;
-    setIsSubmitting(true);
+  const hasSocials = Boolean(
+    organizerSocials &&
+      (organizerSocials.telegram ||
+        organizerSocials.x ||
+        organizerSocials.tiktok ||
+        organizerSocials.youtube)
+  );
+
+
+
+  const getCalendarTile = (dateStr?: string) => {
+    if (!dateStr) return { month: 'EVENT', day: '•', weekday: '', fullDate: '' };
     try {
-      const res = await api.registration.registerForEvent({
-        eventId: event.id,
-        attendee: user,
-        answers,
-        paymentReference: `CHP_TX_${Date.now()}`,
-      });
-      setShowChapaModal(false);
-      if (res.ticket) {
-        navigate(`/app/ticket/${event.id}`);
-        return;
+      const d = new Date(dateStr);
+      if (!isNaN(d.getTime())) {
+        const month = d.toLocaleString('en-US', { month: 'short' }).toUpperCase();
+        const day = d.getDate();
+        const weekday = d.toLocaleString('en-US', { weekday: 'long' });
+        const fullDate = d.toLocaleString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+        return { month, day, weekday, fullDate };
       }
-      setIssuedTicket(res.ticket);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Payment processing failed.');
-    } finally {
-      setIsSubmitting(false);
+    } catch {
+      // ignore
     }
+    return { month: 'EVENT', day: '•', weekday: '', fullDate: dateStr };
   };
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto py-16 px-4">
-        <div className="animate-pulse space-y-4">
-          <div className="h-48 bg-[#E8DDD7]/50 rounded-3xl"></div>
-          <div className="h-8 bg-[#E8DDD7]/50 w-3/4 rounded-xl"></div>
-          <div className="h-20 bg-[#E8DDD7]/50 rounded-xl"></div>
+      <div className="max-w-4xl mx-auto py-20 px-4">
+        <div className="animate-pulse space-y-6">
+          <div className="h-10 bg-[#E8DDD7]/50 w-2/3 rounded-xl"></div>
+          <div className="h-64 bg-[#E8DDD7]/50 rounded-3xl"></div>
         </div>
       </div>
     );
@@ -154,289 +110,281 @@ export const PublicRegisterPage: React.FC = () => {
 
   if (!event) {
     return (
-      <div className="max-w-md mx-auto py-16 px-4 text-center space-y-4">
+      <div className="max-w-md mx-auto py-20 px-4 text-center space-y-4">
         <AlertCircle className="w-12 h-12 text-[#AA767C] mx-auto" />
-        <h2 className="font-serif text-2xl font-bold text-[#2D1F23]">Event Link Not Found</h2>
+        <h2 className="font-serif text-2xl font-bold text-[#2D1F23]">Event Not Found</h2>
         <p className="text-xs text-[#756366]">
-          This registration link may be invalid, closed, or the event was removed by the organizer.
+          This event link may be invalid, closed, or the event was removed by the organizer.
         </p>
-        <Link to="/search">
+        <Link to="/login">
           <Button variant="outline" size="sm">
-            Browse All Events
+            Sign In to Sheba
           </Button>
         </Link>
       </div>
     );
   }
 
-  // Registration Complete Screen fallback
-  if (issuedTicket) {
-    return (
-      <div className="max-w-md mx-auto py-10 px-4 space-y-6">
-        <div className="text-center space-y-1">
-          <Badge variant="success" icon={<ShieldCheck className="w-3.5 h-3.5" />}>
-            Registration Confirmed & Dynamic QR Pass Issued
-          </Badge>
-          <h2 className="font-serif text-2xl font-extrabold text-[#2D1F23]">{event.title}</h2>
-          <p className="text-xs text-[#756366]">
-            Pass issued to <strong>{issuedTicket.attendeeEmail}</strong>
-          </p>
-        </div>
+  const isFull = Boolean(
+    event.isFull || (event.capacity > 0 && event.registeredCount >= event.capacity) || event.status === 'closed'
+  );
 
-        <TicketCard ticket={issuedTicket} onDownload={() => window.print()} />
+  const posterImage =
+    event.posterImageUrl ||
+    event.bannerUrl ||
+    'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80';
 
-        <div className="flex gap-3 pt-2">
-          <Link to="/app/events" className="flex-1">
-            <Button fullWidth variant="primary">
-              View My Tickets Wallet
-            </Button>
-          </Link>
-          <Link to="/app/profile" className="flex-1">
-            <Button fullWidth variant="outline">
-              My Profile & Badges
-            </Button>
-          </Link>
-        </div>
-      </div>
-    );
-  }
+  const cal = getCalendarTile(event.date);
 
-  const isFull = event.registeredCount >= event.capacity || event.status === 'closed';
 
+
+  // Modern 2-Column Structure
   return (
-    <div className="max-w-2xl mx-auto py-10 px-4 space-y-6">
-      <Link
-        to="/search"
-        className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#63474D] hover:underline"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Back to Events
-      </Link>
-
-      {/* Event Header Banner */}
-      <div className="bg-white rounded-3xl overflow-hidden border border-[#E8DDD7] shadow-xs">
-        {event.bannerUrl && (
-          <img
-            src={event.bannerUrl}
-            alt={event.title}
-            className="w-full h-48 sm:h-56 object-cover"
-          />
-        )}
-        <div className="p-6 sm:p-8 space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <Badge variant="primary" className="uppercase font-mono">
-              {event.type}
-            </Badge>
-            <span className="text-xs font-bold text-[#63474D]">
-              {event.isPaid ? `${event.ticketPrice} ETB` : 'FREE ADMISSION'}
-            </span>
-          </div>
-
-          <h1 className="font-serif text-2xl sm:text-3xl font-extrabold text-[#2D1F23]">
-            {event.title}
-          </h1>
-
-          <p className="text-xs font-semibold text-[#AA767C]">
-            Hosted by {event.organizerName}
-          </p>
-
-          <p className="text-xs text-[#756366] leading-relaxed">
-            {event.description}
-          </p>
-
-          {/* Logistics Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 text-xs text-[#2D1F23]">
-            <div className="p-3 rounded-xl bg-[#FAF7F5] border border-[#E8DDD7] space-y-1">
-              <span className="text-[10px] uppercase font-bold text-[#756366] flex items-center gap-1">
-                <Calendar className="w-3 h-3 text-[#63474D]" /> Date
+    <div className="w-full py-8 sm:py-10 px-4 sm:px-6 lg:px-12">
+      <div className="max-w-5xl mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
+          
+          {/* LEFT COLUMN: Title, Date/Time, Location, Registration Area, Description */}
+          <div className="lg:col-span-7 space-y-6 order-2 lg:order-1">
+            
+            {/* Event Category & Price Row (Increased size by a few px for strong visibility) */}
+            <div className="flex flex-wrap items-center gap-3">
+              <Badge variant="primary" className="uppercase font-mono text-sm sm:text-base py-1.5 px-4 rounded-xl shadow-xs font-bold">
+                {event.type}
+              </Badge>
+              <span className="text-gray-400 font-bold">•</span>
+              <span className="font-extrabold text-base sm:text-lg text-[#1B6B4A] tracking-wide">
+                {event.isPaid ? `${event.ticketPrice} ETB` : 'FREE ADMISSION'}
               </span>
-              <p className="font-semibold">{event.date}</p>
             </div>
 
-            <div className="p-3 rounded-xl bg-[#FAF7F5] border border-[#E8DDD7] space-y-1">
-              <span className="text-[10px] uppercase font-bold text-[#756366] flex items-center gap-1">
-                <Clock className="w-3 h-3 text-[#63474D]" /> Time
-              </span>
-              <p className="font-semibold">{event.time}</p>
+            {/* Event Title */}
+            <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-extrabold text-[#2D1F23] tracking-tight leading-tight">
+              {event.title}
+            </h1>
+
+            {/* Date/Time and Location in the same row (Location to the right of date) */}
+            <div className="flex flex-wrap items-center gap-x-8 sm:gap-x-10 gap-y-3 pt-1">
+              {/* Date & Time */}
+              <div className="flex items-center gap-3.5">
+                <div className="flex flex-col items-center justify-center shrink-0 text-center w-10">
+                  <span className="text-[11px] font-bold text-[#63474D] uppercase leading-tight tracking-wider">
+                    {cal.month}
+                  </span>
+                  <span className="text-xl font-extrabold text-[#2D1F23] leading-tight">
+                    {cal.day}
+                  </span>
+                </div>
+                <div className="space-y-0.5">
+                  <p className="text-xs font-bold text-[#2D1F23]">
+                    {cal.weekday ? `${cal.weekday}, ${cal.fullDate}` : event.date}
+                  </p>
+                  <p className="text-xs text-[#756366] flex items-center gap-1">
+                    <Clock className="w-3.5 h-3.5 text-[#AA767C]" />
+                    <span>{event.time || `${event.startTime} - ${event.endTime}`}</span>
+                  </p>
+                </div>
+              </div>
+
+              {/* Location (in the space to the right of date in the same row) */}
+              <div className="flex items-center gap-3">
+                <div className="w-6 flex items-center justify-center shrink-0">
+                  <img src="/location.png" alt="Location" className="w-5 h-5 object-contain" />
+                </div>
+                <div className="space-y-0.5">
+                  <p className="text-xs font-bold text-[#2D1F23]">{event.venueName || event.location}</p>
+                  <p className="text-xs text-[#756366] truncate max-w-[240px]">{event.location}</p>
+                </div>
+              </div>
             </div>
 
-            <div className="p-3 rounded-xl bg-[#FAF7F5] border border-[#E8DDD7] space-y-1">
-              <span className="text-[10px] uppercase font-bold text-[#756366] flex items-center gap-1">
-                <Users className="w-3 h-3 text-[#63474D]" /> Capacity
-              </span>
-              <p className="font-semibold">
-                {event.registeredCount} / {event.capacity} Registered
-              </p>
-            </div>
-          </div>
+            {/* REGISTRATION SECTION (Unboxed, brought up) */}
+            <div className="space-y-4 pt-1">
+              <div className="flex items-center justify-between pb-2 border-b border-[#E8DDD7]/60">
+                <span className="text-xs font-bold uppercase tracking-wider text-[#756366]">
+                  Registration
+                </span>
+                {isFull && (
+                  <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200">
+                    Registration Full / Closed
+                  </span>
+                )}
+              </div>
 
-          <div className="text-xs text-[#756366] flex items-center gap-1.5 pt-1">
-            <MapPin className="w-4 h-4 text-[#63474D] flex-shrink-0" />
-            <span>{event.location}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Registration Form */}
-      <div className="bg-white p-6 sm:p-8 rounded-3xl border border-[#E8DDD7] shadow-xs space-y-6">
-        <div>
-          <h2 className="font-serif text-lg font-bold text-[#2D1F23]">
-            Attendee Registration Form
-          </h2>
-          <p className="text-xs text-[#756366]">
-            Complete the questions set by the organizer to secure your verified entry pass.
-          </p>
-        </div>
-
-        {errorMsg && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 flex-shrink-0" />
-            <span>{errorMsg}</span>
-          </div>
-        )}
-
-        {!isAuthenticated ? (
-          <div className="p-5 bg-[#FAF7F5] rounded-2xl border border-[#E8DDD7] text-center space-y-3">
-            <p className="text-xs text-[#756366]">
-              Sheba registration requires an Attendee Account to associate your verified credentials & dynamic QR ticket pass.
-            </p>
-            <Link to="/login">
-              <Button variant="primary" size="sm">
-                Sign In / Register Attendee Account
-              </Button>
-            </Link>
-          </div>
-        ) : (
-          <form onSubmit={handleRegisterSubmit} className="space-y-4">
-            <div className="p-3.5 bg-[#FAF7F5] rounded-xl border border-[#E8DDD7] text-xs space-y-1">
-              <span className="text-[10px] text-[#756366] uppercase font-bold">Registering As</span>
-              <p className="font-bold text-[#2D1F23]">{user?.name} ({user?.email})</p>
-            </div>
-
-            {/* Custom Organizer Questions */}
-            {event.customQuestions && event.customQuestions.length > 0 && (
-              <div className="space-y-3 pt-2">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-[#756366]">
-                  Organizer Custom Questions
-                </h3>
-                {event.customQuestions.map((q) => (
-                  <div key={q.id} className="space-y-1">
-                    <label className="block text-xs font-bold text-[#2D1F23]">
-                      {q.questionText} {q.isRequired && <span className="text-red-500">*</span>}
-                    </label>
-                    <input
-                      type="text"
-                      required={q.isRequired}
-                      value={answers[q.id] || ''}
-                      onChange={(e) => handleAnswerChange(q.id, e.target.value)}
-                      placeholder="Your response..."
-                      className="w-full px-3.5 py-2 bg-[#FAF7F5] border border-[#E8DDD7] rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-[#63474D]"
-                    />
+              {/* Already Registered State */}
+              {isAlreadyRegistered ? (
+                <div className="space-y-3 pt-2 text-left">
+                  <div className="flex items-center justify-start gap-2 text-xs font-semibold text-emerald-800">
+                    <img src="/tick.png" alt="Done" className="w-5 h-5 object-contain shrink-0" />
+                    <span>You are registered for this event!</span>
                   </div>
-                ))}
-              </div>
-            )}
-
-
-
-            <Button
-              type="submit"
-              fullWidth
-              variant={isFull ? 'ghost' : 'primary'}
-              size="lg"
-              disabled={isFull || isSubmitting}
-              isLoading={isSubmitting}
-            >
-              {isFull
-                ? 'Event Registration Closed (Capacity Reached)'
-                : event.isPaid
-                ? `Proceed to Payment (${event.ticketPrice} ETB via Chapa)`
-                : 'Confirm Free Registration & Get QR Pass'}
-            </Button>
-          </form>
-        )}
-      </div>
-
-      {/* Chapa Split Payment Modal */}
-      {showChapaModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-fade-in">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full border border-[#E8DDD7] shadow-xl space-y-6">
-            <div className="flex items-center justify-between pb-4 border-b border-[#E8DDD7]">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-[#2A7B5F] flex items-center justify-center text-white font-bold text-xs">
-                  C
+                  <div className="flex justify-start gap-3 pt-1">
+                    <Link to={`/app/ticket/${event.id}`}>
+                      <Button variant="primary" size="sm">
+                        View Entry Pass
+                      </Button>
+                    </Link>
+                    <Link to="/app/badges">
+                      <Button variant="outline" size="sm">
+                        View Badges
+                      </Button>
+                    </Link>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-serif font-bold text-base text-[#2D1F23]">Chapa Ethiopia Checkout</h3>
-                  <p className="text-[10px] text-[#756366]">Split-Payment Gateway (ETB Currency)</p>
+              ) : (
+                /* Welcome message (No red line) & Left-aligned Register Button */
+                <div className="space-y-3 pt-1">
+                  {isAuthenticated && user ? (
+                    <div className="space-y-1 text-left">
+                      <p className="font-serif text-sm sm:text-base font-bold text-[#2D1F23]">
+                        Welcome, {user.name}!
+                      </p>
+                      {user.role === 'ORGANIZER' && (
+                        <p className="text-xs text-[#756366]">
+                          Signed in with Organizer account. Registering will link to your personal Attendee profile so you can collect verified badges.
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="font-serif text-sm sm:text-base font-bold text-[#2D1F23] text-left">
+                      Welcome! Create an attendee account or sign in to register and earn verifiable badges.
+                    </p>
+                  )}
+
+                  {isFull ? (
+                    <div className="p-3 text-left text-xs font-bold text-gray-500">
+                      Registration is full
+                    </div>
+                  ) : (
+                    <div className="flex justify-start pt-2">
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        className="px-8 py-2.5 text-xs font-bold rounded-xl shadow-xs hover:shadow-sm cursor-pointer"
+                        onClick={() => {
+                          const targetUrl = token ? `/e/${token}/register` : `/events/${event.id}/register/form`;
+                          navigate(targetUrl);
+                        }}
+                      >
+                        Register
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* About Event Description (80% see-through glassmorphic card with colored title row & black paragraph text) */}
+            <div className="pt-2">
+              <div className="rounded-2xl overflow-hidden border border-white/25 shadow-sm">
+                {/* Colored row for 'About event' title */}
+                <div className="bg-[#63474D] px-6 py-3.5 rounded-t-2xl">
+                  <h2 className="font-serif font-bold text-base sm:text-lg text-white">About Event</h2>
+                </div>
+                {/* 80% see-through glassmorphic card for paragraph with border radius and black text */}
+                <div className="bg-white/20 backdrop-blur-md p-6 border-x border-b border-white/25 rounded-b-2xl">
+                  <p className="text-xs sm:text-sm text-black font-medium leading-relaxed whitespace-pre-line">
+                    {event.description}
+                  </p>
                 </div>
               </div>
-              <Badge variant="success">Secured</Badge>
-            </div>
-
-            <div className="space-y-3 bg-[#FAF7F5] p-4 rounded-2xl border border-[#E8DDD7] text-xs">
-              <div className="flex justify-between">
-                <span className="text-[#756366]">Event Ticket</span>
-                <span className="font-bold text-[#2D1F23]">{event.title}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[#756366]">Ticket Price</span>
-                <span className="font-bold text-[#2D1F23]">{event.ticketPrice} ETB</span>
-              </div>
-              <div className="flex justify-between text-[11px] text-[#756366] pt-1 border-t border-[#E8DDD7]">
-                <span>Sheba Platform Fee (3% split)</span>
-                <span>{(event.ticketPrice * 0.03).toFixed(2)} ETB</span>
-              </div>
-              <div className="flex justify-between text-[11px] text-[#756366]">
-                <span>Organizer Settlement</span>
-                <span>{(event.ticketPrice * 0.97).toFixed(2)} ETB</span>
-              </div>
-            </div>
-
-            {/* Payment Method Selector */}
-            <div className="space-y-2">
-              <label className="block text-xs font-bold text-[#2D1F23]">Select Payment Method</label>
-              <div className="grid grid-cols-3 gap-2">
-                {(['Telebirr', 'CBE_Birr', 'Local_Card'] as const).map((method) => (
-                  <button
-                    key={method}
-                    type="button"
-                    onClick={() => setPaymentMethod(method)}
-                    className={`py-2 px-3 rounded-xl text-xs font-bold border text-center transition-all ${
-                      paymentMethod === method
-                        ? 'border-[#63474D] bg-[#63474D] text-white shadow-xs'
-                        : 'border-[#E8DDD7] bg-[#FAF7F5] text-[#756366] hover:bg-white'
-                    }`}
-                  >
-                    {method === 'Telebirr' ? 'Telebirr' : method === 'CBE_Birr' ? 'CBE Birr' : 'Debit Card'}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex gap-3 pt-2">
-              <Button
-                variant="outline"
-                size="sm"
-                fullWidth
-                onClick={() => setShowChapaModal(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="accent"
-                size="sm"
-                fullWidth
-                isLoading={isSubmitting}
-                onClick={handleConfirmChapaPayment}
-                icon={<CreditCard className="w-4 h-4" />}
-              >
-                Pay {event.ticketPrice} ETB
-              </Button>
             </div>
           </div>
+
+          {/* RIGHT COLUMN: Poster Image on the Right + Unboxed Presented By with Socials */}
+          <div className="lg:col-span-5 lg:sticky lg:top-24 space-y-4 order-1 lg:order-2">
+            <div className="rounded-3xl overflow-hidden shadow-lg border border-[#E8DDD7] bg-white aspect-[4/5] sm:aspect-square lg:aspect-[4/5] relative">
+              <img
+                src={posterImage}
+                alt={event.title}
+                className="w-full h-full object-cover"
+              />
+            </div>
+
+            {/* Presented By Info & Social Icons (Text completely white) */}
+            <div className="flex items-center justify-between gap-4 pt-1">
+              <div className="flex items-center gap-3 min-w-0">
+                <img
+                  src={event.organizerAvatar || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=150&q=80'}
+                  alt={event.organizerName}
+                  className="w-10 h-10 rounded-full object-cover shrink-0 border border-white/40"
+                />
+                <div className="min-w-0">
+                  <span className="text-[11px] uppercase font-bold text-white/90 block">Presented by</span>
+                  <p className="font-bold text-sm text-white truncate">{event.organizerName}</p>
+                </div>
+              </div>
+
+              {/* Social icons beside organizer info */}
+              {hasSocials && (
+                <div className="flex items-center gap-2 shrink-0">
+                  {organizerSocials?.telegram && (
+                    <a
+                      href={
+                        organizerSocials.telegram.startsWith('http')
+                          ? organizerSocials.telegram
+                          : `https://t.me/${organizerSocials.telegram.replace('@', '')}`
+                      }
+                      target="_blank"
+                      rel="noreferrer"
+                      className="w-7 h-7 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition-colors border border-white/30"
+                      title="Telegram"
+                    >
+                      <TelegramIcon className="w-4 h-4" />
+                    </a>
+                  )}
+                  {organizerSocials?.x && (
+                    <a
+                      href={
+                        organizerSocials.x.startsWith('http')
+                          ? organizerSocials.x
+                          : `https://x.com/${organizerSocials.x.replace('@', '')}`
+                      }
+                      target="_blank"
+                      rel="noreferrer"
+                      className="w-7 h-7 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition-colors border border-white/30"
+                      title="X (Twitter)"
+                    >
+                      <XIcon className="w-3.5 h-3.5" />
+                    </a>
+                  )}
+                  {organizerSocials?.tiktok && (
+                    <a
+                      href={
+                        organizerSocials.tiktok.startsWith('http')
+                          ? organizerSocials.tiktok
+                          : `https://tiktok.com/@${organizerSocials.tiktok.replace('@', '')}`
+                      }
+                      target="_blank"
+                      rel="noreferrer"
+                      className="w-7 h-7 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition-colors border border-white/30"
+                      title="TikTok"
+                    >
+                      <TikTokIcon className="w-4 h-4 text-white" />
+                    </a>
+                  )}
+                  {organizerSocials?.youtube && (
+                    <a
+                      href={
+                        organizerSocials.youtube.startsWith('http')
+                          ? organizerSocials.youtube
+                          : `https://youtube.com/${organizerSocials.youtube}`
+                      }
+                      target="_blank"
+                      rel="noreferrer"
+                      className="w-7 h-7 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition-colors border border-white/30"
+                      title="YouTube"
+                    >
+                      <YouTubeIcon className="w-4 h-4" />
+                    </a>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
         </div>
-      )}
+      </div>
     </div>
   );
 };

@@ -5,8 +5,6 @@ import type { Event } from '../../types/event';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import {
-  Calendar,
-  MapPin,
   QrCode,
   BarChart3,
   Award,
@@ -70,11 +68,11 @@ export const EventDashboardPage: React.FC = () => {
 
         <div className="flex flex-wrap items-center gap-6 text-xs text-[#E8DDD7]">
           <span className="flex items-center gap-1.5">
-            <Calendar className="w-4 h-4 text-[#FFA686]" />
+            <img src="/calendar.png" alt="Calendar" className="w-4 h-4 object-contain shrink-0" />
             {event.date} • {event.time}
           </span>
           <span className="flex items-center gap-1.5">
-            <MapPin className="w-4 h-4 text-[#FFA686]" />
+            <img src="/location.png" alt="Location" className="w-4 h-4 object-contain shrink-0" />
             {event.location}
           </span>
         </div>

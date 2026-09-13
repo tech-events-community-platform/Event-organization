@@ -33,6 +33,48 @@ export class BadgeController {
     }
   }
 
+  static async getAttendedBadgeHolders(req: Request, res: Response, next: NextFunction) {
+    try {
+      const eventId = req.params.eventId as string;
+      const attendees = await BadgeService.getAttendedBadgeHolders(eventId);
+      return sendSuccess(res, attendees, 'Attended badge holders retrieved.');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // Section 7: Single shared badge-award controller
+  static async awardBadge(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const { eventId, event_id, attendeeId, attendee_id, badgeCode, badge_type } = req.body;
+      const organizerId = req.user!.userId;
+      const userRole = req.user!.role;
+
+      const targetEventId = eventId || event_id;
+      const targetAttendeeId = attendeeId || attendee_id;
+      const targetBadgeCode = (badgeCode || badge_type) as BadgeCode;
+
+      if (!targetEventId || !targetAttendeeId || !targetBadgeCode) {
+        return res.status(400).json({
+          success: false,
+          message: 'Missing required parameters: eventId, attendeeId, badgeCode (Participant, Winner, Speaker).',
+        });
+      }
+
+      const badge = await BadgeService.awardBadge({
+        eventId: targetEventId,
+        attendeeId: targetAttendeeId,
+        badgeCode: targetBadgeCode,
+        awardedByOrganizerId: organizerId,
+        userRole,
+      });
+
+      return sendSuccess(res, badge, `Badge "${targetBadgeCode}" awarded successfully.`);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async bulkAwardBadges(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const { eventId, attendeeRosterIds, attendeeUserIds, badgeCode } = req.body;

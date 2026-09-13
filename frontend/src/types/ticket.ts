@@ -1,6 +1,6 @@
 import type { EventType } from './event';
 
-export type TicketStatus = 'Valid' | 'Checked in' | 'Expired' | 'Cancelled';
+export type TicketStatus = 'Valid' | 'Checked in' | 'Used' | 'Expired' | 'Cancelled';
 
 export interface Ticket {
   id: string; // e.g. "SHB-8921-2026"

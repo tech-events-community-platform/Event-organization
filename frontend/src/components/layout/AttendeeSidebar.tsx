@@ -1,45 +1,35 @@
 import React from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
-  LayoutDashboard,
   Ticket,
   Award,
-  Compass,
-  User,
-  Clock,
   Settings,
-  LogOut,
   ShieldCheck,
 } from 'lucide-react';
 
 export const AttendeeSidebar: React.FC = () => {
   const location = useLocation();
-  const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
 
   const navItems = [
-    { label: 'Dashboard Overview', path: '/app', icon: LayoutDashboard },
-    { label: 'My Tickets & Passes', path: '/app/events', icon: Ticket },
-    { label: 'My Badges & Turnout', path: '/app/record', icon: Award },
-    { label: 'Explore Events', path: '/app/explore', icon: Compass },
-    { label: 'My Profile', path: '/app/profile', icon: User },
-    { label: 'Attendance Timeline', path: '/app/profile/attendance', icon: Clock },
-    { label: 'Account Settings', path: '/app/settings', icon: Settings },
+    { label: 'Badges', path: '/app', icon: Award },
+    { label: 'My Registrations', path: '/app/events', icon: Ticket },
+    { label: 'Settings', path: '/app/settings', icon: Settings },
   ];
 
   const isActive = (path: string) => {
-    if (path === '/app') return location.pathname === '/app';
-    if (path === '/app/events') return location.pathname === '/app/events' || location.pathname.startsWith('/app/ticket');
-    if (path === '/app/profile') return location.pathname === '/app/profile';
+    if (path === '/app') return location.pathname === '/app' || location.pathname === '/app/badges';
+    if (path === '/app/events') return location.pathname === '/app/events' || location.pathname === '/app/registrations' || location.pathname.startsWith('/app/ticket');
+    if (path === '/app/settings') return location.pathname === '/app/settings';
     return location.pathname.startsWith(path);
   };
 
   const defaultAvatar = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80';
 
   return (
-    <aside className="w-64 bg-[#63474D] text-white flex flex-col justify-between hidden md:flex min-h-[calc(100vh-4rem)] border-r border-[#AA767C]/40 shrink-0">
-      <div className="p-4 space-y-6">
+    <aside className="w-64 bg-[#63474D] text-white flex flex-col hidden md:flex sticky top-16 h-[calc(100vh-4rem)] border-r border-[#AA767C]/40 shrink-0 self-start overflow-y-auto">
+      <div className="p-4 space-y-5">
         {/* Attendee Identity Header */}
         <div className="px-3 py-2 border-b border-[#AA767C]/40 space-y-1">
           <div className="flex items-center gap-1.5">
@@ -72,16 +62,14 @@ export const AttendeeSidebar: React.FC = () => {
             );
           })}
         </nav>
-      </div>
 
-      {/* Footer User Profile */}
-      <div className="p-4 border-t border-[#AA767C]/40 space-y-3">
-        <div className="flex items-center justify-between pt-1">
-          <div className="flex items-center gap-2.5 min-w-0">
+        {/* Brought-up Profile */}
+        <div className="pt-4 border-t border-[#AA767C]/40">
+          <div className="flex items-center gap-2.5 px-1 min-w-0">
             <img
               src={user?.avatarUrl || defaultAvatar}
               alt="Attendee"
-              className="w-8 h-8 rounded-full object-cover border border-[#FFA686]"
+              className="w-8 h-8 rounded-full object-cover border border-[#FFA686] shrink-0"
               onError={(e) => {
                 (e.target as HTMLImageElement).src = defaultAvatar;
               }}
@@ -91,17 +79,6 @@ export const AttendeeSidebar: React.FC = () => {
               <p className="text-[10px] text-[#D6A184] truncate">{user?.email}</p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={async () => {
-              await logout();
-              navigate('/');
-            }}
-            className="p-1.5 text-red-200 hover:text-white hover:bg-red-900/40 rounded-lg transition-colors cursor-pointer"
-            title="Log out"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
         </div>
       </div>
     </aside>

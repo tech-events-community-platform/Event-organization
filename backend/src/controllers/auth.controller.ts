@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { AuthService } from '../services/auth.service';
-import { sendSuccess } from '../utils/apiResponse';
+import { sendSuccess, sendError } from '../utils/apiResponse';
 import { AuthRequest } from '../types';
 
 export class AuthController {
@@ -25,10 +25,40 @@ export class AuthController {
 
   static async login(req: Request, res: Response, next: NextFunction) {
     try {
-      const { email, password } = req.body;
-      const result = await AuthService.loginUser({ email, password });
+      const { email, password, role } = req.body;
+      const result = await AuthService.loginUser({ email, password, role });
 
       return sendSuccess(res, result, 'Login successful.');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async applyForOrganizer(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const userId = req.user!.userId;
+      const { organization, bio, phone, password, socials } = req.body;
+      const result = await AuthService.applyForOrganizer(userId, {
+        organization,
+        bio,
+        phone,
+        password,
+        socials,
+      });
+
+      return sendSuccess(res, result, result.message);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async switchRole(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const userId = req.user!.userId;
+      const { targetRole, password } = req.body;
+      const result = await AuthService.switchRole(userId, { targetRole, password });
+
+      return sendSuccess(res, result, 'Role switched successfully.');
     } catch (error) {
       next(error);
     }
@@ -52,5 +82,41 @@ export class AuthController {
       'Logged out successfully. Please clear the session token from client storage.'
     );
   }
+
+  static async forgotPassword(req: Request, res: Response): Promise<void> {
+    const { email } = req.body;
+    if (!email) {
+      sendError(res, 'Email address is required.', 400);
+      return;
+    }
+    const result = await AuthService.forgotPassword(email);
+    sendSuccess(res, result, result.message);
+  }
+
+  static async resetPassword(req: Request, res: Response): Promise<void> {
+    const { token, newPassword } = req.body;
+    if (!token || !newPassword) {
+      sendError(res, 'Token and newPassword are required.', 400);
+      return;
+    }
+    const result = await AuthService.resetPassword(token, newPassword);
+    sendSuccess(res, result, result.message);
+  }
+
+
+  static async googleLogin(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { credential, role, mode } = req.body;
+      if (!credential) {
+        sendError(res, 'Google credential is required.', 400);
+        return;
+      }
+      const result = await AuthService.loginWithGoogle(credential, role, mode || 'login');
+      return sendSuccess(res, result, 'Google authentication successful.');
+    } catch (error) {
+      next(error);
+    }
+  }
+
 }
 
