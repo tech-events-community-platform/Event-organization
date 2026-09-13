@@ -25,10 +25,40 @@ export class AuthController {
 
   static async login(req: Request, res: Response, next: NextFunction) {
     try {
-      const { email, password } = req.body;
-      const result = await AuthService.loginUser({ email, password });
+      const { email, password, role } = req.body;
+      const result = await AuthService.loginUser({ email, password, role });
 
       return sendSuccess(res, result, 'Login successful.');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async applyForOrganizer(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const userId = req.user!.userId;
+      const { organization, bio, phone, password, socials } = req.body;
+      const result = await AuthService.applyForOrganizer(userId, {
+        organization,
+        bio,
+        phone,
+        password,
+        socials,
+      });
+
+      return sendSuccess(res, result, result.message);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async switchRole(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const userId = req.user!.userId;
+      const { targetRole, password } = req.body;
+      const result = await AuthService.switchRole(userId, { targetRole, password });
+
+      return sendSuccess(res, result, 'Role switched successfully.');
     } catch (error) {
       next(error);
     }

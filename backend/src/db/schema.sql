@@ -30,6 +30,11 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TR
 ALTER TABLE users ADD COLUMN IF NOT EXISTS approval_status VARCHAR(50) NOT NULL DEFAULT 'approved';
 ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id VARCHAR(255) UNIQUE;
 ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS is_organizer BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS organizer_approval_status VARCHAR(50) NOT NULL DEFAULT 'none';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS organizer_bio TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS organizer_socials JSONB DEFAULT '{}'::jsonb;
+UPDATE users SET is_organizer = TRUE, organizer_approval_status = approval_status WHERE role = 'organizer' AND organizer_approval_status = 'none';
 
 -- Events Table (Single-day tech events only: hackathon, workshop, meetup)
 CREATE TABLE IF NOT EXISTS events (

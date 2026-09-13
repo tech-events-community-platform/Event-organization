@@ -9,6 +9,17 @@ const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 export class AuthService {
   static formatUserResponse(user: any, stats?: any) {
+    const isOrganizer = Boolean(user.is_organizer || user.role?.toLowerCase() === 'organizer');
+    const organizerApprovalStatus = (user.organizer_approval_status && user.organizer_approval_status !== 'none')
+      ? user.organizer_approval_status
+      : (user.role?.toLowerCase() === 'organizer' ? (user.approval_status || 'pending') : 'none');
+
+    const roles = [
+      'ATTENDEE',
+      ...(isOrganizer ? ['ORGANIZER'] : []),
+      ...(user.role?.toLowerCase() === 'admin' ? ['ADMIN'] : []),
+    ];
+
     return {
       id: user.id,
       name: user.full_name,
@@ -19,9 +30,12 @@ export class AuthService {
       visibility: user.visibility || 'public',
       organization: user.organization || undefined,
       phone: user.phone || undefined,
-      bio: user.bio || undefined,
+      bio: user.bio || user.organizer_bio || undefined,
       isActive: user.is_active !== false,
       approvalStatus: user.approval_status || (user.role?.toLowerCase() === 'organizer' ? 'pending' : 'approved'),
+      isOrganizer,
+      organizerApprovalStatus,
+      roles,
       stats: stats || {
         meetupsCount: 0,
         workshopsCount: 0,
@@ -78,62 +92,29 @@ export class AuthService {
 
     // Check existing email
     const existing = await query<IUser>(
-      'SELECT id, role, approval_status, is_active FROM users WHERE LOWER(email) = LOWER($1)',
+      'SELECT id, role, approval_status, is_active, is_organizer, organizer_approval_status FROM users WHERE LOWER(email) = LOWER($1)',
       [email]
     );
 
     if (existing.rowCount && existing.rowCount > 0) {
       const existingUser = existing.rows[0];
-      const existingRole = (existingUser.role || 'attendee').toLowerCase();
+      const hasOrganizerProfile = Boolean(existingUser.is_organizer || existingUser.role?.toLowerCase() === 'organizer');
 
-      // If already registered with the same role, show error:
-      if (existingRole === normalizedRole) {
-        const err: any = new Error('You are already registered! Please sign in.');
+      if (isOrganizer) {
+        if (hasOrganizerProfile) {
+          const err: any = new Error('You already have an organizer account or pending application. Please sign in.');
+          err.statusCode = 409;
+          throw err;
+        } else {
+          const err: any = new Error('An account with this email already exists as an Attendee. Please sign in to your Attendee account and apply to become an organizer in Settings.');
+          err.statusCode = 409;
+          throw err;
+        }
+      } else {
+        const err: any = new Error('An account with this email already exists. Please sign in to your account.');
         err.statusCode = 409;
         throw err;
       }
-
-      // Vice versa: allow registration for the other role!
-      const salt = await bcrypt.genSalt(10);
-      const passwordHash = await bcrypt.hash(password, salt);
-      const updated = await query<IUser>(
-        `UPDATE users 
-         SET role = $1,
-             password_hash = COALESCE($2, password_hash),
-             full_name = COALESCE($3, full_name),
-             phone = COALESCE($4, phone),
-             bio = COALESCE($5, bio),
-             organization = COALESCE($6, organization),
-             approval_status = $7,
-             is_active = $8,
-             updated_at = NOW()
-         WHERE id = $9
-         RETURNING id, email, full_name, role, phone, bio, organization, avatar_url, visibility, member_since, is_active, approval_status, created_at, updated_at`,
-        [normalizedRole, passwordHash, full_name, phone, bio, organization, initialApprovalStatus, initialIsActive, existingUser.id]
-      );
-
-      const rawUser = updated.rows[0];
-      if (isOrganizer) {
-        const user = this.formatUserResponse(rawUser);
-        return {
-          user,
-          token: '',
-          isPendingApproval: true,
-          message: 'you will be using this sytem in 1 hour',
-        };
-      }
-
-      const token = signAuthToken({
-        userId: rawUser.id,
-        email: rawUser.email,
-        role: rawUser.role as UserRole,
-        fullName: rawUser.full_name,
-      });
-      const stats = await this.computeUserStats(rawUser.id);
-      return {
-        user: this.formatUserResponse(rawUser, stats),
-        token,
-      };
     }
 
     const salt = await bcrypt.genSalt(10);
@@ -141,10 +122,28 @@ export class AuthService {
     const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(full_name)}&background=63474D&color=fff`;
 
     const result = await query<IUser>(
-      `INSERT INTO users (email, password_hash, full_name, role, phone, bio, organization, avatar_url, visibility, member_since, is_active, approval_status)
-       VALUES (LOWER($1), $2, $3, $4, $5, $6, $7, $8, 'public', 'August 2026', $9, $10)
-       RETURNING id, email, full_name, role, phone, bio, organization, avatar_url, visibility, member_since, is_active, approval_status, created_at, updated_at`,
-      [email, passwordHash, full_name, normalizedRole, phone, bio, organization, avatarUrl, initialIsActive, initialApprovalStatus]
+      `INSERT INTO users (
+        email, password_hash, full_name, role, phone, bio, organization,
+        avatar_url, visibility, member_since, is_active, approval_status,
+        is_organizer, organizer_approval_status, organizer_bio
+       )
+       VALUES (LOWER($1), $2, $3, $4, $5, $6, $7, $8, 'public', 'August 2026', $9, $10, $11, $12, $13)
+       RETURNING id, email, full_name, role, phone, bio, organization, avatar_url, visibility, member_since, is_active, approval_status, is_organizer, organizer_approval_status, organizer_bio, created_at, updated_at`,
+      [
+        email,
+        passwordHash,
+        full_name,
+        normalizedRole,
+        phone,
+        bio,
+        organization,
+        avatarUrl,
+        initialIsActive,
+        initialApprovalStatus,
+        isOrganizer,
+        isOrganizer ? 'pending' : 'none',
+        isOrganizer ? bio : null,
+      ]
     );
 
     const rawUser = result.rows[0];
@@ -164,7 +163,7 @@ export class AuthService {
     const token = signAuthToken({
       userId: rawUser.id,
       email: rawUser.email,
-      role: rawUser.role as UserRole,
+      role: 'attendee',
       fullName: rawUser.full_name,
     });
 
@@ -183,11 +182,12 @@ export class AuthService {
   static async loginUser(data: {
     email: string;
     password: string;
+    role?: string;
   }): Promise<{ user: any; token: string }> {
-    const { email, password } = data;
+    const { email, password, role } = data;
 
     const result = await query<IUser>(
-      `SELECT id, email, password_hash, full_name, role, phone, bio, organization, avatar_url, visibility, member_since, is_active, approval_status, created_at, updated_at
+      `SELECT id, email, password_hash, full_name, role, phone, bio, organization, avatar_url, visibility, member_since, is_active, approval_status, is_organizer, organizer_approval_status, organizer_bio, organizer_socials, created_at, updated_at
        FROM users WHERE LOWER(email) = LOWER($1)`,
       [email]
     );
@@ -207,39 +207,73 @@ export class AuthService {
       throw err;
     }
 
-    const userRole = (rawUser.role || '').toLowerCase();
-    const isPending = rawUser.approval_status === 'pending' || rawUser.approval_status === 'rejected';
-
-    // Organizer pending approval check
-    if (userRole === 'organizer' && (isPending || !rawUser.is_active)) {
-      const err: any = new Error('you will be using this sytem in 1 hour');
-      err.statusCode = 403;
-      err.isPendingApproval = true;
-      err.approvalStatus = rawUser.approval_status || 'pending';
-      throw err;
-    }
-
-    if (!rawUser.is_active && userRole !== 'organizer') {
+    if (!rawUser.is_active && rawUser.role?.toLowerCase() !== 'organizer') {
       const err: any = new Error('Your account has been deactivated. Please contact support.');
       err.statusCode = 403;
       throw err;
+    }
+
+    const requestedRole = (role || '').toLowerCase();
+    const isAdmin = rawUser.role?.toLowerCase() === 'admin';
+    const isOrganizerAccount = Boolean(rawUser.is_organizer || rawUser.role?.toLowerCase() === 'organizer');
+    const organizerStatus = (rawUser.organizer_approval_status && rawUser.organizer_approval_status !== 'none')
+      ? rawUser.organizer_approval_status
+      : (rawUser.approval_status || 'pending');
+
+    let sessionRole: UserRole = 'attendee';
+
+    if (isAdmin) {
+      sessionRole = 'admin';
+    } else if (requestedRole === 'organizer') {
+      if (!isOrganizerAccount) {
+        const err: any = new Error('This account does not have an organizer profile. Please sign in as an Attendee and apply in your Settings.');
+        err.statusCode = 403;
+        throw err;
+      }
+      if (organizerStatus !== 'approved') {
+        const err: any = new Error('you will be using this sytem in 1 hour');
+        err.statusCode = 403;
+        err.isPendingApproval = true;
+        err.approvalStatus = organizerStatus;
+        throw err;
+      }
+      sessionRole = 'organizer';
+    } else if (requestedRole === 'attendee') {
+      sessionRole = 'attendee';
+    } else {
+      // Unspecified role:
+      if (rawUser.role?.toLowerCase() === 'organizer') {
+        if (organizerStatus !== 'approved') {
+          const err: any = new Error('you will be using this sytem in 1 hour');
+          err.statusCode = 403;
+          err.isPendingApproval = true;
+          err.approvalStatus = organizerStatus;
+          throw err;
+        }
+        sessionRole = 'organizer';
+      } else if (isOrganizerAccount && organizerStatus === 'approved') {
+        sessionRole = 'organizer';
+      } else {
+        sessionRole = 'attendee';
+      }
     }
 
     const stats = await this.computeUserStats(rawUser.id);
     const token = signAuthToken({
       userId: rawUser.id,
       email: rawUser.email,
-      role: rawUser.role as UserRole,
+      role: sessionRole,
       fullName: rawUser.full_name,
     });
 
     const user = this.formatUserResponse(rawUser, stats);
+    user.role = (sessionRole as string).toUpperCase() as any;
     return { user, token };
   }
 
   static async getCurrentUser(userId: string): Promise<any> {
     const result = await query<IUser>(
-      `SELECT id, email, full_name, role, phone, bio, organization, avatar_url, visibility, member_since, is_active, approval_status, created_at, updated_at
+      `SELECT id, email, full_name, role, phone, bio, organization, avatar_url, visibility, member_since, is_active, approval_status, is_organizer, organizer_approval_status, organizer_bio, organizer_socials, created_at, updated_at
        FROM users WHERE id = $1`,
       [userId]
     );
@@ -253,6 +287,160 @@ export class AuthService {
     const rawUser = result.rows[0];
     const stats = await this.computeUserStats(rawUser.id);
     return this.formatUserResponse(rawUser, stats);
+  }
+
+  static async applyForOrganizer(
+    userId: string,
+    data: {
+      organization: string;
+      bio?: string;
+      phone?: string;
+      password?: string;
+      socials?: Record<string, string>;
+    }
+  ): Promise<{ user: any; message: string }> {
+    const { organization, bio = null, phone = null, password, socials = {} } = data;
+
+    if (!organization || !organization.trim()) {
+      const err: any = new Error('Organization / Community name is required.');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const userRes = await query<IUser>(
+      'SELECT id, password_hash, approval_status, organizer_approval_status FROM users WHERE id = $1',
+      [userId]
+    );
+
+    if (!userRes.rowCount || userRes.rowCount === 0) {
+      const err: any = new Error('User account not found.');
+      err.statusCode = 404;
+      throw err;
+    }
+
+    const user = userRes.rows[0];
+
+    // Password verification gate: formal application signature
+    if (user.password_hash) {
+      if (!password) {
+        const err: any = new Error('Please confirm with your account password to submit your application.');
+        err.statusCode = 401;
+        throw err;
+      }
+      const isMatch = await bcrypt.compare(password, user.password_hash);
+      if (!isMatch) {
+        const err: any = new Error('Incorrect password. Please verify your credentials to submit your application.');
+        err.statusCode = 401;
+        throw err;
+      }
+    }
+
+    const updated = await query<IUser>(
+      `UPDATE users
+       SET organization = $1,
+           organizer_bio = COALESCE($2, organizer_bio, bio),
+           bio = COALESCE($2, bio),
+           phone = COALESCE($3, phone),
+           organizer_socials = $4,
+           organizer_approval_status = 'pending',
+           is_organizer = TRUE,
+           updated_at = NOW()
+       WHERE id = $5
+       RETURNING id, email, full_name, role, phone, bio, organization, avatar_url, visibility, member_since, is_active, approval_status, is_organizer, organizer_approval_status, organizer_bio, organizer_socials, created_at, updated_at`,
+      [organization.trim(), bio ? bio.trim() : null, phone ? phone.trim() : null, JSON.stringify(socials), userId]
+    );
+
+    const rawUpdated = updated.rows[0];
+    const stats = await this.computeUserStats(rawUpdated.id);
+    return {
+      user: this.formatUserResponse(rawUpdated, stats),
+      message: 'Your organizer application has been submitted and is currently being reviewed by Sheeba administration.',
+    };
+  }
+
+  static async switchRole(
+    userId: string,
+    data: {
+      targetRole: 'ATTENDEE' | 'ORGANIZER';
+      password?: string;
+    }
+  ): Promise<{ user: any; token: string }> {
+    const { targetRole, password } = data;
+    const normalizedTarget = (targetRole || 'ATTENDEE').toUpperCase() as 'ATTENDEE' | 'ORGANIZER';
+
+    const userRes = await query<IUser>(
+      `SELECT id, email, password_hash, full_name, role, phone, bio, organization, avatar_url, visibility, member_since, is_active, approval_status, is_organizer, organizer_approval_status, organizer_bio, organizer_socials, created_at, updated_at
+       FROM users WHERE id = $1`,
+      [userId]
+    );
+
+    if (!userRes.rowCount || userRes.rowCount === 0) {
+      const err: any = new Error('User account not found.');
+      err.statusCode = 404;
+      throw err;
+    }
+
+    const rawUser = userRes.rows[0];
+
+    // Password verification gate: formal hopping between roles
+    if (rawUser.password_hash) {
+      if (!password) {
+        const err: any = new Error('Please enter your password to switch to this workspace.');
+        err.statusCode = 401;
+        throw err;
+      }
+      const isMatch = await bcrypt.compare(password, rawUser.password_hash);
+      if (!isMatch) {
+        const err: any = new Error('Incorrect password. Credential verification required to change role context.');
+        err.statusCode = 401;
+        throw err;
+      }
+    }
+
+    if (normalizedTarget === 'ORGANIZER') {
+      const isOrganizer = Boolean(rawUser.is_organizer || rawUser.role?.toLowerCase() === 'organizer' || rawUser.role?.toLowerCase() === 'admin');
+      const effApproval = rawUser.organizer_approval_status && rawUser.organizer_approval_status !== 'none'
+        ? rawUser.organizer_approval_status
+        : rawUser.approval_status;
+
+      if (!isOrganizer) {
+        const err: any = new Error('This account does not have an organizer profile. Please submit an application in your Attendee Settings.');
+        err.statusCode = 403;
+        throw err;
+      }
+
+      if (rawUser.role?.toLowerCase() !== 'admin' && effApproval !== 'approved') {
+        const err: any = new Error('Your organizer application is pending administrator review. You will be able to access this workspace once approved.');
+        err.statusCode = 403;
+        err.isPendingApproval = true;
+        throw err;
+      }
+
+      const token = signAuthToken({
+        userId: rawUser.id,
+        email: rawUser.email,
+        role: rawUser.role?.toLowerCase() === 'admin' ? 'admin' : 'organizer',
+        fullName: rawUser.full_name,
+      });
+
+      const stats = await this.computeUserStats(rawUser.id);
+      const userFormatted = this.formatUserResponse(rawUser, stats);
+      userFormatted.role = rawUser.role?.toLowerCase() === 'admin' ? 'ADMIN' : 'ORGANIZER';
+      return { user: userFormatted, token };
+    } else {
+      // Switching to ATTENDEE
+      const token = signAuthToken({
+        userId: rawUser.id,
+        email: rawUser.email,
+        role: rawUser.role?.toLowerCase() === 'admin' ? 'admin' : 'attendee',
+        fullName: rawUser.full_name,
+      });
+
+      const stats = await this.computeUserStats(rawUser.id);
+      const userFormatted = this.formatUserResponse(rawUser, stats);
+      userFormatted.role = rawUser.role?.toLowerCase() === 'admin' ? 'ADMIN' : 'ATTENDEE';
+      return { user: userFormatted, token };
+    }
   }
 
   static async forgotPassword(email: string): Promise<{ success: boolean; message: string }> {
@@ -368,34 +556,34 @@ export class AuthService {
 
     // If attempting to register but user already exists:
     if (mode === 'register' && user) {
-      const currentRole = (user.role || 'attendee').toLowerCase();
-
-      // If already registered with the SAME role -> reject
-      if (currentRole === requestedRole) {
-        const err: any = new Error('You are already registered! Please sign in.');
+      const isOrganizerAccount = Boolean(user.is_organizer || user.role?.toLowerCase() === 'organizer');
+      if (requestedRole === 'organizer') {
+        if (isOrganizerAccount) {
+          const err: any = new Error('You already have an organizer account or pending application. Please sign in.');
+          err.statusCode = 409;
+          throw err;
+        } else {
+          const err: any = new Error('An account with this email already exists as an Attendee. Please sign in to your Attendee account and apply to become an organizer in Settings.');
+          err.statusCode = 409;
+          throw err;
+        }
+      } else {
+        const err: any = new Error('An account with this email already exists. Please sign in.');
         err.statusCode = 409;
         throw err;
       }
-
-      // Vice versa: allow registration for the other role!
-      const approvalStatus = requestedRole === 'organizer' ? 'pending' : 'approved';
-      await query(
-        'UPDATE users SET role = $1, approval_status = $2, updated_at = NOW() WHERE id = $3',
-        [requestedRole, approvalStatus, user.id]
-      );
-      user.role = requestedRole;
-      user.approval_status = approvalStatus;
     }
 
     // If registering and user does not exist, create the account
     if (!user) {
       const normalizedRole = (role || 'attendee').toLowerCase();
-      const approvalStatus = normalizedRole === 'organizer' ? 'pending' : 'approved';
+      const isOrganizer = normalizedRole === 'organizer';
+      const approvalStatus = isOrganizer ? 'pending' : 'approved';
       const insertRes = await query(
-        `INSERT INTO users (email, full_name, role, avatar_url, google_id, approval_status, member_since)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
+        `INSERT INTO users (email, full_name, role, avatar_url, google_id, approval_status, member_since, is_organizer, organizer_approval_status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
          RETURNING *`,
-        [email, fullName, normalizedRole, avatarUrl, googleId, approvalStatus, 'September 2026']
+        [email, fullName, normalizedRole, avatarUrl, googleId, approvalStatus, 'September 2026', isOrganizer, isOrganizer ? 'pending' : 'none']
       );
       user = insertRes.rows[0];
 
@@ -405,18 +593,46 @@ export class AuthService {
       );
     }
 
+    // Determine session role
+    const isOrganizerAccount = Boolean(user.is_organizer || user.role?.toLowerCase() === 'organizer');
+    const effOrganizerStatus = user.organizer_approval_status && user.organizer_approval_status !== 'none'
+      ? user.organizer_approval_status
+      : (user.approval_status || 'pending');
+
+    let sessionRole: UserRole = 'attendee';
+    if (user.role?.toLowerCase() === 'admin') {
+      sessionRole = 'admin';
+    } else if (requestedRole === 'organizer') {
+      if (!isOrganizerAccount) {
+        const err: any = new Error('This account does not have an organizer profile. Please sign in as an Attendee and apply in your Settings.');
+        err.statusCode = 403;
+        throw err;
+      }
+      if (effOrganizerStatus !== 'approved') {
+        const err: any = new Error('you will be using this sytem in 1 hour');
+        err.statusCode = 403;
+        err.isPendingApproval = true;
+        err.approvalStatus = effOrganizerStatus;
+        throw err;
+      }
+      sessionRole = 'organizer';
+    } else {
+      sessionRole = 'attendee';
+    }
+
     // 3. Generate your Sheeba JWT token
     const token = signAuthToken({
       userId: user.id,
       email: user.email,
-      role: (user.role || 'attendee').toUpperCase() as UserRole,
+      role: sessionRole,
       fullName: user.full_name,
     });
     const stats = await AuthService.computeUserStats(user.id);
+    const userFormatted = AuthService.formatUserResponse(user, stats);
+    userFormatted.role = (sessionRole as string).toUpperCase() as any;
     return {
-      user: AuthService.formatUserResponse(user, stats),
+      user: userFormatted,
       token,
     };
-  } 
-  
+  }
 }
