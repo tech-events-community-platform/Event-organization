@@ -37,6 +37,7 @@ import { CheckInPage } from '../pages/organizer/CheckInPage';
 import { BadgesPage as OrganizerBadgesPage } from '../pages/organizer/BadgesPage';
 import { ReportPage } from '../pages/organizer/ReportPage';
 import { EventListPage } from '../pages/organizer/EventListPage';
+import { ScannerPage } from '../pages/organizer/ScannerPage';
 
 // Admin Pages
 import { AdminDashboardPage } from '../pages/admin/AdminDashboardPage';
@@ -97,7 +98,9 @@ export const router = createBrowserRouter([
           { path: 'events/create', element: <CreateEventPage /> },
           { path: 'events/:id', element: <EventDetailPage /> },
           { path: 'events', element: <EventListPage /> },
-          { path: 'events/:id/scanner', element: <CheckInPage /> },
+          { path: 'events/:id/scanner', element: <ScannerPage /> },
+          { path: 'scanner/:id', element: <ScannerPage /> },
+          { path: 'scanner', element: <ScannerPage /> },
           { path: 'events/:id/attendees', element: <OrganizerBadgesPage /> },
           { path: 'events/:id/report', element: <ReportPage /> },
           { path: 'check-in', element: <CheckInPage /> },

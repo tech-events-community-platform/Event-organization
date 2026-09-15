@@ -605,6 +605,22 @@ export const api = {
 
   // QR Scanning & Check-in (Organizer Section 4)
   checkIn: {
+    verifyTicket: async (eventId: string, tokenOrCode: string) => {
+      const res = await requestApi('/checkin/verify', {
+        method: 'POST',
+        body: JSON.stringify({ eventId, tokenOrCode }),
+      });
+      return res.data;
+    },
+
+    searchAttendees: async (eventId: string, query: string) => {
+      const res = await requestApi('/checkin/search', {
+        method: 'POST',
+        body: JSON.stringify({ eventId, query }),
+      });
+      return res.data || [];
+    },
+
     lookup: async (eventId: string, query: string): Promise<AttendeeRosterItem | null> => {
       try {
         const res = await requestApi('/checkin/lookup', {
@@ -635,7 +651,7 @@ export const api = {
       eventId: string;
       attendeeId: string;
       notes?: string;
-    }): Promise<{ success: boolean; message: string; badgeAwarded?: BadgeAward; rosterItem?: AttendeeRosterItem }> => {
+    }): Promise<{ success: boolean; message: string; badgeAwarded?: BadgeAward; rosterItem?: AttendeeRosterItem; checkInId?: string; data?: any }> => {
       try {
         const res = await requestApi('/checkin/mark-attended', {
           method: 'POST',
@@ -647,6 +663,8 @@ export const api = {
             message: res.message || 'Check-in approved and Attended badge granted.',
             badgeAwarded: res.data.badgeAwarded,
             rosterItem: res.data.rosterItem,
+            checkInId: res.data.checkInId || res.data.checkIn?.id,
+            data: res.data,
           };
         }
       } catch (err: any) {
@@ -688,17 +706,19 @@ export const api = {
     undo: async (params: {
       eventId: string;
       attendeeId: string;
-    }): Promise<{ success: boolean; message: string; rosterItem?: AttendeeRosterItem }> => {
+      reason?: string;
+    }): Promise<{ success: boolean; message: string; rosterItem?: AttendeeRosterItem; data?: any }> => {
       try {
         const res = await requestApi('/checkin/undo', {
           method: 'POST',
-          body: JSON.stringify({ eventId: params.eventId, attendeeId: params.attendeeId }),
+          body: JSON.stringify({ eventId: params.eventId, attendeeId: params.attendeeId, reason: params.reason }),
         });
         if (res.data) {
           return {
             success: true,
             message: res.message || 'Check-in undone successfully.',
             rosterItem: res.data.rosterItem,
+            data: res.data,
           };
         }
       } catch (err: any) {

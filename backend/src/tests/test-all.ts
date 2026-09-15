@@ -34,9 +34,10 @@ const runTests = async () => {
     assert(!(await bcrypt.compare('WrongPassword', hash)), 'Bcrypt rejects incorrect passwords');
 
     // QR Token Cryptography
-    const qrToken = generateTicketToken('ticket-123', 'event-456', 'user-789');
+    const qrToken = generateTicketToken('ticket-123', 'event-456', '2026-09-20');
     const decodedQr = verifyTicketToken(qrToken);
     assert(decodedQr.ticketId === 'ticket-123' && decodedQr.eventId === 'event-456', 'Dynamic QR pass token signed & verified');
+    assert(typeof decodedQr.exp === 'number' && decodedQr.exp > 0, 'Token includes end-of-event-day exp timestamp');
 
     const qrDataUrl = await generateQrDataUrl(qrToken);
     assert(qrDataUrl.startsWith('data:image/png;base64,'), 'QR Code PNG Base64 generation works');
@@ -318,6 +319,183 @@ const runTests = async () => {
     assert(
       organizerPortalLogin.status === 200 && organizerPortalLogin.body.data?.user?.role === 'ORGANIZER',
       'User can sign in directly to Organizer portal'
+    );
+
+    // TEST SUITE 7: QR Ticket Generation, Scanner Verification, Atomic Check-in & Soft-Void Undo
+    console.log('\n📦 7. Testing QR Ticket Generation, Scanner Verification, Duplicate 409 Rejection & Soft-Void...');
+    const organizerToken = organizerPortalLogin.body.data?.token;
+    const regAttendeeToken = attendeePortalLogin.body.data?.token;
+
+    // Step 1: Organizer creates a tech event
+    const createEventRes = await fetchHttp('/api/events', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${organizerToken}` },
+      body: {
+        title: 'Addis AI & Cloud Summit 2026',
+        description: 'Deep dive into LLMs and Cloud Native architecture in Ethiopia.',
+        type: 'workshop',
+        date: '2026-10-15',
+        startTime: '09:00 AM',
+        endTime: '05:00 PM',
+        location: 'Skylight Hotel, Addis Ababa',
+        venueName: 'Grand Ballroom',
+        capacity: 100,
+        isPaid: false,
+        customQuestions: [
+          { id: 'q1', questionText: 'GitHub Handle', isRequired: false },
+          { id: 'q2', questionText: 'T-Shirt Size', isRequired: true }
+        ]
+      }
+    });
+    assert(createEventRes.status === 201 && createEventRes.body.data?.id, 'Organizer successfully creates event');
+    const eventId = createEventRes.body.data.id;
+
+    // Step 2: Attendee registers for the event
+    const regRes = await fetchHttp(`/api/events/${eventId}/register`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${regAttendeeToken}` },
+      body: {
+        answers: {
+          q1: 'sheba-dev',
+          q2: 'Large'
+        }
+      }
+    });
+    assert(regRes.status === 201 && regRes.body.data?.ticket, 'Attendee registers and receives ticket with signed QR');
+    const issuedTicket = regRes.body.data.ticket;
+
+    assert(
+      typeof issuedTicket.id === 'string' && issuedTicket.id.startsWith('SHB-'),
+      `Ticket code generated in human-readable SHB-XXXX-YYYY format (${issuedTicket.id})`
+    );
+    assert(
+      typeof issuedTicket.qrToken === 'string' && issuedTicket.qrToken.startsWith('eyJ'),
+      'QR token is cryptographically signed without PII'
+    );
+
+    // Step 3: Scanner verification with signed JWT
+    const verifyJwtRes = await fetchHttp('/api/checkin/verify', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${organizerToken}` },
+      body: {
+        eventId,
+        tokenOrCode: issuedTicket.qrToken
+      }
+    });
+    assert(
+      verifyJwtRes.status === 200 &&
+      verifyJwtRes.body.data?.canCheckIn === true &&
+      verifyJwtRes.body.data?.attendee?.email === upgradeEmail,
+      'Scanner successfully verifies signed QR token and surfaces attendee record'
+    );
+    assert(
+      verifyJwtRes.body.data?.attendee?.answers?.q2 === 'Large',
+      'Scanner surfaces custom registration answers (T-Shirt Size: Large)'
+    );
+
+    // Step 4: Scanner verification with short code SHB-XXXX-YYYY
+    const verifyCodeRes = await fetchHttp('/api/checkin/verify', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${organizerToken}` },
+      body: {
+        eventId,
+        tokenOrCode: issuedTicket.id
+      }
+    });
+    assert(
+      verifyCodeRes.status === 200 && verifyCodeRes.body.data?.canCheckIn === true,
+      'Scanner successfully verifies short code (SHB-XXXX-YYYY)'
+    );
+
+    // Step 5: Scanner search by email or name
+    const searchRes = await fetchHttp('/api/checkin/search', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${organizerToken}` },
+      body: {
+        eventId,
+        query: 'Dagmawi'
+      }
+    });
+    assert(
+      searchRes.status === 200 && Array.isArray(searchRes.body.data) && searchRes.body.data.length > 0,
+      'Scanner fallback search finds matching attendee by name'
+    );
+
+    // Step 6: Atomic check-in
+    const checkInRes = await fetchHttp('/api/checkin/mark-attended', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${organizerToken}` },
+      body: {
+        eventId,
+        attendeeId: issuedTicket.attendeeId
+      }
+    });
+    assert(
+      checkInRes.status === 200 && checkInRes.body.data?.badgeAwarded?.badgeCode === 'attended',
+      'Check-in succeeds atomically and awards Attended badge'
+    );
+
+    // Step 7: Duplicate check-in returns 409 Conflict with timestamp
+    const dupCheckInRes = await fetchHttp('/api/checkin/mark-attended', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${organizerToken}` },
+      body: {
+        eventId,
+        attendeeId: issuedTicket.attendeeId
+      }
+    });
+    assert(
+      dupCheckInRes.status === 409 &&
+      (dupCheckInRes.body.code === 'ALREADY_CHECKED_IN' || dupCheckInRes.body.error === 'ALREADY_CHECKED_IN'),
+      'Duplicate check-in attempt strictly rejected with HTTP 409 Conflict'
+    );
+
+    // Step 8: Scanner re-verification shows CHECKED_IN status and canUndo: true
+    const verifyCheckedInRes = await fetchHttp('/api/checkin/verify', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${organizerToken}` },
+      body: {
+        eventId,
+        tokenOrCode: issuedTicket.id
+      }
+    });
+    assert(
+      verifyCheckedInRes.status === 200 &&
+      verifyCheckedInRes.body.data?.canCheckIn === false &&
+      verifyCheckedInRes.body.data?.canUndo === true &&
+      verifyCheckedInRes.body.data?.hasAttendedBadge === true,
+      'Scanner displays CHECKED_IN status, active Attended badge, and enables Soft-Void'
+    );
+
+    // Step 9: Soft-void undo check-in
+    const undoRes = await fetchHttp('/api/checkin/undo', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${organizerToken}` },
+      body: {
+        eventId,
+        attendeeId: issuedTicket.attendeeId,
+        reason: 'Accidental door duty scan'
+      }
+    });
+    assert(
+      undoRes.status === 200 && undoRes.body.success === true,
+      'Soft-void check-in undo successfully resets ticket and revokes badge without deleting records'
+    );
+
+    // Step 10: After soft-void, ticket is back to ISSUED and can be checked in again
+    const postUndoVerify = await fetchHttp('/api/checkin/verify', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${organizerToken}` },
+      body: {
+        eventId,
+        tokenOrCode: issuedTicket.id
+      }
+    });
+    assert(
+      postUndoVerify.status === 200 &&
+      postUndoVerify.body.data?.canCheckIn === true &&
+      postUndoVerify.body.data?.ticket?.status === 'ISSUED',
+      'Post-undo verification confirms ticket is back to ISSUED and ready for check-in'
     );
 
   } catch (err: any) {

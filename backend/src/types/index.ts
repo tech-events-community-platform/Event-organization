@@ -222,8 +222,9 @@ export interface IJwtPayload {
 export interface IQrTicketPayload {
   ticketId: string;
   eventId: string;
-  userId: string;
-  issuedAt: number;
+  exp?: number;
+  userId?: string;
+  issuedAt?: number;
 }
 
 export interface AuthRequest extends Request {

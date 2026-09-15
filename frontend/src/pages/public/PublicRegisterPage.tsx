@@ -7,14 +7,7 @@ import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import {
   Clock,
-  MapPin,
-  Users,
-  AlertCircle,
-  Award,
-  CheckCircle2,
-  ArrowRight,
-  ArrowLeft,
-  Ticket as TicketIcon
+  AlertCircle
 } from 'lucide-react';
 import {
   TelegramIcon,

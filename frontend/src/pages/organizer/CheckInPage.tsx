@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import type { Event } from '../../types/event';
@@ -16,6 +16,9 @@ import {
   Phone,
   User as UserIcon,
   AlertCircle,
+  Camera,
+  Calendar,
+  MapPin,
 } from 'lucide-react';
 
 export const CheckInPage: React.FC = () => {
@@ -343,14 +346,24 @@ export const CheckInPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Turnout Ticker */}
-            <div className="bg-white/10 px-5 py-2.5 rounded-2xl border border-white/20 text-center shrink-0">
-              <span className="text-[10px] font-bold uppercase text-[#FFA686] block tracking-wider">
-                Door Turnout ({currentEvent.date})
-              </span>
-              <span className="text-xl font-serif font-black text-white">
-                {checkedInCount} <span className="text-xs font-normal text-[#E8DDD7]">/ {totalCount}</span>
-              </span>
+            {/* Live QR Scanner Link & Turnout Ticker */}
+            <div className="flex items-center gap-3 shrink-0">
+              <Link
+                to={`/organizer/events/${currentEvent.id}/scanner`}
+                className="inline-flex items-center gap-2 bg-[#F45866] hover:bg-[#e04553] text-white px-4 py-3 rounded-2xl font-bold text-xs shadow-md transition-all shrink-0 hover:scale-105"
+              >
+                <Camera className="w-4 h-4" />
+                <span>Open QR Scanner</span>
+              </Link>
+
+              <div className="bg-white/10 px-5 py-2.5 rounded-2xl border border-white/20 text-center shrink-0">
+                <span className="text-[10px] font-bold uppercase text-[#FFA686] block tracking-wider">
+                  Door Turnout ({currentEvent.date})
+                </span>
+                <span className="text-xl font-serif font-black text-white">
+                  {checkedInCount} <span className="text-xs font-normal text-[#E8DDD7]">/ {totalCount}</span>
+                </span>
+              </div>
             </div>
           </div>
         );
