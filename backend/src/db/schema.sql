@@ -36,6 +36,14 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS organizer_bio TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS organizer_socials JSONB DEFAULT '{}'::jsonb;
 UPDATE users SET is_organizer = TRUE, organizer_approval_status = approval_status WHERE role = 'organizer' AND organizer_approval_status = 'none';
 
+-- Sponsor Profile Columns & Role check update
+ALTER TABLE users ADD COLUMN IF NOT EXISTS company_name VARCHAR(255);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS industry_category VARCHAR(100);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS company_website VARCHAR(255);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS company_phone VARCHAR(50);
+ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
+ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('attendee', 'organizer', 'admin', 'sponsor', 'ATTENDEE', 'ORGANIZER', 'ADMIN', 'SPONSOR'));
+
 -- Events Table (Single-day tech events only: hackathon, workshop, meetup)
 CREATE TABLE IF NOT EXISTS events (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -110,6 +118,18 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_token ON password_reset_tokens(token);
+
+-- OTP Verifications Table (For 6-digit Email OTPs)
+CREATE TABLE IF NOT EXISTS otp_verifications (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email VARCHAR(255) NOT NULL,
+    otp_code VARCHAR(10) NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
+    attempts INT DEFAULT 0,
+    is_verified BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_otp_verifications_email ON otp_verifications(email);
 
 -- Check-Ins Table (Section 4: Door Duty check-ins with soft-void Undo support)
 CREATE TABLE IF NOT EXISTS check_ins (
@@ -212,3 +232,49 @@ CREATE INDEX IF NOT EXISTS idx_check_ins_registration_id ON check_ins(registrati
 CREATE INDEX IF NOT EXISTS idx_check_ins_voided_at ON check_ins(voided_at);
 CREATE INDEX IF NOT EXISTS idx_payments_event_id ON payments(event_id);
 CREATE INDEX IF NOT EXISTS idx_payments_user_id ON payments(user_id);
+
+-- Sponsorship Applications Table (Organizers pitch upcoming events seeking funding)
+CREATE TABLE IF NOT EXISTS sponsorship_applications (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organizer_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    event_title VARCHAR(255) NOT NULL,
+    event_type VARCHAR(50) NOT NULL DEFAULT 'hackathon',
+    category VARCHAR(100) NOT NULL DEFAULT 'Tech',
+    expected_date VARCHAR(100) NOT NULL,
+    location VARCHAR(255) NOT NULL,
+    expected_attendees INT NOT NULL DEFAULT 100,
+    target_audience TEXT NOT NULL,
+    funding_goal NUMERIC(12, 2) NOT NULL DEFAULT 0,
+    currency VARCHAR(10) NOT NULL DEFAULT 'ETB',
+    description TEXT NOT NULL,
+    packages JSONB NOT NULL DEFAULT '[]'::jsonb,
+    contact_name VARCHAR(255) NOT NULL,
+    contact_phone VARCHAR(50) NOT NULL,
+    contact_email VARCHAR(255) NOT NULL,
+    contact_telegram VARCHAR(100),
+    pitch_deck_url TEXT,
+    status VARCHAR(50) NOT NULL DEFAULT 'OPEN' CHECK (status IN ('OPEN', 'UNDER_REVIEW', 'FUNDED', 'CLOSED')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Sponsorship Deals Table (Connects sponsors to applications with status INTERESTED or DECLINED)
+CREATE TABLE IF NOT EXISTS sponsorship_deals (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    application_id UUID NOT NULL REFERENCES sponsorship_applications(id) ON DELETE CASCADE,
+    sponsor_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    status VARCHAR(50) NOT NULL DEFAULT 'INTERESTED' CHECK (status IN ('INTERESTED', 'DECLINED')),
+    package_name VARCHAR(100),
+    pledged_amount NUMERIC(12, 2),
+    sponsor_notes TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT unique_sponsor_application_deal UNIQUE (application_id, sponsor_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_sponsorship_applications_organizer_id ON sponsorship_applications(organizer_id);
+CREATE INDEX IF NOT EXISTS idx_sponsorship_applications_category ON sponsorship_applications(category);
+CREATE INDEX IF NOT EXISTS idx_sponsorship_applications_status ON sponsorship_applications(status);
+CREATE INDEX IF NOT EXISTS idx_sponsorship_deals_application_id ON sponsorship_deals(application_id);
+CREATE INDEX IF NOT EXISTS idx_sponsorship_deals_sponsor_id ON sponsorship_deals(sponsor_id);
+CREATE INDEX IF NOT EXISTS idx_sponsorship_deals_status ON sponsorship_deals(status);

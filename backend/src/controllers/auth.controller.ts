@@ -118,5 +118,96 @@ export class AuthController {
     }
   }
 
+  // --- SPONSOR AUTH METHODS ---
+
+  static async registerSponsor(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { full_name, email, password, company_name, industry_category, company_phone, company_website } = req.body;
+      const result = await AuthService.registerSponsor({
+        full_name,
+        email,
+        password,
+        company_name,
+        industry_category,
+        company_phone,
+        company_website,
+      });
+
+      return sendSuccess(res, result, result.message, 201);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async loginSponsor(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { email, password } = req.body;
+      const result = await AuthService.loginUser({ email, password, role: 'sponsor' });
+      return sendSuccess(res, result, 'Sponsor login successful.');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async googleSponsorLogin(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { credential, mode, company_name, industry_category, company_phone, company_website } = req.body;
+      if (!credential) {
+        sendError(res, 'Google credential is required.', 400);
+        return;
+      }
+      const result = await AuthService.loginSponsorWithGoogle(credential, mode || 'login', {
+        company_name,
+        industry_category,
+        company_phone,
+        company_website,
+      });
+      return sendSuccess(res, result, 'Sponsor Google authentication successful.');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async sendSponsorOtp(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { email } = req.body;
+      if (!email) {
+        sendError(res, 'Email address is required.', 400);
+        return;
+      }
+      const result = await AuthService.sendPasswordResetOtp(email);
+      sendSuccess(res, result, result.message);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async verifySponsorOtp(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { email, otp } = req.body;
+      if (!email || !otp) {
+        sendError(res, 'Email and 6-digit verification code are required.', 400);
+        return;
+      }
+      const result = await AuthService.verifySponsorOtp(email, otp);
+      sendSuccess(res, result, result.message);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async resetSponsorPasswordWithOtp(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { email, otp, newPassword } = req.body;
+      if (!email || !otp || !newPassword) {
+        sendError(res, 'Email, OTP, and new password are required.', 400);
+        return;
+      }
+      const result = await AuthService.verifyOtpAndResetPassword(email, otp, newPassword);
+      sendSuccess(res, result, result.message);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 

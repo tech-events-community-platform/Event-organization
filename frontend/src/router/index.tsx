@@ -18,6 +18,15 @@ import { PublicProfilePage } from '../pages/public/PublicProfilePage';
 import { BadgeDetailPage } from '../pages/public/BadgeDetailPage';
 import { PublicSearchPage } from '../pages/public/PublicSearchPage';
 
+// Sponsor Pages & Layout
+import { SponsorLayout } from '../layouts/SponsorLayout';
+import { SponsorAuthPage } from '../pages/sponsor/SponsorAuthPage';
+import { SponsorForgotPasswordPage } from '../pages/sponsor/SponsorForgotPasswordPage';
+import { SponsorDashboardPage } from '../pages/sponsor/SponsorDashboardPage';
+import { SponsorExplorePage } from '../pages/sponsor/SponsorExplorePage';
+import { SponsorDealsPage } from '../pages/sponsor/SponsorDealsPage';
+import { SponsorDeliverablesPage } from '../pages/sponsor/SponsorDeliverablesPage';
+
 // Attendee Pages
 import { BadgesPage as AttendeeBadgesPage } from '../pages/attendee/BadgesPage';
 import { AttendeeDashboardPage } from '../pages/attendee/DashboardPage';
@@ -37,6 +46,8 @@ import { CheckInPage } from '../pages/organizer/CheckInPage';
 import { BadgesPage as OrganizerBadgesPage } from '../pages/organizer/BadgesPage';
 import { ReportPage } from '../pages/organizer/ReportPage';
 import { EventListPage } from '../pages/organizer/EventListPage';
+import { ApplyToSponsorsPage } from '../pages/organizer/ApplyToSponsorsPage';
+
 
 // Admin Pages
 import { AdminDashboardPage } from '../pages/admin/AdminDashboardPage';
@@ -61,6 +72,8 @@ export const router = createBrowserRouter([
       { path: 'events/:id/register/form', element: <EventRegistrationCheckoutPage /> },
       { path: 'profile/:id', element: <PublicProfilePage /> },
       { path: 'badge/:id', element: <BadgeDetailPage /> },
+      { path: 'sponsor/auth', element: <SponsorAuthPage /> },
+      { path: 'sponsor/forgot-password', element: <SponsorForgotPasswordPage /> },
     ],
   },
   // Protected Attendee Routes (/app)
@@ -106,6 +119,7 @@ export const router = createBrowserRouter([
           { path: 'badges/:id', element: <OrganizerBadgesPage /> },
           { path: 'reports', element: <ReportPage /> },
           { path: 'reports/:id', element: <ReportPage /> },
+          { path: 'apply-sponsors', element: <ApplyToSponsorsPage /> },
           { path: 'settings', element: <AccountSettingsPage /> },
         ],
       },
@@ -125,6 +139,24 @@ export const router = createBrowserRouter([
           { path: 'organizers', element: <AdminUsersPage /> },
           { path: 'reports', element: <AdminDashboardPage /> },
           { path: 'profile', element: <AccountSettingsPage /> },
+        ],
+      },
+    ],
+  },
+  // Protected Sponsor Routes (/sponsor - 4 dedicated tabs: Explore, Deals & Pledges, Brand Deliverables and Contact, Settings)
+  {
+    path: '/sponsor',
+    element: <ProtectedRoute allowedRoles={['SPONSOR']} />,
+    children: [
+      {
+        element: <SponsorLayout />,
+        children: [
+          { index: true, element: <SponsorExplorePage /> },
+          { path: 'explore', element: <SponsorExplorePage /> },
+          { path: 'deals', element: <SponsorDealsPage /> },
+          { path: 'deliverables', element: <SponsorDeliverablesPage /> },
+          { path: 'settings', element: <AccountSettingsPage /> },
+          { path: 'dashboard', element: <Navigate to="/sponsor" replace /> },
         ],
       },
     ],

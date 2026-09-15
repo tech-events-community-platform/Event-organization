@@ -60,6 +60,20 @@ export default function Hero() {
               </a>
             </div>
           </FadeIn>
+
+          {/* Sponsor Portal Entry */}
+          <FadeIn delay={400}>
+            <div className="pt-2 flex flex-wrap items-center gap-2 text-xs sm:text-sm text-gray-600">
+              <span className="font-light">Looking to partner with Ethiopian tech talent & top community events?</span>
+              <Link
+                to="/sponsor/auth"
+                className="inline-flex items-center gap-1.5 font-bold text-[#63474D] hover:text-[#2D1F23] bg-white/80 hover:bg-white border border-[#E8DDD7] hover:border-[#63474D]/40 px-3.5 py-1.5 rounded-full shadow-xs transition-all duration-200"
+              >
+                <span>Are you a sponsor?</span>
+                <ArrowRight className="w-3.5 h-3.5 text-[#FFA686]" />
+              </Link>
+            </div>
+          </FadeIn>
         </div>
       </div>
     </section>
