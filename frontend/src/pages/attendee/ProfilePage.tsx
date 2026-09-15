@@ -9,7 +9,6 @@ import {
   ShieldCheck,
   Settings,
   Award,
-  Calendar,
   ExternalLink,
   Share2,
 } from 'lucide-react';
@@ -156,7 +155,7 @@ export const ProfilePage: React.FC = () => {
 
               <div className="text-[11px] text-[#756366] pt-1 border-t border-[#E8DDD7] flex items-center justify-between">
                 <span className="flex items-center gap-1">
-                  <Calendar className="w-3 h-3 text-[#63474D]" /> {b.eventDate}
+                  <img src="/calendar.png" alt="Calendar" className="w-3 h-3 object-contain shrink-0" /> {b.eventDate}
                 </span>
                 <span className="flex items-center gap-1">
                   <img src="/location.png" alt="Location" className="w-3 h-3 object-contain shrink-0" /> {b.eventLocation.split(',')[0]}

@@ -89,7 +89,7 @@ export async function requestApi<T = any>(endpoint: string, options: RequestInit
 export const api = {
   // Authentication
   auth: {
-    login: async (creds: { email: string; password: string }): Promise<{ user: User; token: string }> => {
+    login: async (creds: { email: string; password: string; role?: string }): Promise<{ user: User; token: string }> => {
       try {
         const res = await requestApi('/auth/login', {
           method: 'POST',
@@ -110,7 +110,7 @@ export const api = {
         console.warn('Backend login fallback to local session:', err.message);
         const lowerEmail = creds.email.toLowerCase();
         const isAdmin = lowerEmail === 'admin@sheba.et' || lowerEmail.includes('admin');
-        const isOrganizer = lowerEmail.includes('organizer');
+        const isOrganizer = creds.role?.toUpperCase() === 'ORGANIZER' || lowerEmail.includes('organizer');
         const role: UserRole = isAdmin ? 'ADMIN' : isOrganizer ? 'ORGANIZER' : 'ATTENDEE';
 
         const localUser: User = {
@@ -127,6 +127,38 @@ export const api = {
         setAuthToken(token);
         return { user: localUser, token };
       }
+    },
+
+    applyOrganizer: async (data: {
+      organization: string;
+      bio?: string;
+      phone?: string;
+      password?: string;
+      socials?: Record<string, string>;
+    }): Promise<{ user: User; message: string }> => {
+      const res = await requestApi('/auth/apply-organizer', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+      return res.data;
+    },
+
+    switchRole: async (data: {
+      targetRole: 'ATTENDEE' | 'ORGANIZER';
+      password?: string;
+    }): Promise<{ user: User; token: string }> => {
+      const res = await requestApi('/auth/switch-role', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+
+      if (res.data?.token) {
+        setAuthToken(res.data.token);
+      }
+      return {
+        user: res.data.user,
+        token: res.data.token,
+      };
     },
 
     googleLogin: async (data: { credential: string; role?: string; mode?: 'login' | 'register' }): Promise<{ user: User; token: string }> => {
@@ -602,11 +634,12 @@ export const api = {
     markAttended: async (params: {
       eventId: string;
       attendeeId: string;
+      notes?: string;
     }): Promise<{ success: boolean; message: string; badgeAwarded?: BadgeAward; rosterItem?: AttendeeRosterItem }> => {
       try {
         const res = await requestApi('/checkin/mark-attended', {
           method: 'POST',
-          body: JSON.stringify({ eventId: params.eventId, attendeeId: params.attendeeId }),
+          body: JSON.stringify({ eventId: params.eventId, attendeeId: params.attendeeId, notes: params.notes }),
         });
         if (res.data) {
           return {
@@ -709,6 +742,7 @@ export const api = {
       attendeeId: string;
       badgeCode: BadgeCode;
       awardedByOrganizerId?: string;
+      notes?: string;
     }): Promise<BadgeAward> => {
       try {
         const res = await requestApi('/badges/award', {
@@ -717,6 +751,7 @@ export const api = {
             eventId: params.eventId,
             attendeeId: params.attendeeId,
             badgeCode: params.badgeCode,
+            notes: params.notes,
           }),
         });
         if (res.data) {
@@ -956,6 +991,28 @@ export const api = {
   // Attendee GDPR Account Self-Service
   userAccount: {
     updateProfile: async (_userId: string, data: Partial<User>): Promise<User> => {
+      try {
+        const payload: any = {};
+        if (data.name !== undefined) payload.full_name = data.name;
+        if (data.phone !== undefined) payload.phone = data.phone;
+        if (data.bio !== undefined) payload.bio = data.bio;
+        if (data.visibility !== undefined) payload.visibility = data.visibility;
+        if (data.organization !== undefined) payload.organization = data.organization;
+        if (data.avatarUrl !== undefined) payload.avatar_url = data.avatarUrl;
+
+        const res = await requestApi('/users/me', {
+          method: 'PATCH',
+          body: JSON.stringify(payload),
+        });
+
+        if (res.data) {
+          localStorage.setItem('sheba_auth_user', JSON.stringify(res.data));
+          return res.data;
+        }
+      } catch (err) {
+        console.warn('Backend update profile failed, updating local state:', err);
+      }
+
       const savedUserStr = localStorage.getItem('sheba_auth_user');
       let userObj = savedUserStr ? JSON.parse(savedUserStr) : null;
       if (userObj) {
@@ -966,6 +1023,14 @@ export const api = {
     },
 
     updateVisibility: async (_userId: string, visibility: ProfileVisibility): Promise<boolean> => {
+      try {
+        await requestApi('/users/me/visibility', {
+          method: 'PATCH',
+          body: JSON.stringify({ visibility }),
+        });
+      } catch (err) {
+        console.warn('Backend visibility update failed, updating local state:', err);
+      }
       const savedUserStr = localStorage.getItem('sheba_auth_user');
       if (savedUserStr) {
         const userObj = JSON.parse(savedUserStr);

@@ -5,7 +5,6 @@ import type { Event } from '../../types/event';
 import type { AttendeeRosterItem, BadgeCode } from '../../types/attendance';
 import { Button } from '../../components/ui/Button';
 import {
-  Calendar,
   Clock,
   Award,
   QrCode,
@@ -257,7 +256,7 @@ export const EventDetailPage: React.FC = () => {
 
             <div className="flex flex-wrap items-center gap-x-6 gap-y-1.5 text-xs text-[#756366]">
               <span className="flex items-center gap-1.5">
-                <Calendar className="w-4 h-4 text-[#AA767C]" />
+                <img src="/calendar.png" alt="Calendar" className="w-4 h-4 object-contain shrink-0" />
                 {event.date}
               </span>
               <span className="flex items-center gap-1.5">
@@ -508,7 +507,7 @@ export const EventDetailPage: React.FC = () => {
                             title="Click to view all answers"
                           >
                             {Object.entries(att.answers)
-                              .map(([q, a]) => `${q}: ${a}`)
+                              .map(([, a], qIdx) => `Q${qIdx + 1}: ${a}`)
                               .join('; ')}
                           </button>
                         ) : (
@@ -735,14 +734,29 @@ export const EventDetailPage: React.FC = () => {
 
             <div className="space-y-3.5 max-h-[60vh] overflow-y-auto pr-1">
               {selectedAnswersAttendee.answers && Object.keys(selectedAnswersAttendee.answers).length > 0 ? (
-                Object.entries(selectedAnswersAttendee.answers).map(([question, answer], idx) => (
-                  <div key={idx} className="p-3.5 bg-[#FAF7F5] rounded-xl border border-[#E8DDD7] space-y-1">
-                    <p className="text-xs font-bold text-[#2D1F23]">{question}</p>
-                    <p className="text-xs text-[#63474D] font-medium leading-relaxed">
-                      {answer || <span className="italic text-gray-400">No answer provided</span>}
-                    </p>
-                  </div>
-                ))
+                Object.entries(selectedAnswersAttendee.answers).map(([questionKey, answer], idx) => {
+                  const matchedQuestion = event?.customQuestions?.find((q) => q.id === questionKey);
+                  const qNum = `Q${idx + 1}`;
+                  const questionText = matchedQuestion?.questionText;
+
+                  return (
+                    <div key={idx} className="p-3.5 bg-[#FAF7F5] rounded-xl border border-[#E8DDD7] space-y-1.5">
+                      <div className="flex items-start gap-2">
+                        <span className="font-mono text-xs font-bold text-[#63474D] bg-[#63474D]/10 px-1.5 py-0.5 rounded shrink-0">
+                          {qNum}
+                        </span>
+                        {questionText && (
+                          <span className="text-xs font-bold text-[#2D1F23] pt-0.5 leading-snug">
+                            {questionText}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-[#63474D] font-medium leading-relaxed pl-1">
+                        {answer || <span className="italic text-gray-400">No answer provided</span>}
+                      </p>
+                    </div>
+                  );
+                })
               ) : (
                 <div className="py-6 text-center text-xs text-gray-400 space-y-1">
                   <p className="font-medium text-gray-600">No Custom Answers</p>

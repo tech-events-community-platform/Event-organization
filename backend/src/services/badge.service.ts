@@ -22,6 +22,9 @@ export class BadgeService {
       eventType: row.event_type || 'workshop',
       eventDate: row.event_date ? new Date(row.event_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '2026',
       eventLocation: row.event_location || 'Addis Ababa',
+      eventDescription: row.event_description || row.description || null,
+      eventTime: row.event_time || (row.start_time ? `${row.start_time}${row.end_time ? ` - ${row.end_time}` : ''}` : null),
+      organizerNote: row.organizer_note || null,
       attendeeId: row.user_id,
       attendeeName: row.attendee_name || row.user_name || 'Attendee',
       attendeeEmail: row.attendee_email || row.user_email || '',
@@ -38,8 +41,8 @@ export class BadgeService {
   static async getAllBadgeAwards(): Promise<any[]> {
     const result = await query(
       `SELECT 
-        b.id, b.badge_code, b.badge_label, b.event_id, b.user_id, b.awarded_by, b.awarded_at, b.revoked_at, b.revocation_reason,
-        e.title AS event_title, e.event_type, e.event_date, e.location AS event_location,
+        b.id, b.badge_code, b.badge_label, b.event_id, b.user_id, b.awarded_by, b.awarded_at, b.revoked_at, b.revocation_reason, b.organizer_note,
+        e.title AS event_title, e.event_type, e.event_date, e.location AS event_location, e.description AS event_description, e.start_time, e.end_time,
         u.full_name AS attendee_name, u.email AS attendee_email,
         org.full_name AS issuer_name,
         COALESCE(org.organization, org.full_name, 'Organizer') AS organizer_name,
@@ -57,8 +60,8 @@ export class BadgeService {
   static async getAttendeeBadges(userId: string): Promise<any[]> {
     const result = await query(
       `SELECT 
-        b.id, b.badge_code, b.badge_label, b.event_id, b.user_id, b.awarded_by, b.awarded_at, b.revoked_at,
-        e.title AS event_title, e.event_type, e.event_date, e.location AS event_location,
+        b.id, b.badge_code, b.badge_label, b.event_id, b.user_id, b.awarded_by, b.awarded_at, b.revoked_at, b.organizer_note,
+        e.title AS event_title, e.event_type, e.event_date, e.location AS event_location, e.description AS event_description, e.start_time, e.end_time,
         u.full_name AS attendee_name, u.email AS attendee_email,
         org.full_name AS issuer_name,
         COALESCE(org.organization, org.full_name, 'Organizer') AS organizer_name,
@@ -78,10 +81,12 @@ export class BadgeService {
   static async getBadgeById(badgeId: string): Promise<any> {
     const result = await query(
       `SELECT 
-        b.id, b.badge_code, b.badge_label, b.event_id, b.user_id, b.awarded_by, b.awarded_at, b.revoked_at, b.revocation_reason,
-        e.title AS event_title, e.event_type, e.event_date, e.location AS event_location,
+        b.id, b.badge_code, b.badge_label, b.event_id, b.user_id, b.awarded_by, b.awarded_at, b.revoked_at, b.revocation_reason, b.organizer_note,
+        e.title AS event_title, e.event_type, e.event_date, e.location AS event_location, e.description AS event_description, e.start_time, e.end_time,
         u.full_name AS attendee_name, u.email AS attendee_email,
-        org.full_name AS issuer_name
+        org.full_name AS issuer_name,
+        COALESCE(org.organization, org.full_name, 'Organizer') AS organizer_name,
+        org.organization AS organizer_organization
        FROM badge_awards b
        JOIN events e ON b.event_id = e.id
        JOIN users u ON b.user_id = u.id
@@ -148,8 +153,9 @@ export class BadgeService {
     badgeCode: BadgeCode;
     awardedByOrganizerId: string;
     userRole?: UserRole;
+    notes?: string;
   }): Promise<any> {
-    const { eventId, attendeeId, badgeCode, awardedByOrganizerId } = params;
+    const { eventId, attendeeId, badgeCode, awardedByOrganizerId, notes } = params;
 
     // Validate badge type: only participant, winner, speaker can be manually awarded
     const validHigherTierBadges = ['participant', 'winner', 'speaker'];
@@ -191,12 +197,12 @@ export class BadgeService {
     const badgeLabel = badgeLabels[normBadgeCode] || 'Participant';
 
     const insertRes = await query(
-      `INSERT INTO badge_awards (badge_code, badge_label, event_id, user_id, awarded_by, awarded_at)
-       VALUES ($1, $2, $3, $4, $5, NOW())
+      `INSERT INTO badge_awards (badge_code, badge_label, event_id, user_id, awarded_by, awarded_at, organizer_note)
+       VALUES ($1, $2, $3, $4, $5, NOW(), $6)
        ON CONFLICT (event_id, user_id, badge_code)
-       DO UPDATE SET revoked_at = NULL, awarded_at = NOW(), revocation_reason = NULL
+       DO UPDATE SET revoked_at = NULL, awarded_at = NOW(), revocation_reason = NULL, organizer_note = COALESCE($6, badge_awards.organizer_note)
        RETURNING *`,
-      [normBadgeCode, badgeLabel, eventId, attendeeId, awardedByOrganizerId]
+      [normBadgeCode, badgeLabel, eventId, attendeeId, awardedByOrganizerId, notes?.trim() || null]
     );
 
     const raw = insertRes.rows[0];

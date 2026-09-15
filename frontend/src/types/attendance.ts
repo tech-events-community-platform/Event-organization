@@ -27,6 +27,9 @@ export interface BadgeAward {
   awardedBy: string;
   awardedAt: string;
   revokedAt?: string | null;
+  organizerNote?: string | null;
+  eventDescription?: string | null;
+  eventTime?: string | null;
 }
 
 export interface AttendeeRosterItem {

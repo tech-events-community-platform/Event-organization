@@ -3,6 +3,7 @@ import { Request } from 'express';
 export type UserRole = 'attendee' | 'organizer' | 'admin';
 export type ProfileVisibility = 'public' | 'private';
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected';
+export type OrganizerApprovalStatus = 'none' | 'pending' | 'approved' | 'rejected';
 
 export interface IUser {
   id: string;
@@ -18,6 +19,10 @@ export interface IUser {
   member_since: string;
   is_active: boolean;
   approval_status: ApprovalStatus;
+  is_organizer?: boolean;
+  organizer_approval_status?: OrganizerApprovalStatus;
+  organizer_bio?: string | null;
+  organizer_socials?: Record<string, string> | null;
   created_at: Date;
   updated_at: Date;
   // Computed stats
@@ -141,6 +146,7 @@ export interface IBadgeAward {
   revoked_at?: Date | null;
   revoked_by?: string | null;
   revocation_reason?: string | null;
+  organizer_note?: string | null;
   created_at: Date;
   updated_at: Date;
   // Joined fields

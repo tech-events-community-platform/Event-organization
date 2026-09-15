@@ -8,7 +8,6 @@ import {
   Plus,
   Trash2,
   Copy,
-  ExternalLink,
   HelpCircle,
   CreditCard,
   X,
@@ -248,13 +247,8 @@ export const CreateEventPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3 pt-3 max-w-lg mx-auto">
-          <Link to={`/e/${createdEvent.shareLinkToken}`} target="_blank" className="flex-1">
-            <Button fullWidth variant="outline" icon={<ExternalLink className="w-4 h-4" />}>
-              Preview Form
-            </Button>
-          </Link>
-          <Link to="/organizer" className="flex-1">
+        <div className="pt-3 max-w-xs mx-auto">
+          <Link to="/organizer" className="block w-full">
             <Button fullWidth variant="primary">
               Return to Dashboard
             </Button>
@@ -440,27 +434,14 @@ export const CreateEventPage: React.FC = () => {
 
           {/* 3. Registration Questions (Unboxed, free spacing, customizable answer choices) */}
           <div className="space-y-4 pt-6 border-t border-gray-100">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="font-serif font-bold text-base text-[#2D1F23] flex items-center gap-2">
-                  <HelpCircle className="w-4 h-4 text-[#63474D]" />
-                  Registration Questions
-                </h2>
-                <p className="text-xs text-[#756366] mt-0.5">
-                  Customize the questions and answer types (text, choice options, multi-tick) for attendees.
-                </p>
-              </div>
-
-              <Button
-                type="button"
-                onClick={handleAddQuestion}
-                variant="outline"
-                size="sm"
-                icon={<Plus className="w-3.5 h-3.5" />}
-                className="font-bold"
-              >
-                Add
-              </Button>
+            <div>
+              <h2 className="font-serif font-bold text-base text-[#2D1F23] flex items-center gap-2">
+                <HelpCircle className="w-4 h-4 text-[#63474D]" />
+                Registration Questions
+              </h2>
+              <p className="text-xs text-[#756366] mt-0.5">
+                Customize the questions and answer types (text, choice options, multi-tick) for attendees.
+              </p>
             </div>
 
             <div className="space-y-4">
@@ -567,18 +548,31 @@ export const CreateEventPage: React.FC = () => {
                   </div>
                 </div>
               ))}
+
+              {/* Big, prominent Add Question button placed below all questions */}
+              <button
+                type="button"
+                onClick={handleAddQuestion}
+                className="w-full py-4 px-4 bg-[#FAF7F5] hover:bg-[#F3ECE8] border-2 border-dashed border-[#AA767C]/50 hover:border-[#63474D] rounded-2xl text-xs sm:text-sm font-bold text-[#63474D] flex items-center justify-center gap-2 transition-all cursor-pointer shadow-2xs group"
+              >
+                <Plus className="w-4 h-4 text-[#AA767C] group-hover:text-[#63474D] transition-colors" />
+                <span>+ Add Question</span>
+              </button>
+            </div>
+
+            {/* Smaller Publish button aligned to the right edge of registration questions */}
+            <div className="pt-4 flex justify-end">
+              <Button
+                type="submit"
+                variant="primary"
+                size="sm"
+                isLoading={isSubmitting}
+                className="text-xs font-semibold px-4 py-2 shadow-xs"
+              >
+                Publish Event & Generate Share Link
+              </Button>
             </div>
           </div>
-
-          <Button
-            type="submit"
-            fullWidth
-            variant="primary"
-            size="lg"
-            isLoading={isSubmitting}
-          >
-            Publish Event & Generate Share Link
-          </Button>
         </form>
 
         {/* Right Column: Live Poster Preview (Bigger, higher up, aligned to event title row, unboxed) */}
