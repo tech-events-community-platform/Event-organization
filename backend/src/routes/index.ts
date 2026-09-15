@@ -8,6 +8,7 @@ import badgeRoutes from './badge.routes';
 import reportRoutes from './report.routes';
 import adminRoutes from './admin.routes';
 import searchRoutes from './search.routes';
+import sponsorshipRoutes from './sponsorship.routes';
 
 const router = Router();
 
@@ -30,5 +31,6 @@ router.use('/badges', badgeRoutes);
 router.use('/reports', reportRoutes);
 router.use('/admin', adminRoutes);
 router.use('/search', searchRoutes);
+router.use('/sponsorships', sponsorshipRoutes);
 
 export default router;

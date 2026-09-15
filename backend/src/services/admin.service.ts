@@ -1,4 +1,5 @@
 import { query } from '../config/db';
+import { EmailService } from './email.service';
 
 export class AdminService {
   static async getDashboardMetrics() {
@@ -8,6 +9,8 @@ export class AdminService {
         (SELECT COUNT(*)::INTEGER FROM users WHERE role = 'attendee' OR role IS NULL) AS total_attendees,
         (SELECT COUNT(*)::INTEGER FROM users WHERE role = 'organizer' OR is_organizer = TRUE) AS total_organizers,
         (SELECT COUNT(*)::INTEGER FROM users WHERE (role = 'organizer' AND approval_status = 'pending') OR organizer_approval_status = 'pending') AS pending_organizers,
+        (SELECT COUNT(*)::INTEGER FROM users WHERE role = 'sponsor') AS total_sponsors,
+        (SELECT COUNT(*)::INTEGER FROM users WHERE role = 'sponsor' AND approval_status = 'pending') AS pending_sponsors,
         (SELECT COUNT(*)::INTEGER FROM registrations WHERE status = 'registered') AS total_registrations,
         (SELECT COUNT(*)::INTEGER FROM tickets WHERE status = 'CHECKED_IN') AS total_check_ins,
         (SELECT COUNT(*)::INTEGER FROM badge_awards WHERE revoked_at IS NULL) AS total_badges
@@ -25,6 +28,8 @@ export class AdminService {
       totalAttendees: parseInt(row.total_attendees || '0', 10),
       totalOrganizers: parseInt(row.total_organizers || '0', 10),
       pendingOrganizers: parseInt(row.pending_organizers || '0', 10),
+      totalSponsors: parseInt(row.total_sponsors || '0', 10),
+      pendingSponsors: parseInt(row.pending_sponsors || '0', 10),
       totalRegistrations,
       totalCheckIns,
       turnoutRate,
@@ -59,6 +64,18 @@ export class AdminService {
       GROUP BY u.id
       ORDER BY 
         CASE WHEN (u.organizer_approval_status = 'pending' OR u.approval_status = 'pending') THEN 0 ELSE 1 END,
+        u.created_at DESC
+    `);
+
+    const sponsorsRes = await query(`
+      SELECT 
+        u.id, u.full_name, u.email, u.phone, u.company_name, u.industry_category,
+        u.company_phone, u.company_website, u.organization, u.role, u.is_active,
+        u.approval_status, u.created_at
+      FROM users u
+      WHERE u.role = 'sponsor'
+      ORDER BY 
+        CASE WHEN u.approval_status = 'pending' THEN 0 ELSE 1 END,
         u.created_at DESC
     `);
 
@@ -99,7 +116,25 @@ export class AdminService {
       };
     });
 
-    return { attendees, organizers };
+    const sponsors = sponsorsRes.rows.map((s) => ({
+      id: s.id,
+      name: s.full_name,
+      email: s.email,
+      companyName: s.company_name || s.organization || 'Corporate Partner',
+      industryCategory: s.industry_category || 'Technology',
+      phone: s.company_phone || s.phone || '',
+      website: s.company_website || '',
+      status: s.approval_status === 'pending'
+        ? 'Pending Approval'
+        : s.approval_status === 'approved'
+        ? 'Active'
+        : 'Rejected',
+      approvalStatus: s.approval_status,
+      isActive: s.approval_status === 'approved',
+      registeredAt: s.created_at,
+    }));
+
+    return { attendees, organizers, sponsors };
   }
 
   static async approveOrganizer(userId: string) {
@@ -142,6 +177,68 @@ export class AdminService {
     }
 
     return res.rows[0];
+  }
+
+  static async approveSponsor(userId: string) {
+    const res = await query(
+      `UPDATE users
+       SET approval_status = 'approved',
+           is_active = TRUE,
+           updated_at = NOW()
+       WHERE id = $1 AND role = 'sponsor'
+       RETURNING id, full_name, email, role, company_name, organization, is_active, approval_status`,
+      [userId]
+    );
+
+    if (!res.rowCount || res.rowCount === 0) {
+      const err: any = new Error('Sponsor account not found.');
+      err.statusCode = 404;
+      throw err;
+    }
+
+    const user = res.rows[0];
+    try {
+      await EmailService.sendSponsorApprovalEmail(
+        user.email,
+        user.full_name,
+        user.company_name || user.organization || 'Corporate Partner'
+      );
+    } catch (e) {
+      console.warn('Failed to dispatch sponsor approval email:', e);
+    }
+
+    return user;
+  }
+
+  static async rejectSponsor(userId: string) {
+    const res = await query(
+      `UPDATE users
+       SET approval_status = 'rejected',
+           is_active = FALSE,
+           updated_at = NOW()
+       WHERE id = $1 AND role = 'sponsor'
+       RETURNING id, full_name, email, role, company_name, organization, is_active, approval_status`,
+      [userId]
+    );
+
+    if (!res.rowCount || res.rowCount === 0) {
+      const err: any = new Error('Sponsor account not found.');
+      err.statusCode = 404;
+      throw err;
+    }
+
+    const user = res.rows[0];
+    try {
+      await EmailService.sendSponsorRejectionEmail(
+        user.email,
+        user.full_name,
+        user.company_name || user.organization || 'Corporate Partner'
+      );
+    } catch (e) {
+      console.warn('Failed to dispatch sponsor rejection email:', e);
+    }
+
+    return user;
   }
 
   static async toggleUserStatus(userId: string) {
