@@ -2,7 +2,7 @@ import React from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import type { Ticket } from '../../types/ticket';
 import { Badge } from '../ui/Badge';
-import { Award, Calendar, MapPin, CheckCircle2, Download, ShieldCheck } from 'lucide-react';
+import { Award, Calendar, Download, ShieldCheck } from 'lucide-react';
 
 interface TicketCardProps {
   ticket: Ticket;
@@ -63,7 +63,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({ ticket, onDownload }) =>
               </div>
             </div>
             <div className="flex items-start gap-2.5 pt-1">
-              <MapPin className="w-4 h-4 text-[#63474D] mt-0.5 flex-shrink-0" />
+              <img src="/location.png" alt="Location" className="w-4 h-4 object-contain mt-0.5 flex-shrink-0" />
               <div>
                 <p className="font-semibold text-[#2D1F23]">{ticket.eventLocation}</p>
               </div>
@@ -94,7 +94,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({ ticket, onDownload }) =>
             </div>
 
             <div className="flex items-center justify-center gap-1.5 text-xs text-[#2A7B5F] font-semibold bg-[#2A7B5F]/10 py-2 px-4 rounded-xl border border-[#2A7B5F]/20">
-              <CheckCircle2 className="w-4 h-4 text-[#2A7B5F]" />
+              <img src="/tick.png" alt="Valid" className="w-4 h-4 object-contain shrink-0" />
               <span>Evaluated live server-side at door entrance.</span>
             </div>
 

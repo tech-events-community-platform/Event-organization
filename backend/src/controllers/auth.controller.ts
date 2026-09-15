@@ -72,5 +72,21 @@ export class AuthController {
     const result = await AuthService.resetPassword(token, newPassword);
     sendSuccess(res, result, result.message);
   }
+
+
+  static async googleLogin(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { credential, role, mode } = req.body;
+      if (!credential) {
+        sendError(res, 'Google credential is required.', 400);
+        return;
+      }
+      const result = await AuthService.loginWithGoogle(credential, role, mode || 'login');
+      return sendSuccess(res, result, 'Google authentication successful.');
+    } catch (error) {
+      next(error);
+    }
+  }
+
 }
 

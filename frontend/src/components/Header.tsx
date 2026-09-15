@@ -29,6 +29,9 @@ export default function Header() {
   const navigate = useNavigate();
   const isHome = location.pathname === '/';
   const isAuthPage = ['/login', '/register', '/pending-approval'].includes(location.pathname);
+  const isExternalRegistration =
+    location.pathname.startsWith('/e/') ||
+    (location.pathname.startsWith('/events/') && location.pathname.includes('/register'));
 
   useEffect(() => {
     const handleScroll = () => {
@@ -97,9 +100,11 @@ export default function Header() {
   return (
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        scrolled
-          ? 'bg-white/95 backdrop-blur-md shadow-sm border-b border-gray-100'
-          : 'bg-white/90 backdrop-blur-sm border-b border-gray-100/80 shadow-2xs'
+        isExternalRegistration
+          ? 'bg-white/10 backdrop-blur-md border-b border-white/15'
+          : scrolled
+          ? 'bg-white/15 backdrop-blur-md shadow-xs border-b border-gray-200/40'
+          : 'bg-white/10 backdrop-blur-md border-b border-gray-200/20'
       }`}
     >
       {/* Top Navbar Row */}
@@ -113,17 +118,25 @@ export default function Header() {
               className="h-8 sm:h-10 w-auto object-contain group-hover:scale-105 transition-transform duration-200"
             />
             <div className="flex flex-col">
-              <span className="font-serif text-xl sm:text-2xl font-bold tracking-tight text-[#2D1F23] group-hover:text-[#63474D] transition-colors leading-none">
+              <span
+                className={`font-serif text-xl sm:text-2xl font-bold tracking-tight transition-colors leading-none ${
+                  isExternalRegistration ? 'text-white' : 'text-[#2D1F23] group-hover:text-[#63474D]'
+                }`}
+              >
                 Sheeba
               </span>
-              <span className="text-[8px] uppercase font-bold tracking-widest text-[#AA767C] mt-0.5">
+              <span
+                className={`text-[8px] uppercase font-bold tracking-widest mt-0.5 ${
+                  isExternalRegistration ? 'text-white/80' : 'text-[#AA767C]'
+                }`}
+              >
                 Event Infrastructure
               </span>
             </div>
           </Link>
 
-          {/* Desktop Navigation for Logged Out Guests */}
-          {!isAuthenticated && !isAuthPage && (
+          {/* Desktop Navigation for Logged Out Guests (Hidden on External Registration) */}
+          {!isAuthenticated && !isAuthPage && !isExternalRegistration && (
             <nav className="hidden md:flex items-center gap-6 lg:gap-8">
               {publicNavLinks.map((link) =>
                 link.isInternal ? (
@@ -147,33 +160,33 @@ export default function Header() {
             </nav>
           )}
 
-          {/* Desktop Right: Profile / Auth Actions */}
+          {/* Desktop Right: Profile / Auth Actions (NO name displayed) */}
           <div className="hidden md:flex items-center gap-3">
             {isAuthenticated && user ? (
-              /* Logged In User Pill & Dropdown */
+              /* Logged In User Avatar Pill & Dropdown (No name displayed) */
               <div className="relative" ref={dropdownRef}>
                 <button
                   type="button"
                   onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                  className="flex items-center gap-2.5 pl-2 pr-3 py-1.5 rounded-full bg-white border border-[#E8DDD7] hover:border-[#63474D]/40 hover:shadow-xs transition-all cursor-pointer"
+                  className={`flex items-center gap-1.5 rounded-full transition-all cursor-pointer ${
+                    isExternalRegistration
+                      ? 'p-1.5 bg-white/20 border border-white/40 hover:bg-white/30'
+                      : 'p-1.5 bg-white/60 border border-[#E8DDD7] hover:border-[#63474D]/40 hover:shadow-xs'
+                  }`}
                 >
                   <img
                     src={user.avatarUrl || defaultAvatar}
-                    alt={user.name}
+                    alt=""
                     className="w-7 h-7 rounded-full object-cover border border-[#FFA686]/60 shadow-xs"
                     onError={(e) => {
                       (e.target as HTMLImageElement).src = defaultAvatar;
                     }}
                   />
-                  <div className="flex flex-col text-left">
-                    <span className="text-xs font-bold text-[#2D1F23] max-w-[130px] truncate leading-tight">
-                      {user.name}
-                    </span>
-                    <span className="text-[9px] uppercase tracking-wider font-semibold text-[#AA767C]">
-                      {user.role === 'ADMIN' ? 'Super Admin' : user.role === 'ORGANIZER' ? 'Organizer' : 'Attendee'}
-                    </span>
-                  </div>
-                  <ChevronDown className="w-3.5 h-3.5 text-gray-500 transition-transform duration-200" />
+                  <ChevronDown
+                    className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                      isExternalRegistration ? 'text-white' : 'text-gray-500'
+                    }`}
+                  />
                 </button>
 
                 {/* Profile Dropdown Menu */}
@@ -238,16 +251,20 @@ export default function Header() {
             ) : (
               <div className="flex items-center gap-2.5">
                 <Link
-                  to="/login"
-                  className="inline-flex items-center px-4 py-2 rounded-xl text-xs font-semibold text-gray-700 hover:text-[#63474D] hover:bg-gray-100 transition-colors"
+                  to={isExternalRegistration ? `/login?redirect=${encodeURIComponent(location.pathname + location.search)}` : "/login"}
+                  className={`inline-flex items-center px-4 py-2 rounded-xl text-xs font-semibold transition-colors ${
+                    isExternalRegistration
+                      ? 'text-white hover:text-white/80 hover:bg-white/10'
+                      : 'text-gray-700 hover:text-[#63474D] hover:bg-gray-100'
+                  }`}
                 >
                   Sign In
                 </Link>
                 <Link
-                  to="/register"
+                  to={isExternalRegistration ? `/register?redirect=${encodeURIComponent(location.pathname + location.search)}` : "/register"}
                   className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#63474D] text-white text-xs font-bold hover:bg-[#523a3f] shadow-xs hover:shadow-sm transition-all duration-200"
                 >
-                  <span>Register</span>
+                  <span>Sign Up</span>
                   <ArrowRight className="w-3.5 h-3.5 text-white" />
                 </Link>
               </div>
@@ -281,8 +298,8 @@ export default function Header() {
         </div>
       </div>
 
-      {/* 1-LINE QUICK NAVIGATION SUBNAV (Visible When Logged In) */}
-      {isAuthenticated && user && (
+      {/* 1-LINE QUICK NAVIGATION SUBNAV (Visible When Logged In, Hidden on External Registration) */}
+      {isAuthenticated && user && !isExternalRegistration && (
         <div className="bg-[#FAF7F5] border-t border-b border-[#E8DDD7]/70 py-1 px-4 sm:px-6 lg:px-8 overflow-x-auto scrollbar-none">
           <div className="max-w-7xl mx-auto flex items-center justify-start sm:justify-center gap-2 sm:gap-4 whitespace-nowrap min-w-max text-xs">
             {user.role === 'ATTENDEE' && (
@@ -552,8 +569,8 @@ export default function Header() {
               </div>
             ) : null}
 
-            {/* Public Navigation links for guests */}
-            {!isAuthenticated && (
+            {/* Public Navigation links for guests (Hidden on external registration link) */}
+            {!isAuthenticated && !isExternalRegistration && (
               <div className="flex flex-col gap-2">
                 {publicNavLinks.map((link) =>
                   link.isInternal ? (
@@ -596,18 +613,18 @@ export default function Header() {
               ) : (
                 <div className="grid grid-cols-2 gap-2">
                   <Link
-                    to="/login"
+                    to={isExternalRegistration ? `/login?redirect=${encodeURIComponent(location.pathname + location.search)}` : "/login"}
                     onClick={() => setIsOpen(false)}
                     className="flex items-center justify-center py-2.5 rounded-xl border border-gray-300 text-gray-800 font-semibold text-xs hover:bg-gray-50 transition-colors"
                   >
                     Sign In
                   </Link>
                   <Link
-                    to="/register"
+                    to={isExternalRegistration ? `/register?redirect=${encodeURIComponent(location.pathname + location.search)}` : "/register"}
                     onClick={() => setIsOpen(false)}
                     className="flex items-center justify-center gap-1 py-2.5 rounded-xl bg-[#63474D] text-white font-bold text-xs shadow-xs hover:bg-[#523a3f] transition-colors"
                   >
-                    <span>Register</span>
+                    <span>Sign Up</span>
                     <ArrowRight className="w-3.5 h-3.5 text-white" />
                   </Link>
                 </div>

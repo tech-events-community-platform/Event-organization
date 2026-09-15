@@ -9,10 +9,8 @@ import { Button } from '../../components/ui/Button';
 import {
   Award,
   Calendar,
-  MapPin,
   ShieldCheck,
   Download,
-  CheckCircle2,
   ArrowLeft,
   ExternalLink,
 } from 'lucide-react';
@@ -206,7 +204,7 @@ export const PublicProfilePage: React.FC = () => {
 
         {exportedMsg && (
           <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-700 flex items-center gap-2 animate-fade-in">
-            <CheckCircle2 className="w-4 h-4" />
+            <img src="/tick.png" alt="Success" className="w-4 h-4 object-contain shrink-0" />
             <span>Profile credential image generated and saved to your device.</span>
           </div>
         )}
@@ -264,7 +262,7 @@ export const PublicProfilePage: React.FC = () => {
                   <Calendar className="w-3 h-3 text-[#63474D]" /> {b.eventDate}
                 </span>
                 <span className="flex items-center gap-1">
-                  <MapPin className="w-3 h-3 text-[#63474D]" /> {b.eventLocation.split(',')[0]}
+                  <img src="/location.png" alt="Location" className="w-3 h-3 object-contain shrink-0" /> {b.eventLocation.split(',')[0]}
                 </span>
               </div>
             </Link>

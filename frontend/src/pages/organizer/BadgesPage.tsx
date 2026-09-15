@@ -4,17 +4,14 @@ import { api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import type { Event } from '../../types/event';
 import type { AttendeeRosterItem, BadgeCode } from '../../types/attendance';
-import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import {
   Award,
-  CheckCircle2,
   CheckSquare,
   Square,
   Sparkles,
   Search,
   Calendar,
-  MapPin,
   X,
   Users,
 } from 'lucide-react';
@@ -193,26 +190,21 @@ export const BadgesPage: React.FC = () => {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-24">
-      {/* Header & Event Picker (Section 6: Sorted Ongoing → Upcoming → Past) */}
+      {/* Header & Event Picker */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-4">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-[#63474D]">
-              Badge Issuance
-            </span>
-            <Badge variant="primary" className="text-[10px]">
-              Attended Floor Enforced
-            </Badge>
-          </div>
+          <span className="text-xs font-bold uppercase tracking-wider text-[#63474D] block mb-0.5">
+            Badge Issuance
+          </span>
           <h1 className="font-serif text-2xl sm:text-3xl font-extrabold text-[#2D1F23]">
-            Award Badges
+            Approve Badges
           </h1>
         </div>
 
         {events.length > 0 && (
           <div className="min-w-64">
-            <label className="text-[10px] uppercase font-bold text-gray-400 block mb-1">
-              Select Event:
+            <label className="text-sm font-extrabold uppercase tracking-wider text-[#2D1F23] block mb-1">
+              SELECT EVENT
             </label>
             <select
               value={selectedEventId}
@@ -237,7 +229,7 @@ export const BadgesPage: React.FC = () => {
       {successToast && (
         <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl text-xs font-semibold flex items-center justify-between shadow-2xs animate-fade-in">
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <img src="/tick.png" alt="Success" className="w-4 h-4 object-contain shrink-0" />
             <span>{successToast}</span>
           </div>
           <button type="button" onClick={() => setSuccessToast(null)} className="p-1">
@@ -259,17 +251,18 @@ export const BadgesPage: React.FC = () => {
                 {currentEvent.date}
               </span>
               <span className="flex items-center gap-1">
-                <MapPin className="w-3.5 h-3.5 text-[#FFA686]" />
+                <img src="/location.png" alt="Location" className="w-3.5 h-3.5 object-contain shrink-0" />
                 {currentEvent.location}
               </span>
             </div>
           </div>
 
-          <div className="bg-white/10 px-5 py-2.5 rounded-2xl border border-white/20 text-center shrink-0">
-            <span className="text-[10px] font-bold uppercase text-[#FFA686] block tracking-wider">
+          {/* Verified Attendees and Count by themselves without any rectangular box */}
+          <div className="text-center sm:text-right shrink-0">
+            <span className="text-[11px] font-bold uppercase text-[#FFA686] block tracking-wider">
               Verified Attendees
             </span>
-            <span className="text-xl font-serif font-black text-white">
+            <span className="text-2xl font-serif font-black text-white">
               {attendedAttendees.length}
             </span>
           </div>
@@ -282,7 +275,7 @@ export const BadgesPage: React.FC = () => {
           <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
-            placeholder="Search verified attendees by name or email..."
+            placeholder="Search attended people by name or email..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-xl text-xs text-[#2D1F23] focus:outline-none focus:ring-2 focus:ring-[#63474D]"
@@ -298,13 +291,13 @@ export const BadgesPage: React.FC = () => {
               size="sm"
               icon={<Award className="w-4 h-4" />}
             >
-              Award Selected ({selectedIds.length})
+              Approve Badges ({selectedIds.length})
             </Button>
           )}
         </div>
       </div>
 
-      {/* Attended Holders List (Section 6: only attendees with Attended badge) */}
+      {/* Attended Holders List (Only attendees who attended) */}
       <div className="bg-white rounded-3xl border border-[#E8DDD7] overflow-hidden shadow-xs">
         {loading ? (
           <div className="p-8 space-y-3 animate-pulse">
@@ -315,9 +308,9 @@ export const BadgesPage: React.FC = () => {
         ) : filteredHolders.length === 0 ? (
           <div className="p-12 text-center space-y-3">
             <Users className="w-10 h-10 text-gray-300 mx-auto" />
-            <p className="font-serif font-bold text-base text-[#2D1F23]">No Verified Attendees Yet</p>
+            <p className="font-serif font-bold text-base text-[#2D1F23]">No Attended Attendees Found</p>
             <p className="text-xs text-gray-500 max-w-md mx-auto">
-              Attendees must be checked in at the door to earn the floor &quot;Attended&quot; badge before they can receive Participant, Winner, or Speaker badges.
+              Only people who attended this event (marked attended at the door or scanned via QR) appear here to be approved for badges.
             </p>
           </div>
         ) : (
@@ -338,9 +331,9 @@ export const BadgesPage: React.FC = () => {
                       )}
                     </button>
                   </th>
-                  <th className="py-3 px-4">Attendee Name & Email</th>
-                  <th className="py-3 px-4">Held Badges (Fixed Set)</th>
-                  <th className="py-3 px-4 text-right">Award Higher Badge</th>
+                  <th className="py-3 px-4">Attended Person</th>
+                  <th className="py-3 px-4">Held Badges</th>
+                  <th className="py-3 px-4 text-right">Approve Badge</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -377,7 +370,7 @@ export const BadgesPage: React.FC = () => {
                         <div className="flex flex-wrap gap-1.5">
                           {/* Attended Floor Badge */}
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase bg-emerald-100 text-emerald-800 border border-emerald-200">
-                            <CheckCircle2 className="w-3 h-3" />
+                            <img src="/tick.png" alt="Attended" className="w-3 h-3 object-contain" />
                             Attended
                           </span>
 
@@ -403,10 +396,10 @@ export const BadgesPage: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => openSingleAwardModal(att)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#63474D] hover:bg-[#523a3f] text-white text-xs font-semibold shadow-2xs transition-all cursor-pointer"
+                          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#63474D] hover:bg-[#523a3f] text-white text-xs font-bold shadow-2xs transition-all cursor-pointer"
                         >
                           <Award className="w-3.5 h-3.5 text-[#FFA686]" />
-                          <span>Award Badge</span>
+                          <span>Approve a badge</span>
                         </button>
                       </td>
                     </tr>
@@ -418,7 +411,7 @@ export const BadgesPage: React.FC = () => {
         )}
       </div>
 
-      {/* Award Badge Modal (Fixed Set: Participant, Winner, Speaker) */}
+      {/* Approve Badge Modal (Fixed Set: Winner, Participant, Speaker) */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4">
           <div
@@ -430,25 +423,25 @@ export const BadgesPage: React.FC = () => {
             <div className="flex items-start justify-between pb-3 border-b border-gray-100">
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-[#63474D]">
-                  {modalMode === 'bulk' ? `Bulk Award (${selectedIds.length} Attendees)` : 'Award Verified Badge'}
+                  {modalMode === 'bulk' ? `Bulk Approve (${selectedIds.length} Attendees)` : 'Approve Badge'}
                 </span>
                 <h3 className="font-serif font-bold text-xl text-[#2D1F23]">
                   {modalMode === 'bulk' ? `${selectedIds.length} Selected Attendees` : targetAttendee?.name}
                 </h3>
                 <p className="text-xs text-gray-500">
-                  {currentEvent?.title} • Fixed System: Attended Floor Verified
+                  {currentEvent?.title}
                 </p>
               </div>
             </div>
 
             <div className="space-y-3">
               <label className="text-xs font-bold text-[#2D1F23] block">
-                Choose Badge Type to Issue:
+                Choose Badge Type to Approve:
               </label>
               <div className="grid grid-cols-3 gap-2.5">
                 {[
-                  { code: 'participant' as BadgeCode, label: 'Participant', icon: '🎖️' },
                   { code: 'winner' as BadgeCode, label: 'Winner', icon: '🏆' },
+                  { code: 'participant' as BadgeCode, label: 'Participant', icon: '🎖️' },
                   { code: 'speaker' as BadgeCode, label: 'Speaker', icon: '🎤' },
                 ].map((b) => (
                   <button
@@ -484,7 +477,7 @@ export const BadgesPage: React.FC = () => {
                 size="sm"
                 icon={<Sparkles className="w-4 h-4" />}
               >
-                Confirm & Issue Badge
+                Confirm & Approve Badge
               </Button>
             </div>
           </div>

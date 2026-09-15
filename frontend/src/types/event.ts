@@ -1,11 +1,17 @@
-export type EventType = 'hackathon' | 'workshop' | 'meetup';
+import type { OrganizerSocials } from './user';
+
+export type EventType = 'hackathon' | 'workshop' | 'meetup' | 'other';
 
 export type EventStatus = 'open' | 'closed' | 'canceled' | 'postponed' | 'completed';
+
+export type QuestionType = 'text' | 'choice' | 'multi_choice';
 
 export interface RegistrationQuestion {
   id: string;
   eventId?: string;
   questionText: string;
+  type?: QuestionType;
+  options?: string[];
   isRequired: boolean;
   order: number;
 }
@@ -15,6 +21,7 @@ export interface Event {
   organizerId: string;
   organizerName: string;
   organizerAvatar?: string;
+  organizerSocials?: OrganizerSocials;
   title: string;
   description: string;
   type: EventType;

@@ -2,27 +2,32 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
-import type { EventType, RegistrationQuestion } from '../../types/event';
+import type { EventType, RegistrationQuestion, QuestionType } from '../../types/event';
 import { Button } from '../../components/ui/Button';
-import { Badge } from '../../components/ui/Badge';
 import {
-  CheckCircle2,
-  Sparkles,
   Plus,
   Trash2,
   Copy,
-  Check,
   ExternalLink,
   HelpCircle,
   CreditCard,
+  X,
 } from 'lucide-react';
+
+interface QuestionDraft {
+  id: string;
+  questionText: string;
+  type: QuestionType;
+  options: string[];
+  isRequired: boolean;
+}
 
 export const CreateEventPage: React.FC = () => {
   const { user } = useAuth();
 
   const [formData, setFormData] = useState({
     title: '',
-    type: 'workshop' as EventType,
+    type: 'meetup' as EventType,
     date: '',
     startTime: '09:00 AM',
     endTime: '05:00 PM',
@@ -34,8 +39,14 @@ export const CreateEventPage: React.FC = () => {
     posterImageUrl: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80',
   });
 
-  const [questions, setQuestions] = useState<Array<{ id: string; questionText: string; isRequired: boolean }>>([
-    { id: 'q_init_1', questionText: 'What is your background or experience level with this topic?', isRequired: true },
+  const [questions, setQuestions] = useState<QuestionDraft[]>([
+    {
+      id: 'q_init_1',
+      questionText: 'What is your background or experience level with this topic?',
+      type: 'choice',
+      options: ['Beginner', 'Intermediate', 'Advanced'],
+      isRequired: true,
+    },
   ]);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -46,7 +57,13 @@ export const CreateEventPage: React.FC = () => {
   const handleAddQuestion = () => {
     setQuestions((prev) => [
       ...prev,
-      { id: `q_${Date.now()}`, questionText: '', isRequired: false },
+      {
+        id: `q_${Date.now()}`,
+        questionText: '',
+        type: 'text',
+        options: ['Option 1', 'Option 2'],
+        isRequired: false,
+      },
     ]);
   };
 
@@ -54,16 +71,73 @@ export const CreateEventPage: React.FC = () => {
     setQuestions((prev) => prev.filter((q) => q.id !== id));
   };
 
-  const handleQuestionChange = (id: string, text: string, isRequired: boolean) => {
+  const handleQuestionTextChange = (id: string, text: string) => {
     setQuestions((prev) =>
-      prev.map((q) => (q.id === id ? { ...q, questionText: text, isRequired } : q))
+      prev.map((q) => (q.id === id ? { ...q, questionText: text } : q))
+    );
+  };
+
+  const handleQuestionTypeChange = (id: string, type: QuestionType) => {
+    setQuestions((prev) =>
+      prev.map((q) =>
+        q.id === id
+          ? {
+              ...q,
+              type,
+              options: q.options && q.options.length > 0 ? q.options : ['Option 1', 'Option 2'],
+            }
+          : q
+      )
+    );
+  };
+
+  const handleQuestionRequiredChange = (id: string, isRequired: boolean) => {
+    setQuestions((prev) =>
+      prev.map((q) => (q.id === id ? { ...q, isRequired } : q))
+    );
+  };
+
+  const handleAddOption = (questionId: string) => {
+    setQuestions((prev) =>
+      prev.map((q) => {
+        if (q.id === questionId) {
+          const count = q.options.length + 1;
+          return { ...q, options: [...q.options, `Option ${count}`] };
+        }
+        return q;
+      })
+    );
+  };
+
+  const handleOptionChange = (questionId: string, index: number, value: string) => {
+    setQuestions((prev) =>
+      prev.map((q) => {
+        if (q.id === questionId) {
+          const newOpts = [...q.options];
+          newOpts[index] = value;
+          return { ...q, options: newOpts };
+        }
+        return q;
+      })
+    );
+  };
+
+  const handleRemoveOption = (questionId: string, index: number) => {
+    setQuestions((prev) =>
+      prev.map((q) => {
+        if (q.id === questionId) {
+          const newOpts = q.options.filter((_, i) => i !== index);
+          return { ...q, options: newOpts.length > 0 ? newOpts : ['Option 1'] };
+        }
+        return q;
+      })
     );
   };
 
   const validate = () => {
     const errs: Record<string, string> = {};
     if (!formData.title.trim()) errs.title = 'Event title is required';
-    if (!formData.date) errs.date = 'Single-day event date is required';
+    if (!formData.date) errs.date = 'Event date is required';
     if (!formData.location.trim()) errs.location = 'Venue or location is required';
     if (!formData.description.trim()) errs.description = 'Description is required';
     if (formData.capacity <= 0) errs.capacity = 'Capacity must be at least 1';
@@ -85,6 +159,11 @@ export const CreateEventPage: React.FC = () => {
         .map((q, idx) => ({
           id: q.id,
           questionText: q.questionText.trim(),
+          type: q.type,
+          options:
+            q.type === 'choice' || q.type === 'multi_choice'
+              ? q.options.filter((opt) => opt.trim().length > 0)
+              : undefined,
           isRequired: q.isRequired,
           order: idx + 1,
         }));
@@ -130,326 +209,397 @@ export const CreateEventPage: React.FC = () => {
   if (createdEvent) {
     const shareUrl = `${window.location.origin}/e/${createdEvent.shareLinkToken}`;
     return (
-      <div className="max-w-xl mx-auto py-12 px-4 space-y-6 text-center">
-        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#E8DDD7] shadow-sm space-y-6">
-          <div className="w-16 h-16 bg-[#2A7B5F]/15 rounded-full flex items-center justify-center text-[#2A7B5F] mx-auto">
-            <CheckCircle2 className="w-8 h-8" />
-          </div>
+      <div className="max-w-xl mx-auto py-16 px-4 space-y-6 text-center animate-fade-in">
+        <img
+          src="/tick.png"
+          alt="Success"
+          className="w-20 h-20 sm:w-24 sm:h-24 object-contain mx-auto"
+        />
 
-          <div className="space-y-1">
-            <Badge variant="success" icon={<Sparkles className="w-3.5 h-3.5" />}>
-              Single-Day Event Published
-            </Badge>
-            <h2 className="font-serif text-2xl font-extrabold text-[#2D1F23]">{createdEvent.title}</h2>
-            <p className="text-xs text-[#756366]">
-              Your shareable registration link is live. Anyone with this link can register and answer your custom questions.
-            </p>
-          </div>
+        <div className="space-y-1.5">
+          <span className="text-xs font-bold uppercase tracking-widest text-[#2A7B5F] block">
+            Event Published
+          </span>
+          <h2 className="font-serif text-3xl font-extrabold text-[#2D1F23]">{createdEvent.title}</h2>
+          <p className="text-xs text-[#756366] max-w-md mx-auto leading-relaxed">
+            Your shareable registration link is live. Anyone with this link can register and answer your custom questions.
+          </p>
+        </div>
 
-          {/* Share Link Card */}
-          <div className="bg-[#FAF7F5] p-5 rounded-2xl border border-[#E8DDD7] space-y-3 text-left">
-            <label className="block text-xs font-bold text-[#2D1F23]">Shareable Registration Link</label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                readOnly
-                value={shareUrl}
-                className="flex-1 px-3.5 py-2 bg-white border border-[#E8DDD7] rounded-xl text-xs font-mono text-[#63474D] focus:outline-none"
-              />
-              <Button
-                type="button"
-                variant="accent"
-                size="sm"
-                onClick={handleCopyShareLink}
-                icon={copiedLink ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-              >
-                {copiedLink ? 'Copied' : 'Copy'}
-              </Button>
-            </div>
+        {/* Share Link Row (Unboxed, only inputs and buttons) */}
+        <div className="space-y-2 text-left max-w-lg mx-auto pt-2">
+          <label className="block text-xs font-bold text-[#2D1F23]">Shareable Registration Link</label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              readOnly
+              value={shareUrl}
+              className="flex-1 px-3.5 py-2.5 bg-[#FAF7F5] border border-[#E8DDD7] rounded-xl text-xs font-mono text-[#63474D] focus:outline-none"
+            />
+            <Button
+              type="button"
+              variant="accent"
+              size="sm"
+              onClick={handleCopyShareLink}
+              icon={copiedLink ? <img src="/tick.png" alt="Copied" className="w-4 h-4 object-contain" /> : <Copy className="w-4 h-4" />}
+            >
+              {copiedLink ? 'Copied' : 'Copy'}
+            </Button>
           </div>
+        </div>
 
-          <div className="flex flex-col sm:flex-row gap-3 pt-2">
-            <Link to={`/e/${createdEvent.shareLinkToken}`} target="_blank" className="flex-1">
-              <Button fullWidth variant="outline" icon={<ExternalLink className="w-4 h-4" />}>
-                Preview Form
-              </Button>
-            </Link>
-            <Link to="/organizer" className="flex-1">
-              <Button fullWidth variant="primary">
-                Return to Dashboard
-              </Button>
-            </Link>
-          </div>
+        <div className="flex flex-col sm:flex-row gap-3 pt-3 max-w-lg mx-auto">
+          <Link to={`/e/${createdEvent.shareLinkToken}`} target="_blank" className="flex-1">
+            <Button fullWidth variant="outline" icon={<ExternalLink className="w-4 h-4" />}>
+              Preview Form
+            </Button>
+          </Link>
+          <Link to="/organizer" className="flex-1">
+            <Button fullWidth variant="primary">
+              Return to Dashboard
+            </Button>
+          </Link>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6 pb-20">
-
+    <div className="w-full space-y-8 pb-20">
       <div className="space-y-1">
-        <Badge variant="primary">Single-Day Event Setup</Badge>
         <h1 className="font-serif text-2xl sm:text-3xl font-extrabold text-[#2D1F23]">Create Event</h1>
         <p className="text-xs text-[#756366]">
-          Define event details, custom questions, and capacity. The system generates a shareable registration link.
+          Define event details, registration questions, and capacity. The system generates a shareable registration link.
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Core Event Details */}
-        <div className="bg-white p-6 sm:p-8 rounded-3xl border border-[#E8DDD7] shadow-xs space-y-4">
-          <h2 className="font-serif font-bold text-base text-[#2D1F23]">1. Event Information</h2>
-
-          <div>
-            <label className="block text-xs font-bold text-[#2D1F23] mb-1">Event Title *</label>
-            <input
-              type="text"
-              placeholder="e.g. Ethiopia Rust & Systems Engineering Workshop"
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              className="w-full px-3.5 py-2 bg-[#FAF7F5] border border-[#E8DDD7] rounded-xl text-xs text-[#2D1F23] focus:outline-none focus:ring-2 focus:ring-[#63474D]"
-            />
-            {errors.title && <p className="text-[11px] text-red-600 mt-1">{errors.title}</p>}
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-[#2D1F23] mb-1">Event Type *</label>
-              <select
-                value={formData.type}
-                onChange={(e) => setFormData({ ...formData, type: e.target.value as EventType })}
-                className="w-full px-3.5 py-2 bg-[#FAF7F5] border border-[#E8DDD7] rounded-xl text-xs text-[#2D1F23] focus:outline-none focus:ring-2 focus:ring-[#63474D]"
-              >
-                <option value="workshop">Workshop (Hands-on)</option>
-                <option value="hackathon">Hackathon (Single-Day Competition)</option>
-                <option value="meetup">Meetup (Community Talk & Networking)</option>
-              </select>
-            </div>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-start">
+        {/* Left Column: Event Form */}
+        <form onSubmit={handleSubmit} className="lg:col-span-7 xl:col-span-7 space-y-8 max-w-xl">
+          {/* Core Event Details (Unboxed, free spacing, concise widths) */}
+          <div className="space-y-4">
+            <h2 className="font-serif font-bold text-base text-[#2D1F23]">1. Event Information</h2>
 
             <div>
-              <label className="block text-xs font-bold text-[#2D1F23] mb-1">Single-Day Date *</label>
-              <input
-                type="date"
-                value={formData.date}
-                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                className="w-full px-3.5 py-2 bg-[#FAF7F5] border border-[#E8DDD7] rounded-xl text-xs text-[#2D1F23] focus:outline-none focus:ring-2 focus:ring-[#63474D]"
-              />
-              {errors.date && <p className="text-[11px] text-red-600 mt-1">{errors.date}</p>}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-[#2D1F23] mb-1">Start Time</label>
+              <label className="block text-xs font-bold text-[#2D1F23] mb-1">Event Title *</label>
               <input
                 type="text"
-                placeholder="09:00 AM"
-                value={formData.startTime}
-                onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
+                placeholder="e.g. Ethiopia Rust & Systems Engineering Workshop"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 className="w-full px-3.5 py-2 bg-[#FAF7F5] border border-[#E8DDD7] rounded-xl text-xs text-[#2D1F23] focus:outline-none focus:ring-2 focus:ring-[#63474D]"
               />
+              {errors.title && <p className="text-[11px] text-red-600 mt-1">{errors.title}</p>}
             </div>
-            <div>
-              <label className="block text-xs font-bold text-[#2D1F23] mb-1">End Time</label>
-              <input
-                type="text"
-                placeholder="05:00 PM"
-                value={formData.endTime}
-                onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
-                className="w-full px-3.5 py-2 bg-[#FAF7F5] border border-[#E8DDD7] rounded-xl text-xs text-[#2D1F23] focus:outline-none focus:ring-2 focus:ring-[#63474D]"
-              />
-            </div>
-          </div>
 
-          <div>
-            <label className="block text-xs font-bold text-[#2D1F23] mb-1">Poster / Banner Image URL</label>
-            <input
-              type="url"
-              placeholder="https://images.unsplash.com/..."
-              value={formData.posterImageUrl}
-              onChange={(e) => setFormData({ ...formData, posterImageUrl: e.target.value })}
-              className="w-full px-3.5 py-2 bg-[#FAF7F5] border border-[#E8DDD7] rounded-xl text-xs text-[#2D1F23] focus:outline-none focus:ring-2 focus:ring-[#63474D]"
-            />
-            {formData.posterImageUrl && (
-              <div className="mt-2 flex items-center gap-3">
-                <img
-                  src={formData.posterImageUrl}
-                  alt="Poster preview"
-                  className="w-20 h-12 object-cover rounded-lg border border-gray-200"
-                  onError={(e) => {
-                    (e.target as HTMLElement).style.display = 'none';
-                  }}
+            <div className="flex flex-wrap items-center gap-4">
+              <div>
+                <label className="block text-xs font-bold text-[#2D1F23] mb-1">Event Type *</label>
+                <select
+                  value={formData.type}
+                  onChange={(e) => setFormData({ ...formData, type: e.target.value as EventType })}
+                  className="w-48 px-3.5 py-2 bg-[#FAF7F5] border border-[#E8DDD7] rounded-xl text-xs text-[#2D1F23] focus:outline-none focus:ring-2 focus:ring-[#63474D]"
+                >
+                  <option value="meetup">Meetup</option>
+                  <option value="workshop">Workshop</option>
+                  <option value="hackathon">Hackathon</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-[#2D1F23] mb-1">Date *</label>
+                <input
+                  type="date"
+                  value={formData.date}
+                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                  className="w-48 px-3.5 py-2 bg-[#FAF7F5] border border-[#E8DDD7] rounded-xl text-xs text-[#2D1F23] focus:outline-none focus:ring-2 focus:ring-[#63474D]"
                 />
-                <span className="text-[11px] text-gray-500">Live Poster Preview</span>
+                {errors.date && <p className="text-[11px] text-red-600 mt-1">{errors.date}</p>}
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-4">
+              <div>
+                <label className="block text-xs font-bold text-[#2D1F23] mb-1">Start Time</label>
+                <input
+                  type="text"
+                  placeholder="09:00 AM"
+                  value={formData.startTime}
+                  onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
+                  className="w-36 px-3.5 py-2 bg-[#FAF7F5] border border-[#E8DDD7] rounded-xl text-xs text-[#2D1F23] focus:outline-none focus:ring-2 focus:ring-[#63474D]"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-[#2D1F23] mb-1">End Time</label>
+                <input
+                  type="text"
+                  placeholder="05:00 PM"
+                  value={formData.endTime}
+                  onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
+                  className="w-36 px-3.5 py-2 bg-[#FAF7F5] border border-[#E8DDD7] rounded-xl text-xs text-[#2D1F23] focus:outline-none focus:ring-2 focus:ring-[#63474D]"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-[#2D1F23] mb-1">Poster / Banner Image URL</label>
+              <input
+                type="url"
+                placeholder="https://images.unsplash.com/..."
+                value={formData.posterImageUrl}
+                onChange={(e) => setFormData({ ...formData, posterImageUrl: e.target.value })}
+                className="w-full px-3.5 py-2 bg-[#FAF7F5] border border-[#E8DDD7] rounded-xl text-xs text-[#2D1F23] focus:outline-none focus:ring-2 focus:ring-[#63474D]"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-[#2D1F23] mb-1">Location & Venue *</label>
+              <input
+                type="text"
+                placeholder="e.g. Bole Innovation Hub, 4th Floor, Addis Ababa"
+                value={formData.location}
+                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                className="w-full px-3.5 py-2 bg-[#FAF7F5] border border-[#E8DDD7] rounded-xl text-xs text-[#2D1F23] focus:outline-none focus:ring-2 focus:ring-[#63474D]"
+              />
+              {errors.location && <p className="text-[11px] text-red-600 mt-1">{errors.location}</p>}
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-[#2D1F23] mb-1">Capacity Limit *</label>
+              <input
+                type="text"
+                inputMode="numeric"
+                placeholder="e.g. 100"
+                value={formData.capacity === 0 ? '' : formData.capacity}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9]/g, '');
+                  setFormData({ ...formData, capacity: val === '' ? 0 : parseInt(val, 10) });
+                }}
+                className="w-36 px-3.5 py-2 bg-[#FAF7F5] border border-[#E8DDD7] rounded-xl text-xs text-[#2D1F23] focus:outline-none focus:ring-2 focus:ring-[#63474D]"
+              />
+              <p className="text-[10px] text-[#756366] mt-1">Registration automatically closes when capacity is reached.</p>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-[#2D1F23] mb-1">Description *</label>
+              <textarea
+                rows={7}
+                placeholder="Describe agenda, prerequisites, and what attendees will learn..."
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                className="w-full px-3.5 py-2.5 bg-[#FAF7F5] border border-[#E8DDD7] rounded-xl text-xs text-[#2D1F23] focus:outline-none focus:ring-2 focus:ring-[#63474D] resize-y min-h-[160px]"
+              ></textarea>
+              {errors.description && <p className="text-[11px] text-red-600 mt-1">{errors.description}</p>}
+            </div>
+          </div>
+
+          {/* 2. Admissions & Pricing (Box kept as requested) */}
+          <div className="bg-white p-6 sm:p-7 rounded-3xl border border-[#E8DDD7] shadow-2xs space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="font-serif font-bold text-base text-[#2D1F23] flex items-center gap-2">
+                <CreditCard className="w-4 h-4 text-[#63474D]" />
+                2. Admissions & Pricing
+              </h2>
+
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={formData.isPaid}
+                  onChange={(e) => setFormData({ ...formData, isPaid: e.target.checked })}
+                  className="w-4 h-4 text-[#63474D] rounded cursor-pointer"
+                />
+                <span className="text-xs font-bold text-[#2D1F23]">Paid Event</span>
+              </label>
+            </div>
+
+            {formData.isPaid && (
+              <div className="p-4 bg-[#FAF7F5] rounded-2xl border border-[#E8DDD7] space-y-3 animate-fade-in">
+                <div>
+                  <label className="block text-xs font-bold text-[#2D1F23] mb-1">
+                    Single Ticket Price (in ETB) *
+                  </label>
+                  <div className="relative max-w-xs">
+                    <input
+                      type="number"
+                      min="1"
+                      placeholder="250"
+                      value={formData.ticketPrice || ''}
+                      onChange={(e) => setFormData({ ...formData, ticketPrice: Number(e.target.value) })}
+                      className="w-full pl-3.5 pr-14 py-2 bg-white border border-[#E8DDD7] rounded-xl text-xs font-bold text-[#2D1F23] focus:outline-none focus:ring-2 focus:ring-[#63474D]"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[#756366]">
+                      ETB
+                    </span>
+                  </div>
+                  {errors.ticketPrice && <p className="text-[11px] text-red-600 mt-1">{errors.ticketPrice}</p>}
+                </div>
               </div>
             )}
           </div>
 
-          <div>
-            <label className="block text-xs font-bold text-[#2D1F23] mb-1">Location & Venue *</label>
-            <input
-              type="text"
-              placeholder="e.g. Bole Innovation Hub, 4th Floor, Addis Ababa"
-              value={formData.location}
-              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-              className="w-full px-3.5 py-2 bg-[#FAF7F5] border border-[#E8DDD7] rounded-xl text-xs text-[#2D1F23] focus:outline-none focus:ring-2 focus:ring-[#63474D]"
-            />
-            {errors.location && <p className="text-[11px] text-red-600 mt-1">{errors.location}</p>}
-          </div>
+          {/* 3. Registration Questions (Unboxed, free spacing, customizable answer choices) */}
+          <div className="space-y-4 pt-6 border-t border-gray-100">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="font-serif font-bold text-base text-[#2D1F23] flex items-center gap-2">
+                  <HelpCircle className="w-4 h-4 text-[#63474D]" />
+                  Registration Questions
+                </h2>
+                <p className="text-xs text-[#756366] mt-0.5">
+                  Customize the questions and answer types (text, choice options, multi-tick) for attendees.
+                </p>
+              </div>
 
-          <div>
-            <label className="block text-xs font-bold text-[#2D1F23] mb-1">Capacity Limit *</label>
-            <input
-              type="number"
-              min="1"
-              value={formData.capacity}
-              onChange={(e) => setFormData({ ...formData, capacity: Number(e.target.value) })}
-              className="w-full px-3.5 py-2 bg-[#FAF7F5] border border-[#E8DDD7] rounded-xl text-xs text-[#2D1F23] focus:outline-none focus:ring-2 focus:ring-[#63474D]"
-            />
-            <p className="text-[10px] text-[#756366] mt-1">Registration automatically closes when capacity is reached.</p>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-[#2D1F23] mb-1">Description *</label>
-            <textarea
-              rows={3}
-              placeholder="Describe agenda, prerequisites, and what attendees will learn..."
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full px-3.5 py-2 bg-[#FAF7F5] border border-[#E8DDD7] rounded-xl text-xs text-[#2D1F23] focus:outline-none focus:ring-2 focus:ring-[#63474D]"
-            ></textarea>
-            {errors.description && <p className="text-[11px] text-red-600 mt-1">{errors.description}</p>}
-          </div>
-        </div>
-
-        {/* Pricing & Chapa ETB Gateway */}
-        <div className="bg-white p-6 sm:p-8 rounded-3xl border border-[#E8DDD7] shadow-xs space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="font-serif font-bold text-base text-[#2D1F23] flex items-center gap-2">
-                <CreditCard className="w-4 h-4 text-[#63474D]" />
-                2. Admission & Pricing (ETB Only)
-              </h2>
-              <p className="text-xs text-[#756366] mt-0.5">
-                Single ticket price model with automatic Chapa 3% split settlement.
-              </p>
+              <Button
+                type="button"
+                onClick={handleAddQuestion}
+                variant="outline"
+                size="sm"
+                icon={<Plus className="w-3.5 h-3.5" />}
+                className="font-bold"
+              >
+                Add
+              </Button>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-[#756366]">{formData.isPaid ? 'Paid Event' : 'Free Event'}</span>
-              <input
-                type="checkbox"
-                checked={formData.isPaid}
-                onChange={(e) => setFormData({ ...formData, isPaid: e.target.checked })}
-                className="w-4 h-4 text-[#63474D] rounded"
+
+            <div className="space-y-4">
+              {questions.map((q, idx) => (
+                <div
+                  key={q.id}
+                  className="p-4 sm:p-5 bg-[#FAF7F5] rounded-2xl border border-[#E8DDD7] space-y-3"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-[#63474D] font-mono">Q{idx + 1}</span>
+                      <span className="text-xs font-semibold text-[#2D1F23]">Question Details</span>
+                    </div>
+
+                    {questions.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveQuestion(q.id)}
+                        className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg transition-colors cursor-pointer"
+                        title="Remove Question"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      placeholder="Enter question text (e.g. What is your experience level? Or GitHub URL)..."
+                      value={q.questionText}
+                      onChange={(e) => handleQuestionTextChange(q.id, e.target.value)}
+                      className="w-full px-3.5 py-2 bg-white border border-[#E8DDD7] rounded-xl text-xs text-[#2D1F23] focus:outline-none focus:ring-2 focus:ring-[#63474D]"
+                    />
+
+                    {/* Answer Type Selector */}
+                    <div className="flex flex-wrap items-center gap-3 pt-1">
+                      <span className="text-[11px] font-bold text-[#756366]">Answer Type:</span>
+                      <select
+                        value={q.type}
+                        onChange={(e) => handleQuestionTypeChange(q.id, e.target.value as QuestionType)}
+                        className="px-2.5 py-1.5 bg-white border border-[#E8DDD7] rounded-lg text-xs text-[#2D1F23] focus:outline-none focus:ring-2 focus:ring-[#63474D]"
+                      >
+                        <option value="text">Text Answer (Free text field)</option>
+                        <option value="choice">Single Choice (Radio selection)</option>
+                        <option value="multi_choice">Multiple Choice (Checkboxes / Multi-tick)</option>
+                      </select>
+
+                      <label className="flex items-center gap-2 text-xs text-[#756366] cursor-pointer ml-auto">
+                        <input
+                          type="checkbox"
+                          checked={q.isRequired}
+                          onChange={(e) => handleQuestionRequiredChange(q.id, e.target.checked)}
+                          className="rounded text-[#63474D]"
+                        />
+                        <span>Required response</span>
+                      </label>
+                    </div>
+
+                    {/* Options List for Single Choice & Multiple Choice */}
+                    {(q.type === 'choice' || q.type === 'multi_choice') && (
+                      <div className="mt-3 p-3 bg-white rounded-xl border border-[#E8DDD7] space-y-2.5">
+                        <span className="text-[10px] font-bold text-[#756366] uppercase tracking-wider block">
+                          {q.type === 'choice' ? 'Single Choice Options' : 'Multiple Choice / Multi-Tick Options'}
+                        </span>
+
+                        <div className="space-y-1.5">
+                          {q.options.map((opt, optIdx) => (
+                            <div key={optIdx} className="flex items-center gap-2">
+                              <span className="text-xs text-gray-400 font-mono w-4 text-center">
+                                {q.type === 'choice' ? '○' : '□'}
+                              </span>
+                              <input
+                                type="text"
+                                value={opt}
+                                onChange={(e) => handleOptionChange(q.id, optIdx, e.target.value)}
+                                placeholder={`Option ${optIdx + 1}`}
+                                className="flex-1 px-3 py-1.5 bg-[#FAF7F5] border border-[#E8DDD7] rounded-lg text-xs text-[#2D1F23] focus:outline-none focus:ring-2 focus:ring-[#63474D]"
+                              />
+                              {q.options.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveOption(q.id, optIdx)}
+                                  className="p-1 text-gray-400 hover:text-red-500 rounded cursor-pointer"
+                                  title="Remove option"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleAddOption(q.id)}
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-[#63474D] hover:underline cursor-pointer pt-1"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Add Option</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <Button
+            type="submit"
+            fullWidth
+            variant="primary"
+            size="lg"
+            isLoading={isSubmitting}
+          >
+            Publish Event & Generate Share Link
+          </Button>
+        </form>
+
+        {/* Right Column: Live Poster Preview (Bigger, higher up, aligned to event title row, unboxed) */}
+        <div className="lg:col-span-5 xl:col-span-5 lg:sticky lg:top-20 space-y-2">
+          {formData.posterImageUrl ? (
+            <div className="space-y-2">
+              <span className="text-xs font-bold text-[#756366] uppercase tracking-wider block">
+                Poster Preview
+              </span>
+              <img
+                src={formData.posterImageUrl}
+                alt="Poster preview"
+                className="w-full max-w-sm rounded-2xl shadow-md object-cover max-h-[480px]"
+                onError={(e) => {
+                  (e.target as HTMLElement).style.display = 'none';
+                }}
               />
             </div>
-          </div>
-
-          {formData.isPaid && (
-            <div className="p-4 bg-[#FAF7F5] rounded-2xl border border-[#E8DDD7] space-y-3 animate-fade-in">
-              <div>
-                <label className="block text-xs font-bold text-[#2D1F23] mb-1">
-                  Ticket Price (in Ethiopian Birr - ETB) *
-                </label>
-                <div className="relative max-w-xs">
-                  <input
-                    type="number"
-                    min="1"
-                    placeholder="250"
-                    value={formData.ticketPrice || ''}
-                    onChange={(e) => setFormData({ ...formData, ticketPrice: Number(e.target.value) })}
-                    className="w-full pl-3.5 pr-14 py-2 bg-white border border-[#E8DDD7] rounded-xl text-xs font-bold text-[#2D1F23] focus:outline-none focus:ring-2 focus:ring-[#63474D]"
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[#756366]">
-                    ETB
-                  </span>
-                </div>
-                {errors.ticketPrice && <p className="text-[11px] text-red-600 mt-1">{errors.ticketPrice}</p>}
-              </div>
-
-              <div className="text-[11px] text-[#756366] space-y-1 pt-1 border-t border-[#E8DDD7]">
-                <p>• Sheba deducts a 3% platform commission + Chapa gateway fee automatically.</p>
-                <p>• Net ticket revenue settles directly to your organizer account.</p>
-              </div>
-            </div>
-          )}
+          ) : null}
         </div>
-
-        {/* Custom Registration Questions Builder (SRS Section 4.6) */}
-        <div className="bg-white p-6 sm:p-8 rounded-3xl border border-[#E8DDD7] shadow-xs space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="font-serif font-bold text-base text-[#2D1F23] flex items-center gap-2">
-                <HelpCircle className="w-4 h-4 text-[#63474D]" />
-                3. Custom Registration Questions
-              </h2>
-              <p className="text-xs text-[#756366] mt-0.5">
-                Add questions that attendees must answer on the generated registration page.
-              </p>
-            </div>
-
-            <Button
-              type="button"
-              onClick={handleAddQuestion}
-              variant="outline"
-              size="sm"
-              icon={<Plus className="w-4 h-4" />}
-            >
-              Add Question
-            </Button>
-          </div>
-
-          <div className="space-y-3">
-            {questions.map((q, idx) => (
-              <div
-                key={q.id}
-                className="p-4 bg-[#FAF7F5] rounded-2xl border border-[#E8DDD7] flex items-start gap-3"
-              >
-                <span className="text-xs font-bold text-[#63474D] mt-2 font-mono">Q{idx + 1}</span>
-                <div className="flex-1 space-y-2">
-                  <input
-                    type="text"
-                    placeholder="Enter question text (e.g. GitHub profile link, dietary restrictions)..."
-                    value={q.questionText}
-                    onChange={(e) => handleQuestionChange(q.id, e.target.value, q.isRequired)}
-                    className="w-full px-3.5 py-2 bg-white border border-[#E8DDD7] rounded-xl text-xs text-[#2D1F23] focus:outline-none focus:ring-2 focus:ring-[#63474D]"
-                  />
-                  <label className="flex items-center gap-2 text-xs text-[#756366] cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={q.isRequired}
-                      onChange={(e) => handleQuestionChange(q.id, q.questionText, e.target.checked)}
-                      className="rounded text-[#63474D]"
-                    />
-                    <span>Required response</span>
-                  </label>
-                </div>
-                {questions.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveQuestion(q.id)}
-                    className="p-2 text-red-400 hover:text-red-600 rounded-lg"
-                    title="Remove Question"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <Button
-          type="submit"
-          fullWidth
-          variant="primary"
-          size="lg"
-          isLoading={isSubmitting}
-        >
-          Publish Event & Generate Share Link
-        </Button>
-      </form>
+      </div>
     </div>
   );
 };

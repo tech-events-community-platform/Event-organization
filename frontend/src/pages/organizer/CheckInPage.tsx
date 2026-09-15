@@ -7,11 +7,9 @@ import type { AttendeeRosterItem } from '../../types/attendance';
 import { Badge } from '../../components/ui/Badge';
 import {
   Search,
-  CheckCircle2,
   RotateCcw,
   Users,
   Calendar,
-  MapPin,
   Clock,
   X,
   UserPlus,
@@ -124,11 +122,11 @@ export const CheckInPage: React.FC = () => {
       prev.map((r) =>
         r.id === attendee.id || r.attendeeId === attendee.attendeeId
           ? {
-              ...r,
-              status: 'Checked in',
-              checkInTime: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) + ' EAT',
-              badges: r.badges?.includes('attended') ? r.badges : [...(r.badges || []), 'attended'],
-            }
+            ...r,
+            status: 'Checked in',
+            checkInTime: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) + ' EAT',
+            badges: r.badges?.includes('attended') ? r.badges : [...(r.badges || []), 'attended'],
+          }
           : r
       )
     );
@@ -164,11 +162,11 @@ export const CheckInPage: React.FC = () => {
       prev.map((r) =>
         r.id === attendee.id || r.attendeeId === attendee.attendeeId
           ? {
-              ...r,
-              status: 'Registered',
-              checkInTime: undefined,
-              badges: (r.badges || []).filter((b) => b !== 'attended'),
-            }
+            ...r,
+            status: 'Registered',
+            checkInTime: undefined,
+            badges: (r.badges || []).filter((b) => b !== 'attended'),
+          }
           : r
       )
     );
@@ -310,19 +308,18 @@ export const CheckInPage: React.FC = () => {
                   {currentEvent.title}
                 </span>
                 <span
-                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                    timeState === 'ongoing'
+                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${timeState === 'ongoing'
                       ? 'bg-amber-100 text-amber-900 border border-amber-300 animate-pulse'
                       : timeState === 'upcoming'
-                      ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
-                      : 'bg-gray-100 text-gray-700 border border-gray-200'
-                  }`}
+                        ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                        : 'bg-gray-100 text-gray-700 border border-gray-200'
+                    }`}
                 >
                   {timeState === 'ongoing'
                     ? '● Live Today — Check-in Active'
                     : timeState === 'upcoming'
-                    ? `⏳ Scheduled for ${currentEvent.date}`
-                    : `📁 Past Event (${currentEvent.date})`}
+                      ? `⏳ Scheduled for ${currentEvent.date}`
+                      : `📁 Past Event (${currentEvent.date})`}
                 </span>
               </div>
               <div className="flex flex-wrap items-center gap-4 text-xs text-[#E8DDD7]">
@@ -357,14 +354,13 @@ export const CheckInPage: React.FC = () => {
       {/* Action Toast Banner */}
       {lastActionToast && (
         <div
-          className={`p-4 rounded-2xl border text-xs font-semibold flex items-center justify-between shadow-2xs animate-fade-in ${
-            lastActionToast.type === 'checkin'
+          className={`p-4 rounded-2xl border text-xs font-semibold flex items-center justify-between shadow-2xs animate-fade-in ${lastActionToast.type === 'checkin'
               ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
               : 'bg-amber-50 border-amber-200 text-amber-800'
-          }`}
+            }`}
         >
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <img src="/tick.png" alt="Success" className="w-4 h-4 object-contain shrink-0" />
             <span>
               {lastActionToast.type === 'checkin'
                 ? `✓ Marked "${lastActionToast.name}" Attended for event date (${currentEvent?.date || 'Today'}) & issued verified badge.`
@@ -434,11 +430,10 @@ export const CheckInPage: React.FC = () => {
               return (
                 <div
                   key={att.id}
-                  className={`p-4 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
-                    isCheckedIn
+                  className={`p-4 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${isCheckedIn
                       ? 'bg-emerald-50/40 border-emerald-200'
                       : 'bg-white border-gray-200 hover:border-gray-300 shadow-2xs'
-                  }`}
+                    }`}
                 >
                   {/* Attendee Info */}
                   <div className="space-y-0.5 flex-1 min-w-0">
@@ -448,7 +443,7 @@ export const CheckInPage: React.FC = () => {
                       </h3>
                       {isCheckedIn && (
                         <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#2A7B5F] bg-emerald-100/70 px-2 py-0.5 rounded-md">
-                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <img src="/tick.png" alt="Attended" className="w-3.5 h-3.5 object-contain" />
                           Attended
                         </span>
                       )}
@@ -472,7 +467,7 @@ export const CheckInPage: React.FC = () => {
                         onClick={() => handleMarkAttended(att)}
                         className="px-5 py-2.5 rounded-xl bg-[#2A7B5F] hover:bg-[#236850] active:scale-98 text-white text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                       >
-                        <CheckCircle2 className="w-4 h-4" />
+                        <img src="/tick.png" alt="Check In" className="w-4 h-4 object-contain" />
                         <span>{isBusy ? 'Checking in...' : 'Mark Attended'}</span>
                       </button>
                     ) : (
@@ -573,7 +568,7 @@ export const CheckInPage: React.FC = () => {
               </div>
 
               <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-2xl text-[11px] text-emerald-900 flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0 mt-0.5" />
+                <img src="/tick.png" alt="Success" className="w-4 h-4 object-contain shrink-0 mt-0.5" />
                 <span>
                   Adding this attendee will immediately create their ticket and grant their verified <strong>Attended</strong> badge.
                 </span>

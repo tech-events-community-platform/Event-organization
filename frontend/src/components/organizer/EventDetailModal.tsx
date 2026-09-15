@@ -5,7 +5,6 @@ import { Badge } from '../ui/Badge';
 import {
   X,
   Calendar,
-  MapPin,
   Users,
   QrCode,
   Award,
@@ -13,7 +12,6 @@ import {
   BarChart3,
   ExternalLink,
   Copy,
-  Check,
   ShieldCheck,
 } from 'lucide-react';
 
@@ -108,7 +106,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, isOpe
 
                 <tr className="hover:bg-gray-50/70">
                   <td className="py-3 px-4 font-semibold text-sheeba-dark flex items-center gap-1.5">
-                    <MapPin className="w-3.5 h-3.5 text-sheeba-purple" /> Venue & Hall
+                    <img src="/location.png" alt="Location" className="w-3.5 h-3.5 object-contain shrink-0" /> Venue & Hall
                   </td>
                   <td className="py-3 px-4 font-medium text-gray-800">
                     {event.venueName || event.location}
@@ -173,7 +171,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, isOpe
               onClick={handleCopyLink}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-gray-200 hover:bg-gray-100 text-sheeba-dark text-xs font-semibold transition-colors cursor-pointer"
             >
-              {copied ? <Check className="w-3.5 h-3.5 text-[#2A7B5F]" /> : <Copy className="w-3.5 h-3.5 text-[#C84B18]" />}
+              {copied ? <img src="/tick.png" alt="Copied" className="w-3.5 h-3.5 object-contain shrink-0" /> : <Copy className="w-3.5 h-3.5 text-[#C84B18]" />}
               <span>{copied ? 'Copied' : 'Copy Link'}</span>
             </button>
             <Link

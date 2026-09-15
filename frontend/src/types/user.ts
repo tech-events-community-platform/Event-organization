@@ -9,6 +9,13 @@ export interface AttendeeStats {
   totalEventsAttended: number;
 }
 
+export interface OrganizerSocials {
+  telegram?: string;
+  x?: string;
+  tiktok?: string;
+  youtube?: string;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -20,6 +27,7 @@ export interface User {
   visibility?: ProfileVisibility;
   phone?: string;
   organization?: string;
+  socials?: OrganizerSocials;
   approvalStatus?: ApprovalStatus;
   isActive?: boolean;
   stats?: AttendeeStats;
@@ -31,4 +39,6 @@ export interface OrganizerProfile {
   contactEmail: string;
   contactPhone?: string;
   bio?: string;
+  socials?: OrganizerSocials;
 }
+

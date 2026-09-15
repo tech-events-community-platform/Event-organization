@@ -8,9 +8,7 @@ import {
   Award,
   ShieldCheck,
   Calendar,
-  MapPin,
   Download,
-  CheckCircle2,
   Sparkles,
   Ticket as TicketIcon,
 } from 'lucide-react';
@@ -206,7 +204,7 @@ export const BadgesPage: React.FC = () => {
 
         {badges.length > 0 && (
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            <img src="/tick.png" alt="Success" className="w-4 h-4 object-contain shrink-0" />
             <span>{badges.length} Verified Badges Earned</span>
           </div>
         )}
@@ -318,7 +316,7 @@ export const BadgesPage: React.FC = () => {
                     {b.eventDate}
                   </span>
                   <span className="flex items-center gap-1">
-                    <MapPin className="w-3.5 h-3.5 text-[#AA767C]" />
+                    <img src="/location.png" alt="Location" className="w-3.5 h-3.5 object-contain shrink-0" />
                     {b.eventLocation}
                   </span>
                 </div>
