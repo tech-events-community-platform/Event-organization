@@ -1,6 +1,7 @@
 import { query, getClient } from '../config/db';
 import { IEvent, EventType, EventStatus, UserRole, AttendeeRosterItem } from '../types';
-import { generateTicketToken, generateQrDataUrl } from '../utils/qr.util';
+import { generateTicketToken, generateQrDataUrl, generateTicketCode, computeEventDayExpiration } from '../utils/qr.util';
+import { EmailService } from './email.service';
 
 export class EventService {
   static formatEvent(row: any): any {
@@ -16,6 +17,12 @@ export class EventService {
         formattedDate = String(row.event_date);
       }
     }
+
+    const registeredCount = parseInt(row.registered_count || '0', 10);
+    const capacity = parseInt(row.capacity || '100', 10);
+    const isFull = registeredCount >= capacity;
+    const posterImageUrl = row.poster_image_url || row.banner_url || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80';
+    const posterUrl = row.poster_image_url || row.banner_url || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80';
 
     return {
       id: row.id,
@@ -33,16 +40,18 @@ export class EventService {
       time: row.time_str || `${row.start_time || '09:00 AM'} - ${row.end_time || '05:00 PM'} EAT`,
       location: row.location,
       venueName: row.venue_name || row.location,
-      capacity: parseInt(row.capacity || '100', 10),
-      registeredCount: parseInt(row.registered_count || '0', 10),
+      capacity,
+      registeredCount,
       checkedInCount: parseInt(row.checked_in_count || '0', 10),
+      isFull,
       status: row.status || 'open',
       isPaid,
       ticketPrice,
       currency: row.currency || 'ETB',
       shareLinkToken: row.share_link_token || row.id,
       customQuestions: typeof row.custom_questions === 'string' ? JSON.parse(row.custom_questions) : row.custom_questions || [],
-      bannerUrl: row.banner_url || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80',
+      bannerUrl: posterUrl,
+      posterImageUrl: posterUrl,
       createdAt: row.created_at,
     };
   }
@@ -63,6 +72,7 @@ export class EventService {
       ticketPrice?: number;
       customQuestions?: any[];
       bannerUrl?: string;
+      posterImageUrl?: string;
       organizerName?: string;
     }
   ): Promise<any> {
@@ -79,9 +89,11 @@ export class EventService {
       isPaid = false,
       ticketPrice = 0,
       customQuestions = [],
-      bannerUrl = 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80',
+      bannerUrl,
+      posterImageUrl,
     } = data;
 
+    const poster = posterImageUrl || bannerUrl || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80';
     const timeStr = `${startTime} - ${endTime} EAT`;
     const shareLinkToken = `shb-${Math.random().toString(36).substring(2, 8)}`;
 
@@ -90,8 +102,8 @@ export class EventService {
         organizer_id, title, description, event_type, category, event_date,
         start_time, end_time, time_str, location, venue_name, capacity,
         status, is_paid, ticket_price, currency, share_link_token,
-        custom_questions, banner_url
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'open', $13, $14, 'ETB', $15, $16, $17)
+        custom_questions, banner_url, poster_image_url
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'open', $13, $14, 'ETB', $15, $16, $17, $18)
       RETURNING *`,
       [
         organizerId,
@@ -110,7 +122,8 @@ export class EventService {
         ticketPrice,
         shareLinkToken,
         JSON.stringify(customQuestions),
-        bannerUrl,
+        poster,
+        poster,
       ]
     );
 
@@ -161,17 +174,19 @@ export class EventService {
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
+    // Section 2: Count registered rows, count non-voided check_ins (or checked-in tickets) on request
     const queryText = `
       SELECT 
         e.*,
         u.full_name AS organizer_name,
         u.email AS organizer_email,
         COUNT(DISTINCT r.id) AS registered_count,
-        COUNT(DISTINCT CASE WHEN t.status = 'CHECKED_IN' THEN t.id END) AS checked_in_count
+        COUNT(DISTINCT CASE WHEN (ci.id IS NOT NULL AND ci.voided_at IS NULL) OR t.status = 'CHECKED_IN' THEN r.id END) AS checked_in_count
       FROM events e
       JOIN users u ON e.organizer_id = u.id
       LEFT JOIN registrations r ON e.id = r.event_id AND r.status = 'registered'
-      LEFT JOIN tickets t ON e.id = t.event_id
+      LEFT JOIN check_ins ci ON r.id = ci.registration_id AND ci.voided_at IS NULL
+      LEFT JOIN tickets t ON e.id = t.event_id AND t.registration_id = r.id
       ${whereClause}
       GROUP BY e.id, u.id
       ORDER BY e.event_date DESC
@@ -182,19 +197,18 @@ export class EventService {
   }
 
   static async getEventById(identifier: string): Promise<any> {
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier);
-
     const queryText = `
       SELECT 
         e.*,
         u.full_name AS organizer_name,
         u.email AS organizer_email,
         COUNT(DISTINCT r.id) AS registered_count,
-        COUNT(DISTINCT CASE WHEN t.status = 'CHECKED_IN' THEN t.id END) AS checked_in_count
+        COUNT(DISTINCT CASE WHEN (ci.id IS NOT NULL AND ci.voided_at IS NULL) OR t.status = 'CHECKED_IN' THEN r.id END) AS checked_in_count
       FROM events e
       JOIN users u ON e.organizer_id = u.id
       LEFT JOIN registrations r ON e.id = r.event_id AND r.status = 'registered'
-      LEFT JOIN tickets t ON e.id = t.event_id
+      LEFT JOIN check_ins ci ON r.id = ci.registration_id AND ci.voided_at IS NULL
+      LEFT JOIN tickets t ON e.id = t.event_id AND t.registration_id = r.id
       WHERE e.id::text = $1 OR e.share_link_token = $1
       GROUP BY e.id, u.id
     `;
@@ -231,10 +245,10 @@ export class EventService {
     const values: any[] = [];
     let counter = 1;
 
-    const allowedFields = ['title', 'description', 'event_type', 'location', 'venue_name', 'capacity', 'status', 'is_paid', 'ticket_price', 'start_time', 'end_time', 'time_str', 'banner_url'];
+    const allowedFields = ['title', 'description', 'event_type', 'location', 'venue_name', 'capacity', 'status', 'is_paid', 'ticket_price', 'start_time', 'end_time', 'time_str', 'banner_url', 'poster_image_url'];
 
     for (const [key, value] of Object.entries(data)) {
-      const dbKey = key === 'type' ? 'event_type' : key === 'ticketPrice' ? 'ticket_price' : key === 'isPaid' ? 'is_paid' : key;
+      const dbKey = key === 'type' ? 'event_type' : key === 'ticketPrice' ? 'ticket_price' : key === 'isPaid' ? 'is_paid' : key === 'posterImageUrl' ? 'poster_image_url' : key === 'bannerUrl' ? 'banner_url' : key;
       if (allowedFields.includes(dbKey)) {
         fields.push(`${dbKey} = $${counter++}`);
         values.push(value);
@@ -298,23 +312,18 @@ export class EventService {
       throw err;
     }
 
-    if (event.registeredCount >= event.capacity) {
+    if (event.registeredCount >= event.capacity || event.isFull) {
       const err: any = new Error('Event has reached maximum capacity.');
       err.statusCode = 400;
       throw err;
     }
 
-    // Check duplicate registration
+    // Reject duplicate registration server-side (Section 3)
     const existingReg = await query('SELECT id FROM registrations WHERE event_id = $1 AND user_id = $2', [event.id, userId]);
     if (existingReg.rowCount && existingReg.rowCount > 0) {
-      // User already registered, return existing ticket
-      const existingTicket = await query('SELECT * FROM tickets WHERE event_id = $1 AND user_id = $2', [event.id, userId]);
-      if (existingTicket.rowCount && existingTicket.rowCount > 0) {
-        return {
-          ticket: existingTicket.rows[0],
-          isPaymentRequired: false,
-        };
-      }
+      const err: any = new Error('You are already registered for this event.');
+      err.statusCode = 409;
+      throw err;
     }
 
     // Handle Paid Event Check (Chapa ETB)
@@ -338,18 +347,20 @@ export class EventService {
       );
       const registrationId = regRes.rows[0].id;
 
-      const ticketCode = `SHB-${Math.floor(1000 + Math.random() * 9000)}-2026`;
+      const eventDate = event.rawDate || event.date;
+      const ticketCode = generateTicketCode(eventDate);
       const ticketId = (await client.query('SELECT gen_random_uuid() AS id')).rows[0].id;
-      const qrToken = generateTicketToken(ticketId, event.id, userId);
+      const expiresAt = computeEventDayExpiration(eventDate);
+      const qrToken = generateTicketToken(ticketId, event.id, eventDate);
       const qrDataUrl = await generateQrDataUrl(qrToken);
 
       const ticketRes = await client.query(
         `INSERT INTO tickets (
           id, ticket_code, registration_id, event_id, user_id, qr_token, qr_code_data_url,
           status, is_paid, ticket_price, currency, expires_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'ISSUED', $8, $9, 'ETB', NOW() + INTERVAL '2 days')
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'ISSUED', $8, $9, 'ETB', $10)
         RETURNING *`,
-        [ticketId, ticketCode, registrationId, event.id, userId, qrToken, qrDataUrl, event.isPaid, event.ticketPrice]
+        [ticketId, ticketCode, registrationId, event.id, userId, qrToken, qrDataUrl, event.isPaid, event.ticketPrice, expiresAt]
       );
 
       // Record Chapa payment transaction if paid
@@ -394,6 +405,22 @@ export class EventService {
         currency: 'ETB',
       };
 
+      // Trigger separate registration-confirmation email with date, time, location (Section 4)
+      try {
+        if (attendeeUser.email) {
+          await EmailService.sendRegistrationConfirmationEmail(
+            attendeeUser.email,
+            attendeeUser.full_name || 'Attendee',
+            event.title,
+            event.date,
+            event.time,
+            event.location
+          );
+        }
+      } catch (emailErr) {
+        console.warn('Registration confirmation email dispatch failed:', emailErr);
+      }
+
       return { ticket: formattedTicket, isPaymentRequired: false };
     } catch (err) {
       await client.query('ROLLBACK');
@@ -420,36 +447,42 @@ export class EventService {
         u.email,
         r.registered_at,
         r.answers,
+        ci.id AS check_in_id,
+        ci.approved_at AS check_in_time,
         t.status AS ticket_status,
-        t.checked_in_at,
         COALESCE(
           json_agg(b.badge_code) FILTER (WHERE b.id IS NOT NULL AND b.revoked_at IS NULL),
           '[]'::json
         ) AS badges
       FROM registrations r
       JOIN users u ON r.user_id = u.id
+      LEFT JOIN check_ins ci ON ci.registration_id = r.id AND ci.voided_at IS NULL
       LEFT JOIN tickets t ON t.registration_id = r.id
       LEFT JOIN badge_awards b ON b.event_id = r.event_id AND b.user_id = u.id
       WHERE r.event_id = $1 AND r.status = 'registered'
-      GROUP BY r.id, u.id, t.id
+      GROUP BY r.id, u.id, ci.id, t.id
       ORDER BY r.registered_at ASC
     `;
 
     const result = await query(queryText, [event.id]);
 
-    return result.rows.map((row) => ({
-      id: row.attendee_id,
-      registrationId: row.registration_id,
-      attendeeId: row.attendee_id,
-      name: row.name,
-      email: row.email,
-      registrationDate: new Date(row.registered_at).toISOString().split('T')[0],
-      status: row.ticket_status === 'CHECKED_IN' ? 'Checked in' : 'Registered',
-      checkInTime: row.checked_in_at
-        ? new Date(row.checked_in_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) + ' EAT'
-        : undefined,
-      badges: row.badges || [],
-      answers: typeof row.answers === 'string' ? JSON.parse(row.answers) : row.answers || {},
-    }));
+    return result.rows.map((row) => {
+      const isCheckedIn = Boolean((row.check_in_id && !row.voided_at) || row.ticket_status === 'CHECKED_IN');
+      const checkInTimeDate = row.check_in_time;
+      return {
+        id: row.attendee_id,
+        registrationId: row.registration_id,
+        attendeeId: row.attendee_id,
+        name: row.name,
+        email: row.email,
+        registrationDate: new Date(row.registered_at).toISOString().split('T')[0],
+        status: isCheckedIn ? 'Checked in' : 'Registered',
+        checkInTime: checkInTimeDate
+          ? new Date(checkInTimeDate).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) + ' EAT'
+          : undefined,
+        badges: row.badges || [],
+        answers: typeof row.answers === 'string' ? JSON.parse(row.answers) : row.answers || {},
+      };
+    });
   }
 }

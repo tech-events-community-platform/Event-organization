@@ -13,7 +13,16 @@ interface AuthContextType {
   role: UserRole | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<User>;
+  login: (email: string, password: string, role?: string) => Promise<User>;
+  loginWithGoogle: (credential: string, role?: UserRole, mode?: 'login' | 'register') => Promise<User>;
+  applyForOrganizer: (data: {
+    organization: string;
+    bio?: string;
+    phone?: string;
+    password?: string;
+    socials?: Record<string, string>;
+  }) => Promise<{ user: User; message: string }>;
+  switchRole: (targetRole: 'ATTENDEE' | 'ORGANIZER', password?: string) => Promise<User>;
   register: (userData: {
     email: string;
     password: string;
@@ -71,10 +80,56 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     refreshUser();
   }, []);
 
-  const login = async (email: string, password: string): Promise<User> => {
+  const login = async (email: string, password: string, role?: string): Promise<User> => {
     setIsLoading(true);
     try {
-      const res = await api.auth.login({ email, password });
+      const res = await api.auth.login({ email, password, role });
+      setUser(res.user);
+      localStorage.setItem('sheba_auth_user', JSON.stringify(res.user));
+      return res.user;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const applyForOrganizer = async (data: {
+    organization: string;
+    bio?: string;
+    phone?: string;
+    password?: string;
+    socials?: Record<string, string>;
+  }): Promise<{ user: User; message: string }> => {
+    setIsLoading(true);
+    try {
+      const res = await api.auth.applyOrganizer(data);
+      setUser(res.user);
+      localStorage.setItem('sheba_auth_user', JSON.stringify(res.user));
+      return res;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const switchRole = async (targetRole: 'ATTENDEE' | 'ORGANIZER', password?: string): Promise<User> => {
+    setIsLoading(true);
+    try {
+      const res = await api.auth.switchRole({ targetRole, password });
+      setUser(res.user);
+      localStorage.setItem('sheba_auth_user', JSON.stringify(res.user));
+      return res.user;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loginWithGoogle = async (
+    credential: string,
+    role?: UserRole,
+    mode?: 'login' | 'register'
+  ): Promise<User> => {
+    setIsLoading(true);
+    try {
+      const res = await api.auth.googleLogin({ credential, role, mode });
       setUser(res.user);
       localStorage.setItem('sheba_auth_user', JSON.stringify(res.user));
       return res.user;
@@ -129,6 +184,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAuthenticated: !!user,
         isLoading,
         login,
+        loginWithGoogle,
+        applyForOrganizer,
+        switchRole,
         register,
         logout,
         refreshUser,

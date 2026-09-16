@@ -34,9 +34,10 @@ const runTests = async () => {
     assert(!(await bcrypt.compare('WrongPassword', hash)), 'Bcrypt rejects incorrect passwords');
 
     // QR Token Cryptography
-    const qrToken = generateTicketToken('ticket-123', 'event-456', 'user-789');
+    const qrToken = generateTicketToken('ticket-123', 'event-456', '2026-09-20');
     const decodedQr = verifyTicketToken(qrToken);
     assert(decodedQr.ticketId === 'ticket-123' && decodedQr.eventId === 'event-456', 'Dynamic QR pass token signed & verified');
+    assert(typeof decodedQr.exp === 'number' && decodedQr.exp > 0, 'Token includes end-of-event-day exp timestamp');
 
     const qrDataUrl = await generateQrDataUrl(qrToken);
     assert(qrDataUrl.startsWith('data:image/png;base64,'), 'QR Code PNG Base64 generation works');
@@ -195,6 +196,306 @@ const runTests = async () => {
       organizerPostLoginRes.body.data?.token &&
       organizerPostLoginRes.body.data?.user?.role === 'ORGANIZER',
       'Approved organizer can now log in and access Organizer workspace'
+    );
+
+    // TEST SUITE 6: Single Account Upgrade, Admin Approval & Credential-Gated Switching
+    console.log('\n📦 6. Testing Single Account Upgrade, Admin Approval & Formal Credential-Gated Role Switching...');
+    const upgradeEmail = `upgrade_${Date.now()}@example.et`;
+    
+    // Step 1: Register as Attendee
+    const regAttendeeRes = await fetchHttp('/api/auth/register', {
+      method: 'POST',
+      body: {
+        email: upgradeEmail,
+        password: 'Password123!',
+        full_name: 'Dagmawi Kebede',
+        role: 'attendee',
+      },
+    });
+    assert(regAttendeeRes.status === 201 && regAttendeeRes.body.data?.token, 'Attendee registered successfully');
+    const attendeeToken = regAttendeeRes.body.data?.token;
+    const attendeeId = regAttendeeRes.body.data?.user?.id;
+
+    // Step 2: Attempt duplicate registration (should return 409 conflict, NOT overwrite account)
+    const duplicateRegRes = await fetchHttp('/api/auth/register', {
+      method: 'POST',
+      body: {
+        email: upgradeEmail,
+        password: 'Password123!',
+        full_name: 'Dagmawi Kebede',
+        role: 'organizer',
+      },
+    });
+    assert(duplicateRegRes.status === 409, 'Duplicate registration returns 409 conflict instead of destructive role overwrite');
+
+    // Step 3: Apply for Organizer privileges from settings
+    const applyRes = await fetchHttp('/api/auth/apply-organizer', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${attendeeToken}` },
+      body: {
+        organization: 'Sheba Developers Community',
+        bio: 'Tech community for builders in Ethiopia',
+        phone: '+251933445566',
+        password: 'Password123!',
+      },
+    });
+    assert(
+      applyRes.status === 200 &&
+      applyRes.body.data?.user?.organizerApprovalStatus === 'pending',
+      'Attendee submits organizer application with password verification and status becomes pending'
+    );
+
+    // Step 4: Verify unapproved switch attempt is rejected
+    const unapprovedSwitchRes = await fetchHttp('/api/auth/switch-role', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${attendeeToken}` },
+      body: { targetRole: 'ORGANIZER', password: 'Password123!' },
+    });
+    assert(unapprovedSwitchRes.status === 403, 'Switch to Organizer is blocked before admin approval');
+
+    // Step 5: Admin reviews pending applications and approves
+    const adminListPending = await fetchHttp('/api/admin/users', {
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+    const foundPending = adminListPending.body.data?.organizers?.some(
+      (o: any) => o.id === attendeeId && (o.approvalStatus === 'pending' || o.organizerApprovalStatus === 'pending')
+    );
+    assert(foundPending, 'Admin sees upgraded attendee in organizer review queue');
+
+    const approveUpgradeRes = await fetchHttp(`/api/admin/users/${attendeeId}/approve`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+    assert(approveUpgradeRes.status === 200, 'Admin approves attendee organizer application');
+
+    // Step 6: Attendee switches to Organizer with password verification
+    const switchWithWrongPw = await fetchHttp('/api/auth/switch-role', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${attendeeToken}` },
+      body: { targetRole: 'ORGANIZER', password: 'WrongPassword' },
+    });
+    assert(switchWithWrongPw.status === 401, 'Switch role rejects invalid password');
+
+    const switchWithCorrectPw = await fetchHttp('/api/auth/switch-role', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${attendeeToken}` },
+      body: { targetRole: 'ORGANIZER', password: 'Password123!' },
+    });
+    assert(
+      switchWithCorrectPw.status === 200 &&
+      switchWithCorrectPw.body.data?.user?.role === 'ORGANIZER' &&
+      switchWithCorrectPw.body.data?.token,
+      'Approved user enters password and successfully switches to Organizer workspace'
+    );
+    const organizerSessionToken = switchWithCorrectPw.body.data?.token;
+
+    // Step 7: Organizer switches back to Attendee workspace
+    const switchBackRes = await fetchHttp('/api/auth/switch-role', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${organizerSessionToken}` },
+      body: { targetRole: 'ATTENDEE', password: 'Password123!' },
+    });
+    assert(
+      switchBackRes.status === 200 &&
+      switchBackRes.body.data?.user?.role === 'ATTENDEE' &&
+      switchBackRes.body.data?.user?.isOrganizer === true,
+      'Organizer enters password and successfully switches back to personal Attendee workspace'
+    );
+
+    // Step 8: Portal Login Verification
+    const attendeePortalLogin = await fetchHttp('/api/auth/login', {
+      method: 'POST',
+      body: { email: upgradeEmail, password: 'Password123!', role: 'ATTENDEE' },
+    });
+    assert(
+      attendeePortalLogin.status === 200 && attendeePortalLogin.body.data?.user?.role === 'ATTENDEE',
+      'User can sign in directly to Attendee portal'
+    );
+
+    const organizerPortalLogin = await fetchHttp('/api/auth/login', {
+      method: 'POST',
+      body: { email: upgradeEmail, password: 'Password123!', role: 'ORGANIZER' },
+    });
+    assert(
+      organizerPortalLogin.status === 200 && organizerPortalLogin.body.data?.user?.role === 'ORGANIZER',
+      'User can sign in directly to Organizer portal'
+    );
+
+    // TEST SUITE 7: QR Ticket Generation, Scanner Verification, Atomic Check-in & Soft-Void Undo
+    console.log('\n📦 7. Testing QR Ticket Generation, Scanner Verification, Duplicate 409 Rejection & Soft-Void...');
+    const organizerToken = organizerPortalLogin.body.data?.token;
+    const regAttendeeToken = attendeePortalLogin.body.data?.token;
+
+    // Step 1: Organizer creates a tech event
+    const createEventRes = await fetchHttp('/api/events', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${organizerToken}` },
+      body: {
+        title: 'Addis AI & Cloud Summit 2026',
+        description: 'Deep dive into LLMs and Cloud Native architecture in Ethiopia.',
+        type: 'workshop',
+        date: '2026-10-15',
+        startTime: '09:00 AM',
+        endTime: '05:00 PM',
+        location: 'Skylight Hotel, Addis Ababa',
+        venueName: 'Grand Ballroom',
+        capacity: 100,
+        isPaid: false,
+        customQuestions: [
+          { id: 'q1', questionText: 'GitHub Handle', isRequired: false },
+          { id: 'q2', questionText: 'T-Shirt Size', isRequired: true }
+        ]
+      }
+    });
+    assert(createEventRes.status === 201 && createEventRes.body.data?.id, 'Organizer successfully creates event');
+    const eventId = createEventRes.body.data.id;
+
+    // Step 2: Attendee registers for the event
+    const regRes = await fetchHttp(`/api/events/${eventId}/register`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${regAttendeeToken}` },
+      body: {
+        answers: {
+          q1: 'sheba-dev',
+          q2: 'Large'
+        }
+      }
+    });
+    assert(regRes.status === 201 && regRes.body.data?.ticket, 'Attendee registers and receives ticket with signed QR');
+    const issuedTicket = regRes.body.data.ticket;
+
+    assert(
+      typeof issuedTicket.id === 'string' && issuedTicket.id.startsWith('SHB-'),
+      `Ticket code generated in human-readable SHB-XXXX-YYYY format (${issuedTicket.id})`
+    );
+    assert(
+      typeof issuedTicket.qrToken === 'string' && issuedTicket.qrToken.startsWith('eyJ'),
+      'QR token is cryptographically signed without PII'
+    );
+
+    // Step 3: Scanner verification with signed JWT
+    const verifyJwtRes = await fetchHttp('/api/checkin/verify', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${organizerToken}` },
+      body: {
+        eventId,
+        tokenOrCode: issuedTicket.qrToken
+      }
+    });
+    assert(
+      verifyJwtRes.status === 200 &&
+      verifyJwtRes.body.data?.canCheckIn === true &&
+      verifyJwtRes.body.data?.attendee?.email === upgradeEmail,
+      'Scanner successfully verifies signed QR token and surfaces attendee record'
+    );
+    assert(
+      verifyJwtRes.body.data?.attendee?.answers?.q2 === 'Large',
+      'Scanner surfaces custom registration answers (T-Shirt Size: Large)'
+    );
+
+    // Step 4: Scanner verification with short code SHB-XXXX-YYYY
+    const verifyCodeRes = await fetchHttp('/api/checkin/verify', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${organizerToken}` },
+      body: {
+        eventId,
+        tokenOrCode: issuedTicket.id
+      }
+    });
+    assert(
+      verifyCodeRes.status === 200 && verifyCodeRes.body.data?.canCheckIn === true,
+      'Scanner successfully verifies short code (SHB-XXXX-YYYY)'
+    );
+
+    // Step 5: Scanner search by email or name
+    const searchRes = await fetchHttp('/api/checkin/search', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${organizerToken}` },
+      body: {
+        eventId,
+        query: 'Dagmawi'
+      }
+    });
+    assert(
+      searchRes.status === 200 && Array.isArray(searchRes.body.data) && searchRes.body.data.length > 0,
+      'Scanner fallback search finds matching attendee by name'
+    );
+
+    // Step 6: Atomic check-in
+    const checkInRes = await fetchHttp('/api/checkin/mark-attended', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${organizerToken}` },
+      body: {
+        eventId,
+        attendeeId: issuedTicket.attendeeId
+      }
+    });
+    assert(
+      checkInRes.status === 200 && checkInRes.body.data?.badgeAwarded?.badgeCode === 'attended',
+      'Check-in succeeds atomically and awards Attended badge'
+    );
+
+    // Step 7: Duplicate check-in returns 409 Conflict with timestamp
+    const dupCheckInRes = await fetchHttp('/api/checkin/mark-attended', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${organizerToken}` },
+      body: {
+        eventId,
+        attendeeId: issuedTicket.attendeeId
+      }
+    });
+    assert(
+      dupCheckInRes.status === 409 &&
+      (dupCheckInRes.body.code === 'ALREADY_CHECKED_IN' || dupCheckInRes.body.error === 'ALREADY_CHECKED_IN'),
+      'Duplicate check-in attempt strictly rejected with HTTP 409 Conflict'
+    );
+
+    // Step 8: Scanner re-verification shows CHECKED_IN status and canUndo: true
+    const verifyCheckedInRes = await fetchHttp('/api/checkin/verify', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${organizerToken}` },
+      body: {
+        eventId,
+        tokenOrCode: issuedTicket.id
+      }
+    });
+    assert(
+      verifyCheckedInRes.status === 200 &&
+      verifyCheckedInRes.body.data?.canCheckIn === false &&
+      verifyCheckedInRes.body.data?.canUndo === true &&
+      verifyCheckedInRes.body.data?.hasAttendedBadge === true,
+      'Scanner displays CHECKED_IN status, active Attended badge, and enables Soft-Void'
+    );
+
+    // Step 9: Soft-void undo check-in
+    const undoRes = await fetchHttp('/api/checkin/undo', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${organizerToken}` },
+      body: {
+        eventId,
+        attendeeId: issuedTicket.attendeeId,
+        reason: 'Accidental door duty scan'
+      }
+    });
+    assert(
+      undoRes.status === 200 && undoRes.body.success === true,
+      'Soft-void check-in undo successfully resets ticket and revokes badge without deleting records'
+    );
+
+    // Step 10: After soft-void, ticket is back to ISSUED and can be checked in again
+    const postUndoVerify = await fetchHttp('/api/checkin/verify', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${organizerToken}` },
+      body: {
+        eventId,
+        tokenOrCode: issuedTicket.id
+      }
+    });
+    assert(
+      postUndoVerify.status === 200 &&
+      postUndoVerify.body.data?.canCheckIn === true &&
+      postUndoVerify.body.data?.ticket?.status === 'ISSUED',
+      'Post-undo verification confirms ticket is back to ISSUED and ready for check-in'
     );
 
   } catch (err: any) {

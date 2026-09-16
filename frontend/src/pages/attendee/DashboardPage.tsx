@@ -6,15 +6,11 @@ import type { Ticket } from '../../types/ticket';
 import {
   Download,
   Share2,
-  MapPin,
-  Calendar,
   Clock,
   QrCode,
   ShieldCheck,
-  CheckCircle2,
   X,
   Copy,
-  Check,
   Send,
   Ticket as TicketIcon,
 } from 'lucide-react';
@@ -48,7 +44,8 @@ export const AttendeeDashboardPage: React.FC = () => {
     const t = (type || '').toLowerCase();
     if (t.includes('hackathon')) return '/badges/hackathon-badge.jpg';
     if (t.includes('workshop')) return '/badges/workshop-badge.jpg';
-    return '/badges/meetup-badge.jpg';
+    if (t.includes('meetup')) return '/badges/meetup-badge.jpg';
+    return '/badges/other.jpg';
   };
 
   const userProfession = user?.organization || user?.bio || '';
@@ -271,7 +268,7 @@ export const AttendeeDashboardPage: React.FC = () => {
               <span>Export</span>
             </button>
             <span className="text-[11px] font-semibold text-gray-500 px-0.5">
-              {tickets.filter((t) => t.status === 'Checked in' || t.status === 'Used').length} verified badges • {tickets.length} total registrations
+              {tickets.filter((t) => (t.status as string) === 'Checked in' || (t.status as string) === 'Used').length} verified badges • {tickets.length} total registrations
             </span>
           </div>
         </div>
@@ -298,7 +295,7 @@ export const AttendeeDashboardPage: React.FC = () => {
           ) : (
             tickets.map((t) => {
               const badgeImg = getBadgeImage(t.eventType);
-              const isCheckedIn = t.status === 'Checked in' || t.status === 'Used';
+              const isCheckedIn = (t.status as string) === 'Checked in' || (t.status as string) === 'Used';
 
               return (
                 <div
@@ -326,7 +323,7 @@ export const AttendeeDashboardPage: React.FC = () => {
                         </h3>
                         {isCheckedIn ? (
                           <p className="text-xs text-[#1b4332] font-bold capitalize mt-0.5 flex items-center gap-1">
-                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <img src="/tick.png" alt="Done" className="w-3.5 h-3.5 object-contain" />
                             <span>{t.eventType} • Verified Turnout & Official Badge Earned</span>
                           </p>
                         ) : (
@@ -341,7 +338,7 @@ export const AttendeeDashboardPage: React.FC = () => {
                     <div className="flex items-center gap-3 shrink-0">
                       {isCheckedIn ? (
                         <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1b4332]/15 text-xs font-bold text-[#1b4332] border border-[#1b4332]/30 shadow-2xs">
-                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <img src="/tick.png" alt="Done" className="w-3.5 h-3.5 object-contain" />
                           Verified Attended
                         </span>
                       ) : (
@@ -357,7 +354,7 @@ export const AttendeeDashboardPage: React.FC = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-black/10 text-xs text-gray-800">
                     <div className="space-y-0.5">
                       <span className="text-[11px] uppercase tracking-wider font-bold text-gray-600 flex items-center gap-1">
-                        <Calendar className="w-3 h-3 text-[#4f0820]" /> Schedule
+                        <img src="/calendar.png" alt="Calendar" className="w-3 h-3 object-contain shrink-0" /> Schedule
                       </span>
                       <p className="font-bold text-[#0e0622]">{t.eventDate}</p>
                       <p className="text-gray-600 font-light flex items-center gap-1">
@@ -367,7 +364,7 @@ export const AttendeeDashboardPage: React.FC = () => {
 
                     <div className="space-y-0.5">
                       <span className="text-[11px] uppercase tracking-wider font-bold text-gray-600 flex items-center gap-1">
-                        <MapPin className="w-3 h-3 text-[#4f0820]" /> Venue
+                        <img src="/location.png" alt="Location" className="w-3 h-3 object-contain shrink-0" /> Venue
                       </span>
                       <p className="font-bold text-[#0e0622]">{t.eventLocation}</p>
                       <p className="text-gray-600 font-light">Addis Ababa, Ethiopia</p>
@@ -535,7 +532,7 @@ export const AttendeeDashboardPage: React.FC = () => {
                 onClick={handleCopyLink}
                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-sheeba-dark text-xs font-semibold transition-colors cursor-pointer"
               >
-                {copied ? <Check className="w-3.5 h-3.5 text-[#2A7B5F]" /> : <Copy className="w-3.5 h-3.5" />}
+                {copied ? <img src="/tick.png" alt="Copied" className="w-3.5 h-3.5 object-contain shrink-0" /> : <Copy className="w-3.5 h-3.5" />}
                 <span>{copied ? 'Copied!' : 'Copy Link'}</span>
               </button>
             </div>

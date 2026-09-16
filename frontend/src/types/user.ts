@@ -1,12 +1,20 @@
 export type UserRole = 'ATTENDEE' | 'ORGANIZER' | 'ADMIN';
 export type ProfileVisibility = 'public' | 'private';
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected';
+export type OrganizerApprovalStatus = 'none' | 'pending' | 'approved' | 'rejected';
 
 export interface AttendeeStats {
   meetupsCount: number;
   workshopsCount: number;
   hackathonsCount: number;
   totalEventsAttended: number;
+}
+
+export interface OrganizerSocials {
+  telegram?: string;
+  x?: string;
+  tiktok?: string;
+  youtube?: string;
 }
 
 export interface User {
@@ -20,7 +28,11 @@ export interface User {
   visibility?: ProfileVisibility;
   phone?: string;
   organization?: string;
+  socials?: OrganizerSocials;
   approvalStatus?: ApprovalStatus;
+  isOrganizer?: boolean;
+  organizerApprovalStatus?: OrganizerApprovalStatus;
+  roles?: UserRole[];
   isActive?: boolean;
   stats?: AttendeeStats;
 }
@@ -31,4 +43,6 @@ export interface OrganizerProfile {
   contactEmail: string;
   contactPhone?: string;
   bio?: string;
+  socials?: OrganizerSocials;
 }
+

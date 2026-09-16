@@ -28,6 +28,13 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS visibility VARCHAR(20) NOT NULL DEFAU
 ALTER TABLE users ADD COLUMN IF NOT EXISTS member_since VARCHAR(50) DEFAULT 'August 2026';
 ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS approval_status VARCHAR(50) NOT NULL DEFAULT 'approved';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id VARCHAR(255) UNIQUE;
+ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS is_organizer BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS organizer_approval_status VARCHAR(50) NOT NULL DEFAULT 'none';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS organizer_bio TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS organizer_socials JSONB DEFAULT '{}'::jsonb;
+UPDATE users SET is_organizer = TRUE, organizer_approval_status = approval_status WHERE role = 'organizer' AND organizer_approval_status = 'none';
 
 -- Events Table (Single-day tech events only: hackathon, workshop, meetup)
 CREATE TABLE IF NOT EXISTS events (
@@ -57,6 +64,7 @@ CREATE TABLE IF NOT EXISTS events (
 );
 
 -- Alter table commands for events
+ALTER TABLE events ADD COLUMN IF NOT EXISTS poster_image_url TEXT;
 ALTER TABLE events ADD COLUMN IF NOT EXISTS event_type VARCHAR(50) NOT NULL DEFAULT 'workshop';
 ALTER TABLE events ADD COLUMN IF NOT EXISTS start_time VARCHAR(50) DEFAULT '09:00 AM';
 ALTER TABLE events ADD COLUMN IF NOT EXISTS end_time VARCHAR(50) DEFAULT '05:00 PM';
@@ -67,6 +75,7 @@ ALTER TABLE events ADD COLUMN IF NOT EXISTS ticket_price NUMERIC(10, 2) NOT NULL
 ALTER TABLE events ADD COLUMN IF NOT EXISTS currency VARCHAR(10) NOT NULL DEFAULT 'ETB';
 ALTER TABLE events ADD COLUMN IF NOT EXISTS share_link_token VARCHAR(100);
 ALTER TABLE events ADD COLUMN IF NOT EXISTS custom_questions JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS poster_image_url TEXT;
 ALTER TABLE events DROP CONSTRAINT IF EXISTS events_status_check;
 ALTER TABLE events ADD CONSTRAINT events_status_check CHECK (status IN ('open', 'closed', 'completed', 'canceled', 'cancelled', 'postponed', 'draft', 'published'));
 
@@ -89,6 +98,32 @@ CREATE TABLE IF NOT EXISTS registrations (
 ALTER TABLE registrations ADD COLUMN IF NOT EXISTS answers JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE registrations ADD COLUMN IF NOT EXISTS payment_reference VARCHAR(255);
 ALTER TABLE registrations ADD COLUMN IF NOT EXISTS payment_status VARCHAR(50) NOT NULL DEFAULT 'settled';
+ALTER TABLE registrations DROP CONSTRAINT IF EXISTS unique_event_user_registration;
+ALTER TABLE registrations ADD CONSTRAINT unique_event_user_registration UNIQUE (event_id, user_id);
+
+-- Password Reset Tokens Table
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token VARCHAR(255) UNIQUE NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_token ON password_reset_tokens(token);
+
+-- Check-Ins Table (Section 4: Door Duty check-ins with soft-void Undo support)
+CREATE TABLE IF NOT EXISTS check_ins (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    registration_id UUID NOT NULL REFERENCES registrations(id) ON DELETE CASCADE,
+    event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    approved_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    approved_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    voided_at TIMESTAMPTZ,
+    voided_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 
 -- Tickets Table
 CREATE TABLE IF NOT EXISTS tickets (
@@ -131,10 +166,14 @@ CREATE TABLE IF NOT EXISTS badge_awards (
     revoked_at TIMESTAMPTZ,
     revoked_by UUID REFERENCES users(id),
     revocation_reason TEXT,
+    organizer_note TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT unique_event_user_badge UNIQUE (event_id, user_id, badge_code)
 );
+
+ALTER TABLE badge_awards ADD COLUMN IF NOT EXISTS organizer_note TEXT;
+ALTER TABLE check_ins ADD COLUMN IF NOT EXISTS notes TEXT;
 
 -- Payments / Chapa Settlement Table (SRS Section 5 & 11.1)
 CREATE TABLE IF NOT EXISTS payments (
@@ -167,5 +206,9 @@ CREATE INDEX IF NOT EXISTS idx_tickets_status ON tickets(status);
 CREATE INDEX IF NOT EXISTS idx_badge_awards_user_id ON badge_awards(user_id);
 CREATE INDEX IF NOT EXISTS idx_badge_awards_event_id ON badge_awards(event_id);
 CREATE INDEX IF NOT EXISTS idx_badge_awards_badge_code ON badge_awards(badge_code);
+CREATE INDEX IF NOT EXISTS idx_check_ins_event_id ON check_ins(event_id);
+CREATE INDEX IF NOT EXISTS idx_check_ins_user_id ON check_ins(user_id);
+CREATE INDEX IF NOT EXISTS idx_check_ins_registration_id ON check_ins(registration_id);
+CREATE INDEX IF NOT EXISTS idx_check_ins_voided_at ON check_ins(voided_at);
 CREATE INDEX IF NOT EXISTS idx_payments_event_id ON payments(event_id);
 CREATE INDEX IF NOT EXISTS idx_payments_user_id ON payments(user_id);

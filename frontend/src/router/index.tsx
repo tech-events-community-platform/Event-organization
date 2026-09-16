@@ -13,11 +13,13 @@ import { LoginPage } from '../pages/public/LoginPage';
 import { RegisterPage } from '../pages/public/RegisterPage';
 import { PendingApprovalPage } from '../pages/public/PendingApprovalPage';
 import { PublicRegisterPage } from '../pages/public/PublicRegisterPage';
+import { EventRegistrationCheckoutPage } from '../pages/public/EventRegistrationCheckoutPage';
 import { PublicProfilePage } from '../pages/public/PublicProfilePage';
 import { BadgeDetailPage } from '../pages/public/BadgeDetailPage';
 import { PublicSearchPage } from '../pages/public/PublicSearchPage';
 
 // Attendee Pages
+import { BadgesPage as AttendeeBadgesPage } from '../pages/attendee/BadgesPage';
 import { AttendeeDashboardPage } from '../pages/attendee/DashboardPage';
 import { RecordPage } from '../pages/attendee/RecordPage';
 import { MyEventsPage } from '../pages/attendee/MyEventsPage';
@@ -25,14 +27,17 @@ import { TicketPage } from '../pages/attendee/TicketPage';
 import { ProfilePage } from '../pages/attendee/ProfilePage';
 import { AttendanceHistoryPage } from '../pages/attendee/AttendanceHistoryPage';
 import { AccountSettingsPage } from '../pages/attendee/AccountSettingsPage';
+import { AttendeeSettingsPage } from '../pages/attendee/AttendeeSettingsPage';
 
-// Organizer Pages
+// Organizer Pages (Section 1: 6 Tabs)
 import { OrganizerDashboardPage } from '../pages/organizer/OrganizerDashboardPage';
-import { EventListPage } from '../pages/organizer/EventListPage';
 import { CreateEventPage } from '../pages/organizer/CreateEventPage';
-import { AttendeeListPage } from '../pages/organizer/AttendeeListPage';
-import { ScannerPage } from '../pages/organizer/ScannerPage';
+import { EventDetailPage } from '../pages/organizer/EventDetailPage';
+import { CheckInPage } from '../pages/organizer/CheckInPage';
+import { BadgesPage as OrganizerBadgesPage } from '../pages/organizer/BadgesPage';
 import { ReportPage } from '../pages/organizer/ReportPage';
+import { EventListPage } from '../pages/organizer/EventListPage';
+import { ScannerPage } from '../pages/organizer/ScannerPage';
 
 // Admin Pages
 import { AdminDashboardPage } from '../pages/admin/AdminDashboardPage';
@@ -52,7 +57,9 @@ export const router = createBrowserRouter([
       { path: 'contact', element: <LoginPage /> },
       { path: 'search', element: <PublicSearchPage /> },
       { path: 'e/:token', element: <PublicRegisterPage /> },
+      { path: 'e/:token/register', element: <EventRegistrationCheckoutPage /> },
       { path: 'events/:id/register', element: <PublicRegisterPage /> },
+      { path: 'events/:id/register/form', element: <EventRegistrationCheckoutPage /> },
       { path: 'profile/:id', element: <PublicProfilePage /> },
       { path: 'badge/:id', element: <BadgeDetailPage /> },
     ],
@@ -65,19 +72,21 @@ export const router = createBrowserRouter([
       {
         element: <AttendeeLayout />,
         children: [
-          { index: true, element: <AttendeeDashboardPage /> },
-          { path: 'record', element: <RecordPage /> },
+          { index: true, element: <AttendeeBadgesPage /> },
+          { path: 'badges', element: <AttendeeBadgesPage /> },
           { path: 'events', element: <MyEventsPage /> },
-          { path: 'explore', element: <PublicSearchPage /> },
+          { path: 'registrations', element: <MyEventsPage /> },
           { path: 'ticket/:eventId', element: <TicketPage /> },
+          { path: 'settings', element: <AttendeeSettingsPage /> },
           { path: 'profile', element: <ProfilePage /> },
           { path: 'profile/attendance', element: <AttendanceHistoryPage /> },
-          { path: 'settings', element: <AccountSettingsPage /> },
+          { path: 'record', element: <RecordPage /> },
+          { path: 'dashboard', element: <AttendeeDashboardPage /> },
         ],
       },
     ],
   },
-  // Protected Organizer Routes (/organizer)
+  // Protected Organizer Routes (/organizer - Section 1: 6 core tabs)
   {
     path: '/organizer',
     element: <ProtectedRoute allowedRoles={['ORGANIZER']} />,
@@ -86,15 +95,18 @@ export const router = createBrowserRouter([
         element: <OrganizerLayout />,
         children: [
           { index: true, element: <OrganizerDashboardPage /> },
-          { path: 'events', element: <EventListPage /> },
           { path: 'events/create', element: <CreateEventPage /> },
-          { path: 'events/:id/attendees', element: <AttendeeListPage /> },
+          { path: 'events/:id', element: <EventDetailPage /> },
+          { path: 'events', element: <EventListPage /> },
           { path: 'events/:id/scanner', element: <ScannerPage /> },
+          { path: 'scanner/:id', element: <ScannerPage /> },
+          { path: 'scanner', element: <ScannerPage /> },
+          { path: 'events/:id/attendees', element: <OrganizerBadgesPage /> },
           { path: 'events/:id/report', element: <ReportPage /> },
-          { path: 'badges', element: <AttendeeListPage /> },
-          { path: 'badges/:id', element: <AttendeeListPage /> },
-          { path: 'attendees', element: <AttendeeListPage /> },
-          { path: 'attendees/:id', element: <AttendeeListPage /> },
+          { path: 'check-in', element: <CheckInPage /> },
+          { path: 'check-in/:id', element: <CheckInPage /> },
+          { path: 'badges', element: <OrganizerBadgesPage /> },
+          { path: 'badges/:id', element: <OrganizerBadgesPage /> },
           { path: 'reports', element: <ReportPage /> },
           { path: 'reports/:id', element: <ReportPage /> },
           { path: 'settings', element: <AccountSettingsPage /> },

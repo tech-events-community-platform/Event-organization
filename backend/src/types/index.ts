@@ -3,6 +3,7 @@ import { Request } from 'express';
 export type UserRole = 'attendee' | 'organizer' | 'admin';
 export type ProfileVisibility = 'public' | 'private';
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected';
+export type OrganizerApprovalStatus = 'none' | 'pending' | 'approved' | 'rejected';
 
 export interface IUser {
   id: string;
@@ -18,6 +19,10 @@ export interface IUser {
   member_since: string;
   is_active: boolean;
   approval_status: ApprovalStatus;
+  is_organizer?: boolean;
+  organizer_approval_status?: OrganizerApprovalStatus;
+  organizer_bio?: string | null;
+  organizer_socials?: Record<string, string> | null;
   created_at: Date;
   updated_at: Date;
   // Computed stats
@@ -63,6 +68,7 @@ export interface IEvent {
   share_link_token: string;
   custom_questions: RegistrationQuestion[];
   banner_url?: string | null;
+  poster_image_url?: string | null;
   created_at: Date;
   updated_at: Date;
   // Computed / Joined fields
@@ -70,6 +76,19 @@ export interface IEvent {
   checked_in_count?: number;
   organizer_name?: string;
   organizer_email?: string;
+}
+
+export interface ICheckIn {
+  id: string;
+  registration_id: string;
+  event_id: string;
+  user_id: string;
+  approved_by: string;
+  approved_at: Date;
+  voided_at?: Date | null;
+  voided_by?: string | null;
+  created_at: Date;
+  updated_at: Date;
 }
 
 export type RegistrationStatus = 'registered' | 'cancelled';
@@ -127,6 +146,7 @@ export interface IBadgeAward {
   revoked_at?: Date | null;
   revoked_by?: string | null;
   revocation_reason?: string | null;
+  organizer_note?: string | null;
   created_at: Date;
   updated_at: Date;
   // Joined fields
@@ -172,10 +192,12 @@ export interface AttendeeRosterItem {
 export interface SponsorReportData {
   eventId: string;
   eventTitle: string;
+  eventDescription: string;
   eventType: EventType;
   eventDate: string;
   eventLocation: string;
   organizerName: string;
+  customQuestions?: any[];
   totalRegistered: number;
   totalAttended: number;
   attendanceRate: number;
@@ -200,8 +222,9 @@ export interface IJwtPayload {
 export interface IQrTicketPayload {
   ticketId: string;
   eventId: string;
-  userId: string;
-  issuedAt: number;
+  exp?: number;
+  userId?: string;
+  issuedAt?: number;
 }
 
 export interface AuthRequest extends Request {
