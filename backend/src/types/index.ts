@@ -98,7 +98,7 @@ export interface IRegistration {
   event_id: string;
   user_id: string;
   status: RegistrationStatus;
-  answers: Record<string, string>;
+  answers: Record<string, any>;
   payment_reference?: string | null;
   payment_status?: string | null;
   registered_at: Date;
@@ -186,8 +186,10 @@ export interface AttendeeRosterItem {
   status: 'Registered' | 'Checked in';
   checkInTime?: string;
   badges: BadgeCode[];
-  answers?: Record<string, string>;
+  answers?: Record<string, any>;
+  
 }
+
 
 export interface SponsorReportData {
   eventId: string;
@@ -210,6 +212,45 @@ export interface SponsorReportData {
   registrationsOverTime: Array<{ date: string; count: number }>;
   hourlyCheckIns?: Array<{ hour: string; count: number }>;
   attendees: AttendeeRosterItem[];
+  rolesBreakdown?: Array<{ role: string; count: number; percentage: number }>;
+  topOrganizations?: Array<{ name: string; count: number }>;
+  goalsBreakdown?: Array<{ goal: string; count: number; percentage: number }>;
+  sampleInterests?: string[];
+  aiNarrative?: {
+    executiveSummary: string;
+    eventBackground: string;
+    objectives: string;
+    deliveryNarrative?: string;
+    audienceOverview: string;
+    experienceNarrative?: string;
+    organizationsNarrative: string;
+    interestsNarrative: string;
+    motivationNarrative: string;
+    engagementNarrative: string;
+    communityFindings?: string;
+    attendeeVoice?: Array<{ quote: string; theme: string; explanation: string }>;
+    audienceDeepAnalysis?: {
+      profile: string;
+      keyThemes: string;
+      emergingInterests: string;
+      communityOpportunities: string;
+    };
+    performanceAnalysis?: string;
+    keyFindings: Array<{ title: string; evidence: string }>;
+    structuredRecommendations?: {
+      futureProgramming: string;
+      mentorship: string;
+      communityDevelopment: string;
+    };
+    partnerImpactSummary: string;
+    // Legacy / convenience fields
+    eventIntroduction?: string;
+    demographicAnalysis?: string;
+    thematicTakeaways?: string;
+    impactHighlights?: string[];
+    recommendations?: string[];
+    strategicConclusion?: string;
+  };
 }
 
 export interface IJwtPayload {
