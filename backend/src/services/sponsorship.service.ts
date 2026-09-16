@@ -24,6 +24,7 @@ export class SponsorshipService {
       contact_email: string;
       contact_telegram?: string;
       pitch_deck_url?: string;
+      socials?: Record<string, string>;
     }
   ): Promise<ISponsorshipApplication> {
     if (!data.event_title || !data.expected_date || !data.location) {
@@ -39,6 +40,7 @@ export class SponsorshipService {
     }
 
     const packagesJson = JSON.stringify(data.packages || []);
+    const socialsJson = JSON.stringify(data.socials || {});
 
     const res = await query<ISponsorshipApplication>(
       `INSERT INTO sponsorship_applications (
@@ -59,8 +61,9 @@ export class SponsorshipService {
         contact_email,
         contact_telegram,
         pitch_deck_url,
+        socials,
         status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, 'OPEN')
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, 'OPEN')
       RETURNING *`,
       [
         organizerId,
@@ -80,6 +83,7 @@ export class SponsorshipService {
         data.contact_email.trim().toLowerCase(),
         data.contact_telegram ? data.contact_telegram.trim() : null,
         data.pitch_deck_url ? data.pitch_deck_url.trim() : null,
+        socialsJson,
       ]
     );
 
@@ -279,13 +283,14 @@ export class SponsorshipService {
         sa.contact_email,
         sa.contact_telegram,
         sa.pitch_deck_url,
+        sa.socials,
         sa.status AS application_status,
         u.organization AS organizer_organization,
         u.full_name AS organizer_name,
         u.avatar_url AS organizer_avatar
       FROM sponsorship_deals sd
       JOIN sponsorship_applications sa ON sd.application_id = sa.id
-      JOIN users u ON sa.organizer_id = u.id
+      LEFT JOIN users u ON sa.organizer_id = u.id
       WHERE sd.sponsor_id = $1
     `;
 
@@ -299,7 +304,41 @@ export class SponsorshipService {
     sql += ` ORDER BY sd.updated_at DESC`;
 
     const res = await query(sql, params);
-    return res.rows;
+    return res.rows.map((row: any) => ({
+      id: row.id,
+      application_id: row.application_id,
+      sponsor_id: row.sponsor_id,
+      status: row.status,
+      package_name: row.package_name,
+      pledged_amount: row.pledged_amount ? Number(row.pledged_amount) : null,
+      sponsor_notes: row.sponsor_notes,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+      application: {
+        id: row.application_id,
+        event_title: row.event_title,
+        event_type: row.event_type,
+        category: row.category,
+        expected_date: row.expected_date,
+        location: row.location,
+        expected_attendees: row.expected_attendees ? Number(row.expected_attendees) : 0,
+        target_audience: row.target_audience,
+        funding_goal: row.funding_goal ? Number(row.funding_goal) : 0,
+        currency: row.currency,
+        description: row.application_description,
+        packages: row.packages,
+        contact_name: row.contact_name,
+        contact_phone: row.contact_phone,
+        contact_email: row.contact_email,
+        contact_telegram: row.contact_telegram,
+        pitch_deck_url: row.pitch_deck_url,
+        socials: row.socials,
+        status: row.application_status,
+        organizer_organization: row.organizer_organization,
+        organizer_name: row.organizer_name,
+        organizer_avatar: row.organizer_avatar,
+      },
+    }));
   }
 
   /**

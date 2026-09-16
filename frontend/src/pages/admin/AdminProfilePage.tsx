@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
-import { ShieldCheck, LogOut, Lock, Mail, Settings } from 'lucide-react';
+import { ShieldCheck, LogOut, Lock, Settings } from 'lucide-react';
 
 export const AdminProfilePage: React.FC = () => {
   const { user, logout } = useAuth();
@@ -36,7 +36,7 @@ export const AdminProfilePage: React.FC = () => {
             </div>
 
             <p className="text-xs text-[#756366] flex items-center justify-center sm:justify-start gap-1">
-              <Mail className="w-3.5 h-3.5 text-[#63474D]" />
+              <img src="/mail-icon.jpg" alt="Email" className="w-3.5 h-3.5 object-contain" />
               {user?.email || 'admin@sheeba.et'}
             </p>
 

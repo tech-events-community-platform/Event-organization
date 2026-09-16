@@ -3,8 +3,6 @@ import {
   HandCoins,
   CheckCircle2,
   XCircle,
-  Phone,
-  Mail,
   Send,
   Calendar,
   MapPin,
@@ -152,8 +150,8 @@ export const SponsorDealsPage: React.FC = () => {
       ) : (
         <div className="space-y-5">
           {deals.map((deal) => {
-            const app = deal.application;
-            if (!app) return null;
+            const app = deal.application || (deal as any);
+            if (!app || !app.event_title) return null;
 
             const isEditingNotes = editingNotesId === deal.id;
 
@@ -227,7 +225,7 @@ export const SponsorDealsPage: React.FC = () => {
                   </div>
                   <div className="flex items-center gap-2">
                     <Users className="w-4 h-4 text-[#63474D]" />
-                    <span>{app.expected_attendees.toLocaleString()} Attendees</span>
+                    <span>{app.expected_attendees?.toLocaleString() || 0} Attendees</span>
                   </div>
                 </div>
 
@@ -243,7 +241,7 @@ export const SponsorDealsPage: React.FC = () => {
                   <div>
                     <span className="text-gray-400 font-bold uppercase text-[10px] block">Pledged / Budget</span>
                     <span className="font-serif font-bold text-[#63474D] text-base">
-                      {(deal.pledged_amount || app.funding_goal).toLocaleString()} {app.currency}
+                      {(deal.pledged_amount || app.funding_goal || 0).toLocaleString()} {app.currency || 'ETB'}
                     </span>
                   </div>
 
@@ -259,7 +257,7 @@ export const SponsorDealsPage: React.FC = () => {
                 <div className="bg-[#FAF7F5] border border-[#63474D]/20 rounded-2xl p-4 space-y-2">
                   <div className="flex items-center justify-between">
                     <p className="text-xs font-bold text-gray-900 flex items-center gap-1.5">
-                      <Phone className="w-3.5 h-3.5 text-[#63474D]" />
+                      <img src="/phone-icon.jpg" alt="Phone" className="w-3.5 h-3.5 object-contain" />
                       Direct Organizer Contact
                     </p>
                     <span className="text-[11px] text-gray-500 font-medium">{app.contact_name}</span>
@@ -270,7 +268,7 @@ export const SponsorDealsPage: React.FC = () => {
                       href={`tel:${app.contact_phone}`}
                       className="px-3 py-1.5 rounded-lg bg-white border border-gray-200 hover:border-[#63474D] text-xs font-semibold text-gray-800 flex items-center gap-1.5 transition-colors"
                     >
-                      <Phone className="w-3.5 h-3.5 text-emerald-600" />
+                      <img src="/phone-icon.jpg" alt="Phone" className="w-3.5 h-3.5 object-contain" />
                       <span>{app.contact_phone}</span>
                     </a>
 
@@ -278,7 +276,7 @@ export const SponsorDealsPage: React.FC = () => {
                       href={`mailto:${app.contact_email}?subject=Sponsorship%20Confirmation%20-%20${encodeURIComponent(app.event_title)}`}
                       className="px-3 py-1.5 rounded-lg bg-white border border-gray-200 hover:border-[#63474D] text-xs font-semibold text-gray-800 flex items-center gap-1.5 transition-colors"
                     >
-                      <Mail className="w-3.5 h-3.5 text-blue-600" />
+                      <img src="/mail-icon.jpg" alt="Email" className="w-3.5 h-3.5 object-contain" />
                       <span>{app.contact_email}</span>
                     </a>
 

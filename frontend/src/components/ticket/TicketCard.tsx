@@ -2,7 +2,7 @@ import React from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import type { Ticket } from '../../types/ticket';
 import { Badge } from '../ui/Badge';
-import { Award, Download, ShieldCheck } from 'lucide-react';
+import { Download, ShieldCheck } from 'lucide-react';
 
 interface TicketCardProps {
   ticket: Ticket;
@@ -17,10 +17,12 @@ export const TicketCard: React.FC<TicketCardProps> = ({ ticket, onDownload }) =>
         {/* Top Header Brand */}
         <div className="bg-[#63474D] text-white p-6 text-center relative overflow-hidden">
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-[#FFA686] flex items-center justify-center text-[#2D1F23] shadow-xs">
-                <Award className="w-5 h-5 font-bold" />
-              </div>
+            <div className="flex items-center gap-2.5">
+              <img
+                src="/logo.jpg"
+                alt="Sheeba Logo"
+                className="h-9 sm:h-10 w-auto object-contain shrink-0 drop-shadow-xs"
+              />
               <span className="font-serif font-bold text-lg tracking-wider text-white">
                 SHEEBA<span className="text-[#FFA686]">.</span>
               </span>
