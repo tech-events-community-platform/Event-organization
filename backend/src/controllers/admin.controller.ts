@@ -41,6 +41,26 @@ export class AdminController {
     }
   }
 
+  static async approveSponsor(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = req.params.id as string;
+      const updated = await AdminService.approveSponsor(id);
+      return sendSuccess(res, updated, 'Sponsor approved and activated successfully.');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async rejectSponsor(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = req.params.id as string;
+      const updated = await AdminService.rejectSponsor(id);
+      return sendSuccess(res, updated, 'Sponsor registration rejected.');
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async toggleUserStatus(req: Request, res: Response, next: NextFunction) {
     try {
       const id = req.params.id as string;

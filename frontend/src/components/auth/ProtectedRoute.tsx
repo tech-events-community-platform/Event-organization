@@ -11,6 +11,9 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) 
   const { user, isAuthenticated, role } = useAuth();
 
   if (!isAuthenticated || !user || !role) {
+    if (allowedRoles && allowedRoles.includes('SPONSOR')) {
+      return <Navigate to="/sponsor/auth" replace />;
+    }
     return <Navigate to="/login" replace />;
   }
 
@@ -20,6 +23,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) 
       return <Navigate to="/organizer" replace />;
     } else if (role === 'ADMIN') {
       return <Navigate to="/admin" replace />;
+    } else if (role === 'SPONSOR') {
+      return <Navigate to="/sponsor" replace />;
     } else {
       return <Navigate to="/app" replace />;
     }

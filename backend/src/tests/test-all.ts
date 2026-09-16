@@ -3,6 +3,7 @@ import http from 'http';
 import app from '../app';
 import { signAuthToken, verifyAuthToken } from '../utils/jwt.util';
 import { generateTicketToken, verifyTicketToken, generateQrDataUrl } from '../utils/qr.util';
+import { query } from '../config/db';
 
 const runTests = async () => {
   console.log('====================================================');
@@ -320,6 +321,245 @@ const runTests = async () => {
       organizerPortalLogin.status === 200 && organizerPortalLogin.body.data?.user?.role === 'ORGANIZER',
       'User can sign in directly to Organizer portal'
     );
+
+    // TEST SUITE 7: Independent Sponsor Role, Approval Gate & OTP Password Reset
+    console.log('\n📦 7. Testing Sponsor Role, Approval Gate & OTP Password Reset...');
+    const testSponsorEmail = `sponsor_suite_${Date.now()}@corporate.et`;
+    const testSponsorPass = 'InitialSponsorPass123!';
+
+    // Cleanup prior if any
+    await query('DELETE FROM users WHERE LOWER(email) = LOWER($1)', [testSponsorEmail]);
+    await query('DELETE FROM otp_verifications WHERE LOWER(email) = LOWER($1)', [testSponsorEmail]);
+
+    // Step 1: Sponsor Corporate Registration
+    const sponsorRegRes = await fetchHttp('/api/auth/sponsor/register', {
+      method: 'POST',
+      body: {
+        email: testSponsorEmail,
+        password: testSponsorPass,
+        full_name: 'Almaz Tadesse',
+        company_name: 'Telebirr Innovations PLC',
+        industry_category: 'Fintech',
+        company_phone: '+251911998877',
+        company_website: 'https://telebirr.et',
+      },
+    });
+    assert(
+      sponsorRegRes.status === 201 && sponsorRegRes.body.data?.user?.role === 'SPONSOR' && sponsorRegRes.body.data?.user?.approvalStatus === 'pending',
+      'Sponsor registers in PENDING approval status'
+    );
+
+    // Step 2: Login before approval blocked
+    const unapprovedSponsorLogin = await fetchHttp('/api/auth/sponsor/login', {
+      method: 'POST',
+      body: { email: testSponsorEmail, password: testSponsorPass },
+    });
+    assert(
+      unapprovedSponsorLogin.status === 403 && unapprovedSponsorLogin.body.isPendingApproval === true,
+      'Sponsor login is blocked prior to admin review with pending notice'
+    );
+
+    // Step 3: Admin Review & Approval
+    const adminUsersResSponsor = await fetchHttp('/api/admin/users', {
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+    const pendingSponsor = adminUsersResSponsor.body.data?.sponsors?.find((s: any) => s.email === testSponsorEmail);
+    assert(
+      adminUsersResSponsor.status === 200 && Boolean(pendingSponsor),
+      'Admin successfully views pending sponsor in sponsors queue'
+    );
+
+    const approveSponsorRes = await fetchHttp(`/api/admin/users/${pendingSponsor.id}/approve-sponsor`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+    assert(
+      approveSponsorRes.status === 200 && approveSponsorRes.body.data?.approval_status === 'approved',
+      'Admin approves sponsor account and triggers approval email'
+    );
+
+    // Step 4: Approved Sponsor Login
+    const approvedSponsorLogin = await fetchHttp('/api/auth/sponsor/login', {
+      method: 'POST',
+      body: { email: testSponsorEmail, password: testSponsorPass },
+    });
+    assert(
+      approvedSponsorLogin.status === 200 && approvedSponsorLogin.body.data?.token && approvedSponsorLogin.body.data?.user?.role === 'SPONSOR',
+      'Approved sponsor logs in and receives corporate session token'
+    );
+
+    // Step 5: OTP Forgot Password
+    // Test 5a: Unregistered email rejection
+    const unregOtpRes = await fetchHttp('/api/auth/sponsor/forgot-password/otp', {
+      method: 'POST',
+      body: { email: 'nonexistent_sponsor@nowhere.et' },
+    });
+    assert(
+      unregOtpRes.status === 404,
+      'Forgot password rejects unregistered emails with clear 404 notice'
+    );
+
+    // Test 5b: Registered sponsor requests OTP
+    const forgotOtpRes = await fetchHttp('/api/auth/sponsor/forgot-password/otp', {
+      method: 'POST',
+      body: { email: testSponsorEmail },
+    });
+    assert(
+      forgotOtpRes.status === 200 && forgotOtpRes.body.success === true,
+      'Sponsor requests 6-digit OTP code'
+    );
+
+    const dbOtp = await query('SELECT otp_code FROM otp_verifications WHERE LOWER(email) = LOWER($1)', [testSponsorEmail]);
+    const otpCode = dbOtp.rows[0]?.otp_code;
+    assert(
+      Boolean(otpCode && otpCode.length === 6),
+      'OTP code securely generated and stored in database'
+    );
+
+    // Test 5c: Standalone OTP code authentication
+    const verifyOtpRes = await fetchHttp('/api/auth/sponsor/verify-otp', {
+      method: 'POST',
+      body: { email: testSponsorEmail, otp: otpCode },
+    });
+    assert(
+      verifyOtpRes.status === 200 && verifyOtpRes.body.success === true,
+      'Standalone OTP authentication endpoint validates 6-digit code'
+    );
+
+    const newSponsorPass = 'NewCorporatePass2026!';
+    const resetOtpRes = await fetchHttp('/api/auth/sponsor/reset-password/otp', {
+      method: 'POST',
+      body: { email: testSponsorEmail, otp: otpCode, newPassword: newSponsorPass },
+    });
+    assert(
+      resetOtpRes.status === 200 && resetOtpRes.body.success === true,
+      'Sponsor verifies OTP and resets corporate account password'
+    );
+
+    const newPassLogin = await fetchHttp('/api/auth/sponsor/login', {
+      method: 'POST',
+      body: { email: testSponsorEmail, password: newSponsorPass },
+    });
+    assert(
+      newPassLogin.status === 200 && newPassLogin.body.data?.token,
+      'Sponsor successfully logs in using newly reset password'
+    );
+
+    // TEST SUITE 8: Sponsorship Marketplace, Pitch Creation & Deal Pipeline
+    console.log('\n📦 8. Testing Sponsorship Marketplace, Pitch Creation & Deal Pipeline...');
+    const organizerToken = organizerPostLoginRes.body.data?.token;
+    const sponsorToken = approvedSponsorLogin.body.data?.token;
+
+    // Step 1: Organizer creates uncreated event sponsorship application
+    const createPitchRes = await fetchHttp('/api/sponsorships/applications', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${organizerToken}` },
+      body: {
+        event_title: 'Addis AI & Cloud Summit 2026',
+        event_type: 'hackathon',
+        category: 'AI & Data',
+        expected_date: 'December 2026',
+        location: 'Millennium Hall, Addis Ababa',
+        expected_attendees: 500,
+        target_audience: 'Senior software engineers, AI researchers, and startup founders',
+        funding_goal: 150000,
+        currency: 'ETB',
+        description: '3-day flagship AI hackathon building local LLM solutions for agriculture and healthcare.',
+        packages: [
+          { name: 'Title Sponsor', amount: 80000, perks: 'Keynote speaking slot + Logo on all badges + 3x3m Booth' },
+          { name: 'Gold Sponsor', amount: 40000, perks: 'Stage banner + Swag bag placement' },
+        ],
+        contact_name: 'Dawit Bekele',
+        contact_phone: '+251911334455',
+        contact_email: 'dawit@gdgaddis.et',
+        contact_telegram: '@dawit_gdg',
+      },
+    });
+    assert(
+      createPitchRes.status === 201 && createPitchRes.body.data?.id,
+      'Organizer publishes upcoming event sponsorship pitch to marketplace'
+    );
+    const createdAppId = createPitchRes.body.data?.id;
+
+    // Step 2: Organizer views their submitted pitches
+    const myPitchesRes = await fetchHttp('/api/sponsorships/organizer/my-applications', {
+      headers: { Authorization: `Bearer ${organizerToken}` },
+    });
+    assert(
+      myPitchesRes.status === 200 &&
+      Array.isArray(myPitchesRes.body.data) &&
+      myPitchesRes.body.data.some((p: any) => p.id === createdAppId),
+      'Organizer retrieves their submitted pitches with interested sponsor metrics'
+    );
+
+    // Step 3: Sponsor explores marketplace
+    const exploreRes = await fetchHttp('/api/sponsorships/explore?category=AI%20%26%20Data');
+    assert(
+      exploreRes.status === 200 &&
+      Array.isArray(exploreRes.body.data) &&
+      exploreRes.body.data.some((p: any) => p.id === createdAppId),
+      'Sponsor explores marketplace with category filtering'
+    );
+
+    // Step 4: Sponsor views pitch details with direct organizer contacts
+    const pitchDetailRes = await fetchHttp(`/api/sponsorships/applications/${createdAppId}`);
+    assert(
+      pitchDetailRes.status === 200 &&
+      pitchDetailRes.body.data?.contact_phone === '+251911334455' &&
+      pitchDetailRes.body.data?.contact_email === 'dawit@gdgaddis.et',
+      'Pitch details expose direct organizer contact details for off-platform communication'
+    );
+
+    // Step 5: Sponsor marks deal as INTERESTED
+    const markInterestedRes = await fetchHttp('/api/sponsorships/deals', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${sponsorToken}` },
+      body: {
+        applicationId: createdAppId,
+        status: 'INTERESTED',
+        package_name: 'Title Sponsor',
+        pledged_amount: 80000,
+        sponsor_notes: 'Interested in title sponsorship. Reaching out via phone for booth specifications.',
+      },
+    });
+    assert(
+      markInterestedRes.status === 200 && markInterestedRes.body.data?.status === 'INTERESTED',
+      'Sponsor marks deal as INTERESTED in Deals & Pledges pipeline'
+    );
+    const dealId = markInterestedRes.body.data?.id;
+
+    // Step 6: Sponsor views their Deals pipeline
+    const myDealsRes = await fetchHttp('/api/sponsorships/sponsor/my-deals', {
+      headers: { Authorization: `Bearer ${sponsorToken}` },
+    });
+    assert(
+      myDealsRes.status === 200 &&
+      Array.isArray(myDealsRes.body.data) &&
+      myDealsRes.body.data.some((d: any) => d.id === dealId && d.contact_phone === '+251911334455'),
+      'Sponsor views deals pipeline with direct organizer phone and email'
+    );
+
+    // Step 7: Sponsor updates deal status to DECLINED
+    const updateDealRes = await fetchHttp(`/api/sponsorships/deals/${dealId}`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${sponsorToken}` },
+      body: {
+        status: 'DECLINED',
+        sponsor_notes: 'Allocated marketing budget elsewhere for Q4.',
+      },
+    });
+    assert(
+      updateDealRes.status === 200 && updateDealRes.body.data?.status === 'DECLINED',
+      'Sponsor updates deal status to DECLINED'
+    );
+
+    // Step 8: Clean up test applications & deals
+    await query('DELETE FROM sponsorship_deals WHERE application_id = $1', [createdAppId]);
+    await query('DELETE FROM sponsorship_applications WHERE id = $1', [createdAppId]);
+
+    // Clean up
+    await query('DELETE FROM users WHERE LOWER(email) = LOWER($1)', [testSponsorEmail]);
+    await query('DELETE FROM otp_verifications WHERE LOWER(email) = LOWER($1)', [testSponsorEmail]);
 
     // TEST SUITE 7: QR Ticket Generation, Scanner Verification, Atomic Check-in & Soft-Void Undo
     console.log('\n📦 7. Testing QR Ticket Generation, Scanner Verification, Duplicate 409 Rejection & Soft-Void...');

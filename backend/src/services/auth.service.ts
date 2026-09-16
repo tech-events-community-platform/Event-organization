@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { query } from '../config/db';
-import { IUser, IUserSafe, UserRole } from '../types';
+import { IUser, IUserSafe, UserRole, ISponsorRegistration } from '../types';
 import { signAuthToken } from '../utils/jwt.util';
 import { EmailService } from './email.service';
 import { OAuth2Client } from 'google-auth-library';
@@ -10,6 +10,7 @@ const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 export class AuthService {
   static formatUserResponse(user: any, stats?: any) {
     const isOrganizer = Boolean(user.is_organizer || user.role?.toLowerCase() === 'organizer');
+    const isSponsor = user.role?.toLowerCase() === 'sponsor';
     const organizerApprovalStatus = (user.organizer_approval_status && user.organizer_approval_status !== 'none')
       ? user.organizer_approval_status
       : (user.role?.toLowerCase() === 'organizer' ? (user.approval_status || 'pending') : 'none');
@@ -18,6 +19,7 @@ export class AuthService {
       'ATTENDEE',
       ...(isOrganizer ? ['ORGANIZER'] : []),
       ...(user.role?.toLowerCase() === 'admin' ? ['ADMIN'] : []),
+      ...(isSponsor ? ['SPONSOR'] : []),
     ];
 
     return {
@@ -25,11 +27,15 @@ export class AuthService {
       name: user.full_name,
       email: user.email,
       role: (user.role || 'attendee').toUpperCase(),
-      avatarUrl: user.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=63474D&color=fff`,
+      avatarUrl: user.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.company_name || user.full_name)}&background=63474D&color=fff`,
       memberSince: user.member_since || 'August 2026',
       visibility: user.visibility || 'public',
-      organization: user.organization || undefined,
-      phone: user.phone || undefined,
+      organization: user.organization || user.company_name || undefined,
+      companyName: user.company_name || user.organization || undefined,
+      industryCategory: user.industry_category || undefined,
+      companyWebsite: user.company_website || undefined,
+      companyPhone: user.company_phone || user.phone || undefined,
+      phone: user.phone || user.company_phone || undefined,
       bio: user.bio || user.organizer_bio || undefined,
       isActive: user.is_active !== false,
       approvalStatus: user.approval_status || (user.role?.toLowerCase() === 'organizer' ? 'pending' : 'approved'),
@@ -187,7 +193,7 @@ export class AuthService {
     const { email, password, role } = data;
 
     const result = await query<IUser>(
-      `SELECT id, email, password_hash, full_name, role, phone, bio, organization, avatar_url, visibility, member_since, is_active, approval_status, is_organizer, organizer_approval_status, organizer_bio, organizer_socials, created_at, updated_at
+      `SELECT id, email, password_hash, full_name, role, phone, bio, organization, company_name, industry_category, company_phone, company_website, avatar_url, visibility, member_since, is_active, approval_status, is_organizer, organizer_approval_status, organizer_bio, organizer_socials, created_at, updated_at
        FROM users WHERE LOWER(email) = LOWER($1)`,
       [email]
     );
@@ -207,13 +213,38 @@ export class AuthService {
       throw err;
     }
 
-    if (!rawUser.is_active && rawUser.role?.toLowerCase() !== 'organizer') {
+    const isSponsorAccount = rawUser.role?.toLowerCase() === 'sponsor';
+    const requestedRole = (role || '').toLowerCase();
+
+    // Prevent cross-portal logins: sponsors cannot use attendee/organizer login form
+    if (isSponsorAccount && requestedRole !== 'sponsor') {
+      const err: any = new Error('This account is registered as a Sponsor. Please sign in via the dedicated Sponsor Portal.');
+      err.statusCode = 403;
+      throw err;
+    }
+
+    // If logging into sponsor portal, verify that account has sponsor role
+    if (requestedRole === 'sponsor') {
+      if (!isSponsorAccount) {
+        const err: any = new Error('This account is not registered as a Sponsor. Please use the Attendee or Organizer login.');
+        err.statusCode = 403;
+        throw err;
+      }
+      if (rawUser.approval_status !== 'approved') {
+        const err: any = new Error('Your application will be reviewed shortly. Wait a few moments until Sheeba Administration approves you...');
+        err.statusCode = 403;
+        err.isPendingApproval = true;
+        err.approvalStatus = rawUser.approval_status || 'pending';
+        throw err;
+      }
+    }
+
+    if (!rawUser.is_active && rawUser.role?.toLowerCase() !== 'organizer' && rawUser.role?.toLowerCase() !== 'sponsor') {
       const err: any = new Error('Your account has been deactivated. Please contact support.');
       err.statusCode = 403;
       throw err;
     }
 
-    const requestedRole = (role || '').toLowerCase();
     const isAdmin = rawUser.role?.toLowerCase() === 'admin';
     const isOrganizerAccount = Boolean(rawUser.is_organizer || rawUser.role?.toLowerCase() === 'organizer');
     const organizerStatus = (rawUser.organizer_approval_status && rawUser.organizer_approval_status !== 'none')
@@ -224,6 +255,8 @@ export class AuthService {
 
     if (isAdmin) {
       sessionRole = 'admin';
+    } else if (requestedRole === 'sponsor') {
+      sessionRole = 'sponsor';
     } else if (requestedRole === 'organizer') {
       if (!isOrganizerAccount) {
         const err: any = new Error('This account does not have an organizer profile. Please sign in as an Attendee and apply in your Settings.');
@@ -242,7 +275,15 @@ export class AuthService {
       sessionRole = 'attendee';
     } else {
       // Unspecified role:
-      if (rawUser.role?.toLowerCase() === 'organizer') {
+      if (rawUser.role?.toLowerCase() === 'sponsor') {
+        if (rawUser.approval_status !== 'approved') {
+          const err: any = new Error('Your application will be reviewed shortly. Wait a few moments until Sheeba Administration approves you...');
+          err.statusCode = 403;
+          err.isPendingApproval = true;
+          throw err;
+        }
+        sessionRole = 'sponsor';
+      } else if (rawUser.role?.toLowerCase() === 'organizer') {
         if (organizerStatus !== 'approved') {
           const err: any = new Error('you will be using this sytem in 1 hour');
           err.statusCode = 403;
@@ -273,7 +314,7 @@ export class AuthService {
 
   static async getCurrentUser(userId: string): Promise<any> {
     const result = await query<IUser>(
-      `SELECT id, email, full_name, role, phone, bio, organization, avatar_url, visibility, member_since, is_active, approval_status, is_organizer, organizer_approval_status, organizer_bio, organizer_socials, created_at, updated_at
+      `SELECT id, email, full_name, role, phone, bio, organization, company_name, industry_category, company_phone, company_website, avatar_url, visibility, member_since, is_active, approval_status, is_organizer, organizer_approval_status, organizer_bio, organizer_socials, created_at, updated_at
        FROM users WHERE id = $1`,
       [userId]
     );
@@ -633,6 +674,371 @@ export class AuthService {
     return {
       user: userFormatted,
       token,
+    };
+  }
+
+  /**
+   * Register a new Sponsor account (requires Sheeba administration review)
+   */
+  static async registerSponsor(data: ISponsorRegistration): Promise<{ user: any; message: string }> {
+    const {
+      full_name,
+      email,
+      password,
+      company_name,
+      industry_category,
+      company_phone,
+      company_website = null,
+    } = data;
+
+    if (!full_name || !email || !password || !company_name || !industry_category || !company_phone) {
+      const err: any = new Error('All required sponsor fields must be provided.');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const cleanEmail = email.toLowerCase().trim();
+
+    // Check existing email across all users
+    const existing = await query<IUser>(
+      'SELECT id, role, approval_status FROM users WHERE LOWER(email) = LOWER($1)',
+      [cleanEmail]
+    );
+
+    if (existing.rowCount && existing.rowCount > 0) {
+      const err: any = new Error('An account with this email address already exists. Please sign in or use a dedicated corporate email.');
+      err.statusCode = 409;
+      throw err;
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(password, salt);
+    const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(company_name)}&background=63474D&color=FFA686`;
+
+    const result = await query<IUser>(
+      `INSERT INTO users (
+        email, password_hash, full_name, role, phone, organization,
+        company_name, industry_category, company_phone, company_website,
+        avatar_url, visibility, member_since, is_active, approval_status
+       )
+       VALUES (LOWER($1), $2, $3, 'sponsor', $4, $5, $5, $6, $4, $7, $8, 'public', 'September 2026', FALSE, 'pending')
+       RETURNING *`,
+      [
+        cleanEmail,
+        passwordHash,
+        full_name.trim(),
+        company_phone.trim(),
+        company_name.trim(),
+        industry_category.trim(),
+        company_website ? company_website.trim() : null,
+        avatarUrl,
+      ]
+    );
+
+    const rawUser = result.rows[0];
+    const user = this.formatUserResponse(rawUser);
+
+    // Send application received email
+    try {
+      await EmailService.sendSponsorApplicationReceivedEmail(cleanEmail, full_name.trim(), company_name.trim());
+    } catch (e) {
+      console.warn('Failed to send sponsor application email:', e);
+    }
+
+    return {
+      user,
+      message: 'Your application will be reviewed shortly. Wait a few moments until Sheeba Administration approves you...',
+    };
+  }
+
+  /**
+   * Sponsor Google Sign-In with optimal indexed lookup and Attendee/Organizer cross-role rejection
+   */
+  static async loginSponsorWithGoogle(
+    credential: string,
+    mode: 'login' | 'register' = 'login',
+    sponsorData?: Partial<ISponsorRegistration>
+  ): Promise<{ user: any; token: string }> {
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    if (!payload || !payload.email) {
+      const err: any = new Error('Invalid Google credential.');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    if (!payload.email_verified) {
+      const err: any = new Error('Google email is not verified.');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const email = payload.email.toLowerCase().trim();
+    const googleId = payload.sub;
+    const fullName = payload.name || email.split('@')[0];
+    const avatarUrl = payload.picture;
+
+    // Fast indexed query in PostgreSQL: check by email or google_id
+    const userRes = await query<IUser>(
+      `SELECT id, email, full_name, role, phone, organization, company_name, industry_category, company_phone, company_website, avatar_url, approval_status, is_active, google_id
+       FROM users WHERE LOWER(email) = LOWER($1) OR google_id = $2`,
+      [email, googleId]
+    );
+
+    if (userRes.rowCount && userRes.rowCount > 0) {
+      const user = userRes.rows[0];
+
+      // Rejection rule: If account is registered as Attendee or Organizer, reject
+      if (user.role?.toLowerCase() !== 'sponsor') {
+        const err: any = new Error(
+          'This Google account is already registered as an Attendee or Organizer. Sponsor accounts require a dedicated corporate account.'
+        );
+        err.statusCode = 409;
+        throw err;
+      }
+
+      // Check admin approval
+      if (user.approval_status !== 'approved') {
+        const err: any = new Error('Your application will be reviewed shortly. Wait a few moments until Sheeba Administration approves you...');
+        err.statusCode = 403;
+        err.isPendingApproval = true;
+        err.approvalStatus = user.approval_status || 'pending';
+        throw err;
+      }
+
+      // Ensure google_id is linked
+      if (!user.google_id) {
+        await query('UPDATE users SET google_id = $1 WHERE id = $2', [googleId, user.id]);
+        user.google_id = googleId;
+      }
+
+      const token = signAuthToken({
+        userId: user.id,
+        email: user.email,
+        role: 'sponsor',
+        fullName: user.full_name,
+      });
+
+      const userFormatted = this.formatUserResponse(user);
+      userFormatted.role = 'SPONSOR' as any;
+      return { user: userFormatted, token };
+    }
+
+    // Account does not exist:
+    if (mode === 'login') {
+      const err: any = new Error('No sponsor account found for this Google email. Please register as a sponsor first.');
+      err.statusCode = 404;
+      throw err;
+    }
+
+    // Google registration mode: create pending sponsor account
+    const companyName = sponsorData?.company_name || fullName;
+    const industryCategory = sponsorData?.industry_category || 'Technology';
+    const companyPhone = sponsorData?.company_phone || null;
+    const companyWebsite = sponsorData?.company_website || null;
+
+    const insertRes = await query<IUser>(
+      `INSERT INTO users (
+        email, full_name, role, google_id, avatar_url,
+        company_name, industry_category, company_phone, company_website,
+        organization, phone, visibility, member_since, is_active, approval_status
+       )
+       VALUES ($1, $2, 'sponsor', $3, $4, $5, $6, $7, $8, $5, $7, 'public', 'September 2026', FALSE, 'pending')
+       RETURNING *`,
+      [email, fullName, googleId, avatarUrl, companyName, industryCategory, companyPhone, companyWebsite]
+    );
+
+    const newUser = insertRes.rows[0];
+    EmailService.sendSponsorApplicationReceivedEmail(email, fullName, companyName).catch(console.warn);
+
+    const err: any = new Error('Your application will be reviewed shortly. Wait a few moments until Sheeba Administration approves you...');
+    err.statusCode = 201;
+    err.isPendingApproval = true;
+    err.user = this.formatUserResponse(newUser);
+    throw err;
+  }
+
+  /**
+   * Dispatch a 6-digit numeric OTP to sponsor email (15-minute expiration)
+   */
+  static async sendPasswordResetOtp(email: string): Promise<{ success: boolean; message: string }> {
+    const cleanEmail = email.toLowerCase().trim();
+    const userRes = await query<IUser>(
+      'SELECT id, email, full_name, role, company_name FROM users WHERE LOWER(email) = LOWER($1)',
+      [cleanEmail]
+    );
+
+    if (!userRes.rowCount || userRes.rowCount === 0) {
+      const err: any = new Error(
+        'No registered sponsor account found with this email address. Please check your spelling or apply to become a sponsor.'
+      );
+      err.statusCode = 404;
+      throw err;
+    }
+
+    const user = userRes.rows[0];
+    if (user.role?.toLowerCase() !== 'sponsor') {
+      const err: any = new Error(
+        'This email belongs to an Attendee or Organizer account. Please use the standard password reset on the main login page.'
+      );
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+    console.log(`\n======================================================`);
+    console.log(`[Sponsor OTP Generated] 🔑 EMAIL: ${cleanEmail} | CODE: ${otpCode}`);
+    console.log(`======================================================\n`);
+
+    // Delete older unverified OTPs for this email
+    await query('DELETE FROM otp_verifications WHERE LOWER(email) = LOWER($1)', [cleanEmail]);
+
+    // Insert new OTP record
+    await query(
+      'INSERT INTO otp_verifications (email, otp_code, expires_at, attempts) VALUES (LOWER($1), $2, $3, 0)',
+      [cleanEmail, otpCode, expiresAt]
+    );
+
+    // Dispatch email
+    await EmailService.sendSponsorOtpEmail(cleanEmail, otpCode, user.full_name || user.company_name || 'Partner');
+
+    return {
+      success: true,
+      message: 'A 6-digit verification code has been sent to your email. It will expire in 15 minutes.',
+    };
+  }
+
+  /**
+   * Verify 6-digit OTP code before displaying new password inputs
+   */
+  static async verifySponsorOtp(email: string, otp: string): Promise<{ success: boolean; message: string }> {
+    const cleanEmail = email.toLowerCase().trim();
+    const cleanOtp = otp.trim();
+
+    const otpRes = await query(
+      'SELECT id, otp_code, expires_at, attempts FROM otp_verifications WHERE LOWER(email) = LOWER($1) ORDER BY created_at DESC LIMIT 1',
+      [cleanEmail]
+    );
+
+    if (!otpRes.rowCount || otpRes.rowCount === 0) {
+      const err: any = new Error('No active verification code found for this email. Please request a new code.');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const record = otpRes.rows[0];
+
+    // Limit failed attempts to prevent brute-forcing
+    if (record.attempts >= 5) {
+      await query('DELETE FROM otp_verifications WHERE id = $1', [record.id]);
+      const err: any = new Error('Too many failed attempts. Please request a new verification code.');
+      err.statusCode = 429;
+      throw err;
+    }
+
+    // Check expiration
+    if (new Date() > new Date(record.expires_at)) {
+      await query('DELETE FROM otp_verifications WHERE id = $1', [record.id]);
+      const err: any = new Error('The verification code has expired. Please request a fresh one.');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    // Match verification code
+    if (record.otp_code !== cleanOtp) {
+      await query('UPDATE otp_verifications SET attempts = attempts + 1 WHERE id = $1', [record.id]);
+      const remaining = 5 - (record.attempts + 1);
+      const err: any = new Error(`Invalid verification code. You have ${remaining} attempt(s) remaining.`);
+      err.statusCode = 400;
+      throw err;
+    }
+
+    // Mark OTP verified in database
+    await query('UPDATE otp_verifications SET is_verified = TRUE WHERE id = $1', [record.id]);
+
+    return {
+      success: true,
+      message: 'Code verified successfully! Please enter your new password below.',
+    };
+  }
+
+  /**
+   * Verify 6-digit OTP and reset account password
+   */
+  static async verifyOtpAndResetPassword(
+    email: string,
+    otp: string,
+    newPassword: string
+  ): Promise<{ success: boolean; message: string }> {
+    const cleanEmail = email.toLowerCase().trim();
+    const cleanOtp = otp.trim();
+
+    const otpRes = await query(
+      'SELECT id, otp_code, expires_at, attempts FROM otp_verifications WHERE LOWER(email) = LOWER($1) ORDER BY created_at DESC LIMIT 1',
+      [cleanEmail]
+    );
+
+    if (!otpRes.rowCount || otpRes.rowCount === 0) {
+      const err: any = new Error('No active verification code found for this email. Please request a new one.');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const record = otpRes.rows[0];
+
+    // Limit failed attempts to prevent brute-forcing
+    if (record.attempts >= 5) {
+      await query('DELETE FROM otp_verifications WHERE id = $1', [record.id]);
+      const err: any = new Error('Too many failed attempts. Please request a new verification code.');
+      err.statusCode = 429;
+      throw err;
+    }
+
+    // Check expiration
+    if (new Date() > new Date(record.expires_at)) {
+      await query('DELETE FROM otp_verifications WHERE id = $1', [record.id]);
+      const err: any = new Error('The verification code has expired. Please request a new one.');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    // Match verification code
+    if (record.otp_code !== cleanOtp) {
+      await query('UPDATE otp_verifications SET attempts = attempts + 1 WHERE id = $1', [record.id]);
+      const remaining = 5 - (record.attempts + 1);
+      const err: any = new Error(`Invalid verification code. You have ${remaining} attempt(s) remaining.`);
+      err.statusCode = 400;
+      throw err;
+    }
+
+    // Validate new password
+    if (!newPassword || newPassword.length < 6) {
+      const err: any = new Error('New password must be at least 6 characters.');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    // Hash and update
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(newPassword, salt);
+
+    await query(
+      'UPDATE users SET password_hash = $1, updated_at = NOW() WHERE LOWER(email) = LOWER($2)',
+      [passwordHash, cleanEmail]
+    );
+
+    // Clean up OTP record
+    await query('DELETE FROM otp_verifications WHERE id = $1', [record.id]);
+
+    return {
+      success: true,
+      message: 'Your password has been successfully reset. You may now log in with your new password.',
     };
   }
 }

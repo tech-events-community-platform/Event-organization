@@ -15,5 +15,13 @@ router.post('/apply-organizer', authenticate, AuthController.applyForOrganizer);
 router.post('/switch-role', authenticate, AuthController.switchRole);
 router.post('/logout', authenticate, AuthController.logout);
 
+// Sponsor Auth Endpoints (Completely decoupled role & portal)
+router.post('/sponsor/register', AuthController.registerSponsor);
+router.post('/sponsor/login', AuthController.loginSponsor);
+router.post('/sponsor/google', AuthController.googleSponsorLogin);
+router.post('/sponsor/forgot-password/otp', AuthController.sendSponsorOtp);
+router.post('/sponsor/verify-otp', AuthController.verifySponsorOtp);
+router.post('/sponsor/reset-password/otp', AuthController.resetSponsorPasswordWithOtp);
+
 export default router;
 

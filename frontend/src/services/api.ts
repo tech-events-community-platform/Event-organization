@@ -272,6 +272,180 @@ export const api = {
       });
       return res.data || { success: true, message: 'Password reset successfully.' };
     },
+
+    sponsor: {
+      register: async (data: {
+        full_name: string;
+        email: string;
+        password: string;
+        company_name: string;
+        industry_category: string;
+        company_phone: string;
+        company_website?: string;
+      }): Promise<{ user: User; message: string }> => {
+        const res = await requestApi('/auth/sponsor/register', {
+          method: 'POST',
+          body: JSON.stringify(data),
+        });
+        return res.data;
+      },
+
+      login: async (creds: { email: string; password: string }): Promise<{ user: User; token: string }> => {
+        const res = await requestApi('/auth/sponsor/login', {
+          method: 'POST',
+          body: JSON.stringify(creds),
+        });
+        if (res.data?.token) {
+          setAuthToken(res.data.token);
+        }
+        return {
+          user: res.data.user,
+          token: res.data.token,
+        };
+      },
+
+      googleLogin: async (data: {
+        credential: string;
+        mode?: 'login' | 'register';
+        company_name?: string;
+        industry_category?: string;
+        company_phone?: string;
+        company_website?: string;
+      }): Promise<{ user: User; token: string }> => {
+        const res = await requestApi('/auth/sponsor/google', {
+          method: 'POST',
+          body: JSON.stringify(data),
+        });
+        if (res.data?.token) {
+          setAuthToken(res.data.token);
+        }
+        return {
+          user: res.data.user,
+          token: res.data.token,
+        };
+      },
+
+      sendOtp: async (email: string): Promise<{ success: boolean; message: string }> => {
+        const res = await requestApi('/auth/sponsor/forgot-password/otp', {
+          method: 'POST',
+          body: JSON.stringify({ email }),
+        });
+        return res.data || { success: true, message: res.message || 'OTP sent successfully.' };
+      },
+
+      verifyOtp: async (email: string, otp: string): Promise<{ success: boolean; message: string }> => {
+        const res = await requestApi('/auth/sponsor/verify-otp', {
+          method: 'POST',
+          body: JSON.stringify({ email, otp }),
+        });
+        return res.data || { success: true, message: res.message || 'Code verified successfully.' };
+      },
+
+      resetPassword: async (email: string, otp: string, newPassword: string): Promise<{ success: boolean; message: string }> => {
+        const res = await requestApi('/auth/sponsor/reset-password/otp', {
+          method: 'POST',
+          body: JSON.stringify({ email, otp, newPassword }),
+        });
+        return res.data || { success: true, message: res.message || 'Password reset successfully.' };
+      },
+    },
+  },
+
+  // Sponsorship Marketplace & Pitches API
+  sponsorship: {
+    createApplication: async (data: {
+      event_title: string;
+      event_type?: string;
+      category?: string;
+      expected_date: string;
+      location: string;
+      expected_attendees: number;
+      target_audience: string;
+      funding_goal: number;
+      currency?: string;
+      description: string;
+      packages?: Array<{ name: string; amount: number; perks: string }>;
+      contact_name: string;
+      contact_phone: string;
+      contact_email: string;
+      contact_telegram?: string;
+      pitch_deck_url?: string;
+    }) => {
+      const res = await requestApi('/sponsorships/applications', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+      return res.data;
+    },
+
+    getMyApplications: async () => {
+      const res = await requestApi('/sponsorships/organizer/my-applications');
+      return res.data || [];
+    },
+
+    deleteApplication: async (id: string) => {
+      const res = await requestApi(`/sponsorships/applications/${id}`, {
+        method: 'DELETE',
+      });
+      return res.data;
+    },
+
+    exploreApplications: async (params?: {
+      category?: string;
+      search?: string;
+      minBudget?: number;
+      maxBudget?: number;
+    }) => {
+      const queryParts: string[] = [];
+      if (params?.category && params.category !== 'All') {
+        queryParts.push(`category=${encodeURIComponent(params.category)}`);
+      }
+      if (params?.search) {
+        queryParts.push(`search=${encodeURIComponent(params.search)}`);
+      }
+      if (params?.minBudget) {
+        queryParts.push(`minBudget=${encodeURIComponent(params.minBudget)}`);
+      }
+      if (params?.maxBudget) {
+        queryParts.push(`maxBudget=${encodeURIComponent(params.maxBudget)}`);
+      }
+      const queryStr = queryParts.length > 0 ? `?${queryParts.join('&')}` : '';
+      const res = await requestApi(`/sponsorships/explore${queryStr}`);
+      return res.data || [];
+    },
+
+    getApplication: async (id: string) => {
+      const res = await requestApi(`/sponsorships/applications/${id}`);
+      return res.data;
+    },
+
+    saveDeal: async (data: {
+      applicationId: string;
+      status: 'INTERESTED' | 'DECLINED';
+      package_name?: string;
+      pledged_amount?: number;
+      sponsor_notes?: string;
+    }) => {
+      const res = await requestApi('/sponsorships/deals', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+      return res.data;
+    },
+
+    getMyDeals: async (status?: 'INTERESTED' | 'DECLINED') => {
+      const queryStr = status ? `?status=${encodeURIComponent(status)}` : '';
+      const res = await requestApi(`/sponsorships/sponsor/my-deals${queryStr}`);
+      return res.data || [];
+    },
+
+    updateDeal: async (dealId: string, data: { status: 'INTERESTED' | 'DECLINED'; sponsor_notes?: string }) => {
+      const res = await requestApi(`/sponsorships/deals/${dealId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      });
+      return res.data;
+    },
   },
 
   // Events API
@@ -1148,6 +1322,20 @@ export const api = {
       return res.data;
     },
 
+    approveSponsor: async (userId: string) => {
+      const res = await requestApi(`/admin/users/${userId}/approve-sponsor`, {
+        method: 'PATCH',
+      });
+      return res.data;
+    },
+
+    rejectSponsor: async (userId: string) => {
+      const res = await requestApi(`/admin/users/${userId}/reject-sponsor`, {
+        method: 'PATCH',
+      });
+      return res.data;
+    },
+
     toggleUserStatus: async (userId: string) => {
       const res = await requestApi(`/admin/users/${userId}/status`, {
         method: 'PATCH',
@@ -1164,4 +1352,82 @@ export const api = {
       }
     },
   },
+
+  sponsorship: {
+    createApplication: async (data: any) => {
+      const res = await requestApi('/sponsorships/applications', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+      return res.data;
+    },
+
+    getMyApplications: async () => {
+      const res = await requestApi('/sponsorships/organizer/my-applications');
+      return res.data || [];
+    },
+
+    deleteApplication: async (id: string) => {
+      const res = await requestApi(`/sponsorships/applications/${id}`, {
+        method: 'DELETE',
+      });
+      return res.data;
+    },
+
+    exploreApplications: async (params?: {
+      category?: string;
+      search?: string;
+      minBudget?: number;
+      maxBudget?: number;
+    }) => {
+      const query = new URLSearchParams();
+      if (params?.category) query.append('category', params.category);
+      if (params?.search) query.append('search', params.search);
+      if (params?.minBudget) query.append('minBudget', String(params.minBudget));
+      if (params?.maxBudget) query.append('maxBudget', String(params.maxBudget));
+      const qs = query.toString();
+      const res = await requestApi(`/sponsorships/explore${qs ? `?${qs}` : ''}`);
+      return res.data || [];
+    },
+
+    getApplication: async (id: string) => {
+      const res = await requestApi(`/sponsorships/applications/${id}`);
+      return res.data;
+    },
+
+    expressInterestOrDecline: async (data: {
+      applicationId: string;
+      status: 'INTERESTED' | 'DECLINED';
+      package_name?: string;
+      pledged_amount?: number;
+      sponsor_notes?: string;
+    }) => {
+      const res = await requestApi('/sponsorships/deals', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+      return res.data;
+    },
+
+    getMyDeals: async (status?: 'INTERESTED' | 'DECLINED') => {
+      const query = status ? `?status=${status}` : '';
+      const res = await requestApi(`/sponsorships/sponsor/my-deals${query}`);
+      return res.data || [];
+    },
+
+    updateDeal: async (
+      id: string,
+      data: {
+        status: 'INTERESTED' | 'DECLINED';
+        sponsor_notes?: string;
+      }
+    ) => {
+      const res = await requestApi(`/sponsorships/deals/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      });
+      return res.data;
+    },
+  },
 };
+

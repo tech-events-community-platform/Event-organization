@@ -32,6 +32,17 @@ interface AuthContextType {
     phone?: string;
     bio?: string;
   }) => Promise<RegisterResult>;
+  loginSponsor: (email: string, password: string) => Promise<User>;
+  registerSponsor: (data: {
+    full_name: string;
+    email: string;
+    password: string;
+    company_name: string;
+    industry_category: string;
+    company_phone: string;
+    company_website?: string;
+  }) => Promise<{ user: User; message: string }>;
+  loginSponsorWithGoogle: (credential: string, mode?: 'login' | 'register', sponsorData?: any) => Promise<User>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -164,6 +175,56 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const loginSponsor = async (email: string, password: string): Promise<User> => {
+    setIsLoading(true);
+    try {
+      const res = await api.auth.sponsor.login({ email, password });
+      setUser(res.user);
+      localStorage.setItem('sheba_auth_user', JSON.stringify(res.user));
+      return res.user;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const registerSponsor = async (data: {
+    full_name: string;
+    email: string;
+    password: string;
+    company_name: string;
+    industry_category: string;
+    company_phone: string;
+    company_website?: string;
+  }): Promise<{ user: User; message: string }> => {
+    setIsLoading(true);
+    try {
+      const res = await api.auth.sponsor.register(data);
+      return res;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loginSponsorWithGoogle = async (
+    credential: string,
+    mode?: 'login' | 'register',
+    sponsorData?: any
+  ): Promise<User> => {
+    setIsLoading(true);
+    try {
+      const res = await api.auth.sponsor.googleLogin({
+        credential,
+        mode,
+        ...sponsorData,
+      });
+      setUser(res.user);
+      localStorage.setItem('sheba_auth_user', JSON.stringify(res.user));
+      return res.user;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const logout = async () => {
     setIsLoading(true);
     try {
@@ -185,6 +246,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isLoading,
         login,
         loginWithGoogle,
+        loginSponsor,
+        registerSponsor,
+        loginSponsorWithGoogle,
         applyForOrganizer,
         switchRole,
         register,

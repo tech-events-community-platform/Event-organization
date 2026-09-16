@@ -38,6 +38,17 @@ export const errorHandler = (
   const statusCode = err.statusCode || 500;
   const message = err.message || 'Internal Server Error';
 
+  if (err.isPendingApproval) {
+    res.status(statusCode).json({
+      success: false,
+      message,
+      isPendingApproval: true,
+      approvalStatus: err.approvalStatus || 'pending',
+    });
+    return;
+  }
+
+  sendError(res, message, statusCode, process.env.NODE_ENV === 'development' ? err.stack : undefined);
   res.status(statusCode).json({
     success: false,
     message,
