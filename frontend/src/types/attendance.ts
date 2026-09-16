@@ -42,7 +42,7 @@ export interface AttendeeRosterItem {
   status: 'Registered' | 'Checked in';
   checkInTime?: string;
   badges: BadgeCode[];
-  answers?: Record<string, string>;
+  answers?: Record<string, any>;
 }
 
 export interface SponsorReportData {
@@ -66,4 +66,43 @@ export interface SponsorReportData {
   registrationsOverTime: { date: string; count: number }[];
   hourlyCheckIns: { time?: string; hour?: string; count: number }[];
   attendees?: AttendeeRosterItem[];
+  rolesBreakdown?: { role: string; count: number; percentage: number }[];
+  topOrganizations?: { name: string; count: number }[];
+  goalsBreakdown?: { goal: string; count: number; percentage: number }[];
+  sampleInterests?: string[];
+  aiNarrative?: {
+    executiveSummary: string;
+    eventBackground: string;
+    objectives: string;
+    deliveryNarrative?: string;
+    audienceOverview: string;
+    experienceNarrative?: string;
+    organizationsNarrative: string;
+    interestsNarrative: string;
+    motivationNarrative: string;
+    engagementNarrative: string;
+    communityFindings?: string;
+    attendeeVoice?: Array<{ quote: string; theme: string; explanation: string }>;
+    audienceDeepAnalysis?: {
+      profile: string;
+      keyThemes: string;
+      emergingInterests: string;
+      communityOpportunities: string;
+    };
+    performanceAnalysis?: string;
+    keyFindings: Array<{ title: string; evidence: string }>;
+    structuredRecommendations?: {
+      futureProgramming: string;
+      mentorship: string;
+      communityDevelopment: string;
+    };
+    partnerImpactSummary: string;
+    // Legacy / convenience fields
+    eventIntroduction?: string;
+    demographicAnalysis?: string;
+    thematicTakeaways?: string;
+    impactHighlights?: string[];
+    recommendations?: string[];
+    strategicConclusion?: string;
+  };
 }

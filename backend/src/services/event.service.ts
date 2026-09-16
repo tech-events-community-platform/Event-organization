@@ -1,4 +1,4 @@
-import { query, getClient } from '../config/db';
+    import { query, getClient } from '../config/db';
 import { IEvent, EventType, EventStatus, UserRole, AttendeeRosterItem } from '../types';
 import { generateTicketToken, generateQrDataUrl, generateTicketCode, computeEventDayExpiration } from '../utils/qr.util';
 import { EmailService } from './email.service';
@@ -294,7 +294,7 @@ export class EventService {
   static async registerForEvent(params: {
     eventId: string;
     userId: string;
-    answers?: Record<string, string>;
+    answers?: Record<string, any>;
     paymentReference?: string;
   }): Promise<{ ticket: any; isPaymentRequired: boolean; checkoutUrl?: string }> {
     const { eventId, userId, answers = {}, paymentReference } = params;
