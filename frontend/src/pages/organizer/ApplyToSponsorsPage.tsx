@@ -7,17 +7,14 @@ import {
   MapPin,
   Users,
   Target,
-  DollarSign,
   Send,
   Trash2,
   ExternalLink,
   Sparkles,
   CheckCircle2,
   AlertCircle,
-  HelpCircle,
   Layers,
   ArrowRight,
-  TrendingUp,
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';

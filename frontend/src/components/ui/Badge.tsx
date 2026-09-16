@@ -1,6 +1,6 @@
 import React from 'react';
 
-export type BadgeVariant = 'primary' | 'secondary' | 'tertiary' | 'accent' | 'light' | 'outline' | 'gray' | 'error' | 'success';
+export type BadgeVariant = 'primary' | 'secondary' | 'tertiary' | 'accent' | 'light' | 'outline' | 'gray' | 'error' | 'success' | 'warning' | 'danger';
 
 interface BadgeProps {
   children: React.ReactNode;
@@ -24,6 +24,8 @@ export const Badge: React.FC<BadgeProps> = ({
     outline: 'border border-[#E8DDD7] text-[#2D1F23] font-medium bg-white',
     gray: 'bg-[#F4EFEB] text-[#756366] border border-[#E8DDD7] font-medium',
     success: 'bg-[#2A7B5F]/15 text-[#2A7B5F] border border-[#2A7B5F]/30 font-semibold',
+    warning: 'bg-amber-500/15 text-amber-700 border border-amber-500/30 font-semibold',
+    danger: 'bg-[#B91C1C]/10 text-[#B91C1C] border border-[#B91C1C]/30 font-medium',
     error: 'bg-[#B91C1C]/10 text-[#B91C1C] border border-[#B91C1C]/30 font-medium',
   };
 
