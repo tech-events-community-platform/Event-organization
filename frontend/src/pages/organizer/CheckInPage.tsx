@@ -12,8 +12,6 @@ import {
   Clock,
   X,
   UserPlus,
-  Mail,
-  Phone,
   User as UserIcon,
   AlertCircle,
   Camera,
@@ -561,7 +559,7 @@ export const CheckInPage: React.FC = () => {
 
               <div>
                 <label className="block text-xs font-bold text-[#2D1F23] mb-1 flex items-center gap-1.5">
-                  <Mail className="w-3.5 h-3.5 text-[#63474D]" />
+                  <img src="/mail-icon.jpg" alt="Email" className="w-3.5 h-3.5 object-contain" />
                   Email Address *
                 </label>
                 <input
@@ -576,7 +574,7 @@ export const CheckInPage: React.FC = () => {
 
               <div>
                 <label className="block text-xs font-bold text-[#2D1F23] mb-1 flex items-center gap-1.5">
-                  <Phone className="w-3.5 h-3.5 text-[#63474D]" />
+                  <img src="/phone-icon.jpg" alt="Phone" className="w-3.5 h-3.5 object-contain" />
                   Phone Number
                 </label>
                 <input

@@ -370,6 +370,7 @@ export const api = {
       contact_email: string;
       contact_telegram?: string;
       pitch_deck_url?: string;
+      socials?: Record<string, string>;
     }) => {
       const res = await requestApi('/sponsorships/applications', {
         method: 'POST',
@@ -420,6 +421,20 @@ export const api = {
     },
 
     saveDeal: async (data: {
+      applicationId: string;
+      status: 'INTERESTED' | 'DECLINED';
+      package_name?: string;
+      pledged_amount?: number;
+      sponsor_notes?: string;
+    }) => {
+      const res = await requestApi('/sponsorships/deals', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+      return res.data;
+    },
+
+    expressInterestOrDecline: async (data: {
       applicationId: string;
       status: 'INTERESTED' | 'DECLINED';
       package_name?: string;

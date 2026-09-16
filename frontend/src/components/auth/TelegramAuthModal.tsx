@@ -2,7 +2,7 @@ import React from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Link } from 'react-router-dom';
-import { ShieldCheck, Mail } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
 
 interface TelegramAuthModalProps {
   isOpen: boolean;
@@ -29,7 +29,7 @@ export const TelegramAuthModal: React.FC<TelegramAuthModalProps> = ({
         </div>
 
         <Link to="/login" onClick={onClose} className="block">
-          <Button fullWidth variant="primary" icon={<Mail className="w-4 h-4" />}>
+          <Button fullWidth variant="primary" icon={<img src="/mail-icon.jpg" alt="Email" className="w-4 h-4 object-contain" />}>
             Go to Email Sign In
           </Button>
         </Link>

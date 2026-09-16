@@ -6,7 +6,6 @@ import {
   Clock,
   ShieldAlert,
   Building,
-  Mail,
   ArrowRight,
   RefreshCw,
   ArrowLeft,
@@ -82,7 +81,7 @@ export const PendingApprovalPage: React.FC = () => {
           {state?.email && (
             <div className="flex items-center justify-between text-xs">
               <span className="font-semibold text-[#756366] flex items-center gap-1">
-                <Mail className="w-3.5 h-3.5" /> Email
+                <img src="/mail-icon.jpg" alt="Email" className="w-3.5 h-3.5 object-contain" /> Email
               </span>
               <span className="font-bold text-[#2D1F23]">{state.email}</span>
             </div>
