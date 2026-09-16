@@ -3,12 +3,9 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/ui/Button';
 import {
-  Award,
   Lock,
-  Mail,
   User,
   Building,
-  Phone,
   FileText,
   AlertCircle,
   Users,
@@ -106,14 +103,18 @@ export const RegisterPage: React.FC = () => {
     <div className="min-h-[85vh] flex flex-col justify-center max-w-md mx-auto pt-28 sm:pt-32 pb-20 px-4 space-y-6">
       {/* Header */}
       <div className="text-center space-y-2">
-        <div className="w-12 h-12 rounded-2xl bg-[#63474D] flex items-center justify-center text-[#FFA686] mx-auto shadow-sm">
-          <Award className="w-6 h-6" />
-        </div>
+        <Link to="/" className="inline-block group mx-auto">
+          <img
+            src="/logo.jpg"
+            alt="Sheeba Logo"
+            className="h-14 sm:h-16 w-auto object-contain mx-auto group-hover:scale-105 transition-transform duration-200 drop-shadow-sm"
+          />
+        </Link>
         <h1 className="font-serif text-3xl font-extrabold text-[#2D1F23]">
           Create Your Account
         </h1>
         <p className="text-xs text-[#756366]">
-          Join Ethiopia's single-day tech event community and earn verifiable credentials.
+          Join Ethiopia's premier event community and earn verifiable credentials.
         </p>
       </div>
 
@@ -250,7 +251,7 @@ export const RegisterPage: React.FC = () => {
           <div>
             <label className="block text-xs font-bold text-[#2D1F23] mb-1">Email Address</label>
             <div className="relative">
-              <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#756366]" />
+              <img src="/mail-icon.jpg" alt="Email" className="w-4 h-4 object-contain absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="email"
                 required
@@ -281,7 +282,7 @@ export const RegisterPage: React.FC = () => {
           <div>
             <label className="block text-xs font-bold text-[#2D1F23] mb-1">Phone Number (Optional)</label>
             <div className="relative">
-              <Phone className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#756366]" />
+              <img src="/phone-icon.jpg" alt="Phone" className="w-4 h-4 object-contain absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="tel"
                 placeholder="+2519..."

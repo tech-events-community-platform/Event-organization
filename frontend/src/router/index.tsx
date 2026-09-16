@@ -26,6 +26,7 @@ import { SponsorDashboardPage } from '../pages/sponsor/SponsorDashboardPage';
 import { SponsorExplorePage } from '../pages/sponsor/SponsorExplorePage';
 import { SponsorDealsPage } from '../pages/sponsor/SponsorDealsPage';
 import { SponsorDeliverablesPage } from '../pages/sponsor/SponsorDeliverablesPage';
+import { SponsorApplicationDetailPage } from '../pages/sponsor/SponsorApplicationDetailPage';
 
 // Attendee Pages
 import { BadgesPage as AttendeeBadgesPage } from '../pages/attendee/BadgesPage';
@@ -156,6 +157,8 @@ export const router = createBrowserRouter([
         children: [
           { index: true, element: <SponsorExplorePage /> },
           { path: 'explore', element: <SponsorExplorePage /> },
+          { path: 'explore/:id', element: <SponsorApplicationDetailPage /> },
+          { path: 'applications/:id', element: <SponsorApplicationDetailPage /> },
           { path: 'deals', element: <SponsorDealsPage /> },
           { path: 'deliverables', element: <SponsorDeliverablesPage /> },
           { path: 'settings', element: <AccountSettingsPage /> },

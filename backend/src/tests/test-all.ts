@@ -563,13 +563,13 @@ const runTests = async () => {
 
     // TEST SUITE 7: QR Ticket Generation, Scanner Verification, Atomic Check-in & Soft-Void Undo
     console.log('\n📦 7. Testing QR Ticket Generation, Scanner Verification, Duplicate 409 Rejection & Soft-Void...');
-    const organizerToken = organizerPortalLogin.body.data?.token;
+    const organizerPortalToken = organizerPortalLogin.body.data?.token;
     const regAttendeeToken = attendeePortalLogin.body.data?.token;
 
     // Step 1: Organizer creates a tech event
     const createEventRes = await fetchHttp('/api/events', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${organizerToken}` },
+      headers: { Authorization: `Bearer ${organizerPortalToken}` },
       body: {
         title: 'Addis AI & Cloud Summit 2026',
         description: 'Deep dive into LLMs and Cloud Native architecture in Ethiopia.',

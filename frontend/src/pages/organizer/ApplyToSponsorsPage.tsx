@@ -8,8 +8,6 @@ import {
   Users,
   Target,
   DollarSign,
-  Phone,
-  Mail,
   Send,
   Trash2,
   ExternalLink,
@@ -81,6 +79,29 @@ export const ApplyToSponsorsPage: React.FC = () => {
     { name: 'Community Supporter', amount: 5000, perks: 'Logo on digital backdrop, 2 passes, mention during opening remarks' },
   ]);
 
+  // Dynamic organizer socials
+  const [socials, setSocials] = useState<{ platform: string; url: string }[]>([
+    { platform: 'LinkedIn', url: '' },
+    { platform: 'X (Twitter)', url: '' },
+    { platform: 'Website', url: '' },
+  ]);
+
+  const handleAddSocial = () => {
+    setSocials((prev) => [...prev, { platform: '', url: '' }]);
+  };
+
+  const handleRemoveSocial = (index: number) => {
+    setSocials((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSocialChange = (index: number, field: 'platform' | 'url', val: string) => {
+    setSocials((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: val };
+      return updated;
+    });
+  };
+
   const loadMyApplications = async () => {
     try {
       setFetchLoading(true);
@@ -135,9 +156,17 @@ export const ApplyToSponsorsPage: React.FC = () => {
     }
 
     try {
+      const socialsMap: Record<string, string> = {};
+      socials.forEach((s) => {
+        if (s.platform.trim() && s.url.trim()) {
+          socialsMap[s.platform.trim()] = s.url.trim();
+        }
+      });
+
       const payload = {
         ...formData,
         packages,
+        socials: socialsMap,
       };
 
       await api.sponsorship.createApplication(payload);
@@ -505,7 +534,7 @@ export const ApplyToSponsorsPage: React.FC = () => {
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#AA767C]/15 shadow-sm space-y-6">
             <div className="border-b border-gray-100 pb-4">
               <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                <Phone className="w-5 h-5 text-[#63474D]" />
+                <img src="/phone-icon.jpg" alt="Phone" className="w-5 h-5 object-contain" />
                 3. Direct Organizer Contact Channels
               </h2>
               <p className="text-xs sm:text-sm text-gray-500 mt-1">
@@ -530,7 +559,7 @@ export const ApplyToSponsorsPage: React.FC = () => {
 
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5 flex items-center gap-1.5">
-                  <Phone className="w-3.5 h-3.5 text-gray-400" />
+                  <img src="/phone-icon.jpg" alt="Phone" className="w-3.5 h-3.5 object-contain" />
                   Direct Phone Number (Callable) *
                 </label>
                 <input
@@ -545,7 +574,7 @@ export const ApplyToSponsorsPage: React.FC = () => {
 
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5 flex items-center gap-1.5">
-                  <Mail className="w-3.5 h-3.5 text-gray-400" />
+                  <img src="/mail-icon.jpg" alt="Email" className="w-3.5 h-3.5 object-contain" />
                   Official Contact Email *
                 </label>
                 <input
@@ -584,6 +613,57 @@ export const ApplyToSponsorsPage: React.FC = () => {
                   onChange={(e) => setFormData({ ...formData, pitch_deck_url: e.target.value })}
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#63474D] focus:ring-2 focus:ring-[#63474D]/20 outline-none text-sm transition-all"
                 />
+              </div>
+
+              {/* Organizer Socials for Sponsors */}
+              <div className="md:col-span-2 pt-4 border-t border-gray-100 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-gray-800">
+                      Organizer Social Media Links (Displayed to Sponsors)
+                    </h3>
+                    <p className="text-[11px] text-gray-500">
+                      Add any social platforms you want displayed on your proposal card for sponsors (LinkedIn, X, TikTok, Website, etc.).
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAddSocial}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#63474D]/10 hover:bg-[#63474D]/20 text-[#63474D] text-xs font-bold transition-colors cursor-pointer"
+                  >
+                    <PlusCircle className="w-3.5 h-3.5" />
+                    <span>Add Social</span>
+                  </button>
+                </div>
+
+                <div className="space-y-2.5">
+                  {socials.map((soc, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        placeholder="Platform (e.g. LinkedIn, X, TikTok)"
+                        value={soc.platform}
+                        onChange={(e) => handleSocialChange(idx, 'platform', e.target.value)}
+                        className="w-1/3 px-3 py-2 rounded-xl border border-gray-200 focus:border-[#63474D] outline-none text-xs font-semibold"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Link or Handle (e.g. https://linkedin.com/in/... or @handle)"
+                        value={soc.url}
+                        onChange={(e) => handleSocialChange(idx, 'url', e.target.value)}
+                        className="flex-1 px-3 py-2 rounded-xl border border-gray-200 focus:border-[#63474D] outline-none text-xs"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveSocial(idx)}
+                        className="p-2 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50 transition-colors cursor-pointer"
+                        title="Remove link"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>

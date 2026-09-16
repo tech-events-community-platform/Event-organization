@@ -274,6 +274,7 @@ export interface ISponsorshipApplication {
   contact_email: string;
   contact_telegram?: string;
   pitch_deck_url?: string;
+  socials?: Record<string, string>;
   status: SponsorshipApplicationStatus;
   created_at: Date;
   updated_at: Date;
