@@ -13,6 +13,25 @@ import {
   Lock,
 } from 'lucide-react';
 
+export const SHEEBA_ROLES = [
+  'Student',
+  'Professional',
+  'Entrepreneur / Business Owner',
+  'Researcher / Academic',
+  'Job Seeker',
+  'Other',
+];
+
+export const SHEEBA_GOALS = [
+  'Learn new skills & practical knowledge',
+  'Network with peers & industry professionals',
+  'Explore career & job opportunities',
+  'Gain hands-on experience / projects',
+  'Discover new tools & technologies',
+  'Explore business partnerships & collaborations',
+  'Other',
+];
+
 export const EventRegistrationCheckoutPage: React.FC = () => {
   const { token, id } = useParams<{ token?: string; id?: string }>();
   const location = useLocation();
@@ -35,7 +54,7 @@ export const EventRegistrationCheckoutPage: React.FC = () => {
   const [switchError, setSwitchError] = useState<string | null>(null);
 
   // Form states
-  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [answers, setAnswers] = useState<Record<string, any>>({});
   const [selectedPayment, setSelectedPayment] = useState<'telebirr' | 'cbe' | 'awash'>('telebirr');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -91,8 +110,22 @@ export const EventRegistrationCheckoutPage: React.FC = () => {
     }
   };
 
-  const handleAnswerChange = (questionId: string, val: string) => {
+  const handleAnswerChange = (questionId: string, val: any) => {
     setAnswers((prev) => ({ ...prev, [questionId]: val }));
+  };
+
+  const handleToggleGoal = (goal: string) => {
+    setAnswers((prev) => {
+      const currentGoals: string[] = Array.isArray(prev.sheba_goals)
+        ? prev.sheba_goals
+        : typeof prev.sheba_goals === 'string' && prev.sheba_goals
+        ? prev.sheba_goals.split(', ')
+        : [];
+      const updated = currentGoals.includes(goal)
+        ? currentGoals.filter((g) => g !== goal)
+        : [...currentGoals, goal];
+      return { ...prev, sheba_goals: updated };
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -141,9 +174,34 @@ export const EventRegistrationCheckoutPage: React.FC = () => {
       }
     }
 
+    // Validate Sheeba Standard Platform Questions
+    if (!answers.sheba_role || !String(answers.sheba_role).trim()) {
+      setErrorMsg('Please select what best describes you (Standard Question 1: Role).');
+      return;
+    }
+    if (!answers.sheba_interests || !String(answers.sheba_interests).trim()) {
+      setErrorMsg('Please enter your main areas of interest or expertise (Standard Question 2).');
+      return;
+    }
+    if (!answers.sheba_organization || !String(answers.sheba_organization).trim()) {
+      setErrorMsg('Please enter your organization or affiliation (Standard Question 3).');
+      return;
+    }
+    const selectedGoals: string[] = Array.isArray(answers.sheba_goals)
+      ? answers.sheba_goals
+      : typeof answers.sheba_goals === 'string' && answers.sheba_goals
+      ? answers.sheba_goals.split(', ')
+      : [];
+    if (selectedGoals.length === 0) {
+      setErrorMsg('Please select at least one goal you hope to gain from this event (Standard Question 4).');
+      return;
+    }
+
     // Validate required custom questions
     for (const q of event.customQuestions || []) {
-      if (q.isRequired && !answers[q.id]?.trim()) {
+      const qVal = answers[q.id];
+      const isFilled = typeof qVal === 'string' ? qVal.trim().length > 0 : Boolean(qVal);
+      if (q.isRequired && !isFilled) {
         setErrorMsg(`Please answer required question: "${q.questionText}"`);
         return;
       }
@@ -444,6 +502,147 @@ export const EventRegistrationCheckoutPage: React.FC = () => {
               </div>
             </div>
           )}
+        </div>
+
+        {/* Sheeba Standard Impact & Demographics Questions */}
+        <div className="space-y-6 pt-2 pb-6 border-b border-gray-300">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#63474D]/10 text-[#63474D]">
+                Platform Standard
+              </span>
+              <span className="text-[11px] text-gray-500 font-medium">
+                Mandatory for impact analysis & verifiable credentials
+              </span>
+            </div>
+            <h2 className="font-serif font-bold text-lg text-black">
+              Attendee Profile & Goals
+            </h2>
+            <p className="text-xs text-gray-600 mt-0.5">
+              These standardized questions help event organizers and partners assess attendance impact, tailor sessions, and compile verified reports.
+            </p>
+          </div>
+
+          <div className="space-y-5">
+            {/* Question 1: Role */}
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-black">
+                1. What best describes you? <span className="text-red-600">*</span>
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                {SHEEBA_ROLES.map((role) => {
+                  const isSelected = answers.sheba_role === role;
+                  return (
+                    <label
+                      key={role}
+                      className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                        isSelected
+                          ? 'border-[#63474D] bg-[#63474D]/5 shadow-xs'
+                          : 'border-gray-200 bg-white/60 hover:bg-white hover:border-gray-300'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="sheba_role"
+                        value={role}
+                        checked={isSelected}
+                        onChange={() => handleAnswerChange('sheba_role', role)}
+                        className="w-4 h-4 text-[#63474D] focus:ring-[#63474D] cursor-pointer"
+                      />
+                      <span className="text-xs font-medium text-black">{role}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Question 2: Interests */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="block text-sm font-semibold text-black">
+                  2. What are your main areas of interest or expertise? <span className="text-red-600">*</span>
+                </label>
+                <span className="text-[10px] text-gray-500">e.g., AI, Product Design, FinTech</span>
+              </div>
+              <textarea
+                rows={2}
+                value={answers.sheba_interests || ''}
+                onChange={(e) => handleAnswerChange('sheba_interests', e.target.value)}
+                placeholder="List topics, technologies, or skills you specialize in or want to explore..."
+                className="w-full px-3.5 py-2.5 bg-white/70 border border-gray-300 rounded-xl text-xs text-black placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#63474D] shadow-xs resize-none"
+              />
+            </div>
+
+            {/* Question 3: Organization */}
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-black">
+                3. What organization, company, or institution are you affiliated with? <span className="text-red-600">*</span>
+              </label>
+              <div className="space-y-2">
+                <input
+                  type="text"
+                  value={answers.sheba_organization || ''}
+                  onChange={(e) => handleAnswerChange('sheba_organization', e.target.value)}
+                  placeholder="e.g., Addis Ababa University, Gebeya, Commercial Bank of Ethiopia..."
+                  className="w-full px-3.5 py-2.5 bg-white/70 border border-gray-300 rounded-xl text-xs text-black placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#63474D] shadow-xs"
+                />
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-[11px] text-gray-500 mr-1">Quick fill:</span>
+                  {['Independent / Freelancer', 'Student (No affiliation)', 'Seeking Opportunities'].map((tag) => (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => handleAnswerChange('sheba_organization', tag)}
+                      className={`text-[11px] px-2.5 py-1 rounded-lg border transition-colors ${
+                        answers.sheba_organization === tag
+                          ? 'border-[#63474D] bg-[#63474D] text-white font-medium'
+                          : 'border-gray-200 bg-white/60 text-gray-700 hover:border-gray-300 hover:bg-white'
+                      }`}
+                    >
+                      {tag}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Question 4: Goals */}
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-black">
+                4. What are you hoping to gain from this event? <span className="text-red-600">*</span>
+              </label>
+              <p className="text-[11px] text-gray-500">Select all that apply:</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-0.5">
+                {SHEEBA_GOALS.map((goal) => {
+                  const currentGoals: string[] = Array.isArray(answers.sheba_goals)
+                    ? answers.sheba_goals
+                    : typeof answers.sheba_goals === 'string' && answers.sheba_goals
+                    ? answers.sheba_goals.split(', ')
+                    : [];
+                  const isChecked = currentGoals.includes(goal);
+                  return (
+                    <label
+                      key={goal}
+                      className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                        isChecked
+                          ? 'border-[#63474D] bg-[#63474D]/5 shadow-xs'
+                          : 'border-gray-200 bg-white/60 hover:bg-white hover:border-gray-300'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        value={goal}
+                        checked={isChecked}
+                        onChange={() => handleToggleGoal(goal)}
+                        className="w-4 h-4 rounded text-[#63474D] focus:ring-[#63474D] cursor-pointer"
+                      />
+                      <span className="text-xs font-medium text-black">{goal}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Organizer Questions Section (Google Form Formality, Text Black, Unboxed) */}
