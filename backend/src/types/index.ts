@@ -1,9 +1,19 @@
 import { Request } from 'express';
 
-export type UserRole = 'attendee' | 'organizer' | 'admin';
+export type UserRole = 'attendee' | 'organizer' | 'admin' | 'sponsor';
 export type ProfileVisibility = 'public' | 'private';
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected';
 export type OrganizerApprovalStatus = 'none' | 'pending' | 'approved' | 'rejected';
+
+export interface ISponsorRegistration {
+  full_name: string;
+  email: string;
+  password: string;
+  company_name: string;
+  industry_category: string;
+  company_phone: string;
+  company_website?: string;
+}
 
 export interface IUser {
   id: string;
@@ -14,6 +24,11 @@ export interface IUser {
   phone?: string | null;
   bio?: string | null;
   organization?: string | null;
+  company_name?: string | null;
+  industry_category?: string | null;
+  company_website?: string | null;
+  company_phone?: string | null;
+  google_id?: string | null;
   avatar_url?: string | null;
   visibility: ProfileVisibility;
   member_since: string;
@@ -229,4 +244,59 @@ export interface IQrTicketPayload {
 
 export interface AuthRequest extends Request {
   user?: IJwtPayload;
+}
+
+export interface ISponsorshipPackage {
+  id?: string;
+  name: string;
+  amount: number;
+  perks: string;
+}
+
+export type SponsorshipApplicationStatus = 'OPEN' | 'UNDER_REVIEW' | 'FUNDED' | 'CLOSED';
+
+export interface ISponsorshipApplication {
+  id: string;
+  organizer_id: string;
+  event_title: string;
+  event_type: string;
+  category: string;
+  expected_date: string;
+  location: string;
+  expected_attendees: number;
+  target_audience: string;
+  funding_goal: number;
+  currency: string;
+  description: string;
+  packages: ISponsorshipPackage[];
+  contact_name: string;
+  contact_phone: string;
+  contact_email: string;
+  contact_telegram?: string;
+  pitch_deck_url?: string;
+  status: SponsorshipApplicationStatus;
+  created_at: Date;
+  updated_at: Date;
+  // Joined fields
+  organizer_name?: string;
+  organizer_organization?: string;
+  organizer_avatar?: string;
+  interested_sponsors_count?: number;
+}
+
+export type SponsorshipDealStatus = 'INTERESTED' | 'DECLINED';
+
+export interface ISponsorshipDeal {
+  id: string;
+  application_id: string;
+  sponsor_id: string;
+  status: SponsorshipDealStatus;
+  package_name?: string;
+  pledged_amount?: number;
+  sponsor_notes?: string;
+  created_at: Date;
+  updated_at: Date;
+  // Joined fields
+  application?: ISponsorshipApplication;
+  sponsor?: IUserSafe;
 }

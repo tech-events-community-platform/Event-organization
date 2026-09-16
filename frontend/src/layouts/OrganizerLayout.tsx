@@ -3,7 +3,7 @@ import { Outlet, Link, useLocation } from 'react-router-dom';
 import { Navbar } from '../components/layout/Navbar';
 import { OrganizerSidebar } from '../components/layout/OrganizerSidebar';
 import { Footer } from '../components/layout/Footer';
-import { LayoutDashboard, PlusCircle, QrCode, Award, BarChart3, Settings } from 'lucide-react';
+import { LayoutDashboard, PlusCircle, QrCode, Award, BarChart3, Settings, HandCoins } from 'lucide-react';
 
 export const OrganizerLayout: React.FC = () => {
   const location = useLocation();
@@ -11,6 +11,7 @@ export const OrganizerLayout: React.FC = () => {
   const isTabActive = (path: string) => {
     if (path === '/organizer') return location.pathname === '/organizer';
     if (path === '/organizer/events/create') return location.pathname === '/organizer/events/create';
+    if (path === '/organizer/apply-sponsors') return location.pathname.startsWith('/organizer/apply-sponsors');
     if (path === '/organizer/check-in') {
       return location.pathname.startsWith('/organizer/check-in') || location.pathname.includes('/scanner');
     }
@@ -30,7 +31,7 @@ export const OrganizerLayout: React.FC = () => {
     <div className="min-h-screen flex flex-col bg-white">
       <Navbar />
 
-      {/* Mobile Top Sub-bar for Organizers (Section 1: 6 tabs) */}
+      {/* Mobile Top Sub-bar for Organizers */}
       <div className="md:hidden bg-[#63474D] text-white py-2 px-3 border-b border-[#AA767C]/40 overflow-x-auto scrollbar-none flex gap-1.5">
         <Link
           to="/organizer"
@@ -49,6 +50,15 @@ export const OrganizerLayout: React.FC = () => {
         >
           <PlusCircle className="w-3.5 h-3.5" />
           Create Event
+        </Link>
+        <Link
+          to="/organizer/apply-sponsors"
+          className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap flex items-center gap-1 ${
+            isTabActive('/organizer/apply-sponsors') ? 'bg-[#AA767C] text-white' : 'text-[#E8DDD7]'
+          }`}
+        >
+          <HandCoins className="w-3.5 h-3.5 text-[#FFA686]" />
+          Apply to Sponsors
         </Link>
         <Link
           to="/organizer/check-in"
