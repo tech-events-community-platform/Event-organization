@@ -6,6 +6,20 @@ import { authorizeRoles } from '../middlewares/role.middleware';
 const router = Router();
 
 router.post(
+  '/verify',
+  authenticate,
+  authorizeRoles('organizer', 'admin'),
+  CheckinController.verify
+);
+
+router.post(
+  '/search',
+  authenticate,
+  authorizeRoles('organizer', 'admin'),
+  CheckinController.search
+);
+
+router.post(
   '/lookup',
   authenticate,
   authorizeRoles('organizer', 'admin'),

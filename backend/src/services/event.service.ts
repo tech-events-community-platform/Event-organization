@@ -1,6 +1,6 @@
 import { query, getClient } from '../config/db';
 import { IEvent, EventType, EventStatus, UserRole, AttendeeRosterItem } from '../types';
-import { generateTicketToken, generateQrDataUrl } from '../utils/qr.util';
+import { generateTicketToken, generateQrDataUrl, generateTicketCode, computeEventDayExpiration } from '../utils/qr.util';
 import { EmailService } from './email.service';
 
 export class EventService {
@@ -347,18 +347,20 @@ export class EventService {
       );
       const registrationId = regRes.rows[0].id;
 
-      const ticketCode = `SHB-${Math.floor(1000 + Math.random() * 9000)}-2026`;
+      const eventDate = event.rawDate || event.date;
+      const ticketCode = generateTicketCode(eventDate);
       const ticketId = (await client.query('SELECT gen_random_uuid() AS id')).rows[0].id;
-      const qrToken = generateTicketToken(ticketId, event.id, userId);
+      const expiresAt = computeEventDayExpiration(eventDate);
+      const qrToken = generateTicketToken(ticketId, event.id, eventDate);
       const qrDataUrl = await generateQrDataUrl(qrToken);
 
       const ticketRes = await client.query(
         `INSERT INTO tickets (
           id, ticket_code, registration_id, event_id, user_id, qr_token, qr_code_data_url,
           status, is_paid, ticket_price, currency, expires_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'ISSUED', $8, $9, 'ETB', NOW() + INTERVAL '2 days')
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'ISSUED', $8, $9, 'ETB', $10)
         RETURNING *`,
-        [ticketId, ticketCode, registrationId, event.id, userId, qrToken, qrDataUrl, event.isPaid, event.ticketPrice]
+        [ticketId, ticketCode, registrationId, event.id, userId, qrToken, qrDataUrl, event.isPaid, event.ticketPrice, expiresAt]
       );
 
       // Record Chapa payment transaction if paid

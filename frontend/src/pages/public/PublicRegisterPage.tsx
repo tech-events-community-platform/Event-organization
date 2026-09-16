@@ -7,7 +7,7 @@ import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import {
   Clock,
-  AlertCircle,
+  AlertCircle
 } from 'lucide-react';
 import {
   TelegramIcon,
@@ -72,10 +72,10 @@ export const PublicRegisterPage: React.FC = () => {
 
   const hasSocials = Boolean(
     organizerSocials &&
-      (organizerSocials.telegram ||
-        organizerSocials.x ||
-        organizerSocials.tiktok ||
-        organizerSocials.youtube)
+    (organizerSocials.telegram ||
+      organizerSocials.x ||
+      organizerSocials.tiktok ||
+      organizerSocials.youtube)
   );
 
 
@@ -143,10 +143,10 @@ export const PublicRegisterPage: React.FC = () => {
     <div className="w-full py-8 sm:py-10 px-4 sm:px-6 lg:px-12">
       <div className="max-w-5xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
-          
+
           {/* LEFT COLUMN: Title, Date/Time, Location, Registration Area, Description */}
           <div className="lg:col-span-7 space-y-6 order-2 lg:order-1">
-            
+
             {/* Event Category & Price Row (Increased size by a few px for strong visibility) */}
             <div className="flex flex-wrap items-center gap-3">
               <Badge variant="primary" className="uppercase font-mono text-sm sm:text-base py-1.5 px-4 rounded-xl shadow-xs font-bold">

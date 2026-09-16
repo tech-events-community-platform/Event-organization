@@ -49,6 +49,14 @@ export const errorHandler = (
   }
 
   sendError(res, message, statusCode, process.env.NODE_ENV === 'development' ? err.stack : undefined);
+  res.status(statusCode).json({
+    success: false,
+    message,
+    code: err.code || undefined,
+    error: err.code || err.message,
+    data: err.data || undefined,
+    isPendingApproval: err.isPendingApproval,
+  });
 };
 
 export const notFoundHandler = (

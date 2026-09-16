@@ -3,28 +3,79 @@ import QRCode from 'qrcode';
 import { ENV } from '../config/env';
 import { IQrTicketPayload } from '../types';
 
+export const computeEventDayExpiration = (eventDate: string | Date): Date => {
+  let dateStr: string;
+  if (eventDate instanceof Date) {
+    dateStr = eventDate.toISOString().split('T')[0];
+  } else {
+    dateStr = String(eventDate).split('T')[0];
+  }
+
+  // End of event day in East Africa Time (EAT, UTC+3)
+  try {
+    const endOfDayEAT = new Date(`${dateStr}T23:59:59+03:00`);
+    if (!isNaN(endOfDayEAT.getTime())) {
+      return endOfDayEAT;
+    }
+  } catch {}
+
+  // Fallback: 23:59:59 UTC
+  const fallback = new Date(dateStr);
+  fallback.setUTCHours(23, 59, 59, 999);
+  return fallback;
+};
+
+export const generateTicketCode = (eventDate?: string | Date): string => {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let randomPart = '';
+  for (let i = 0; i < 4; i++) {
+    randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  let year = '2026';
+  if (eventDate) {
+    try {
+      const d = new Date(eventDate);
+      if (!isNaN(d.getFullYear())) {
+        year = String(d.getFullYear());
+      }
+    } catch {}
+  }
+  return `SHB-${randomPart}-${year}`;
+};
+
 export const generateTicketToken = (
   ticketId: string,
   eventId: string,
-  userId: string
+  eventDate?: string | Date
 ): string => {
+  const expDate = computeEventDayExpiration(eventDate || new Date());
+  const expUnix = Math.floor(expDate.getTime() / 1000);
+
+  // Cryptographically signed token strictly contains NO PII (no name, email, phone)
   const payload: IQrTicketPayload = {
     ticketId,
     eventId,
-    userId,
+    exp: expUnix,
     issuedAt: Date.now(),
   };
-  return jwt.sign(payload, ENV.TICKET_SIGNING_SECRET, {
-    // Ticket tokens don't expire prematurely, but they are validated against DB status
-    noTimestamp: false,
-  });
+
+  return jwt.sign(payload, ENV.TICKET_SIGNING_SECRET);
 };
 
 export const verifyTicketToken = (token: string): IQrTicketPayload => {
   try {
-    return jwt.verify(token, ENV.TICKET_SIGNING_SECRET) as IQrTicketPayload;
+    const decoded = jwt.verify(token, ENV.TICKET_SIGNING_SECRET) as IQrTicketPayload;
+    return decoded;
   } catch (error: any) {
-    throw new Error('INVALID_QR_SIGNATURE');
+    if (error.name === 'TokenExpiredError') {
+      const err: any = new Error('TOKEN_EXPIRED');
+      err.code = 'TOKEN_EXPIRED';
+      err.expiredAt = error.expiredAt;
+      throw err;
+    }
+    const err: any = new Error('INVALID_QR_SIGNATURE');
+    err.code = 'INVALID_QR_SIGNATURE';
+    throw err;
   }
 };
 
