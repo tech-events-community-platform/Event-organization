@@ -1,29 +1,79 @@
 import React from 'react';
-import { TelegramIcon, XIcon, YouTubeIcon } from '../ui/SocialIcons';
+import { useLocation } from 'react-router-dom';
+import { LinkedInIcon, XIcon, TikTokIcon } from '../ui/SocialIcons';
 
 export const Footer: React.FC = () => {
-  return (
-    <footer className="w-full py-8 mt-auto bg-transparent">
-      <div className="w-full px-4 sm:px-6 lg:px-8 space-y-5">
-        {/* Long thick line separator */}
-        <div className="w-full h-1 bg-white/40 rounded-full" />
+  const location = useLocation();
+  const isExternalRegistration =
+    location.pathname.startsWith('/e/') ||
+    (location.pathname.startsWith('/events/') && location.pathname.includes('/register'));
 
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm sm:text-base font-semibold text-white">
-          <p className="text-white tracking-wide">
-            © 2026 Sheeba. All rights reserved.
+  return (
+    <footer className="w-full py-8 mt-auto">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4">
+        {/* Subtle separator */}
+        <div
+          className={`w-full h-px ${
+            isExternalRegistration ? 'bg-white/20' : 'bg-gray-300'
+          }`}
+        />
+
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs sm:text-sm">
+          {/* Copyright notice with © and Addis Ababa, Ethiopia */}
+          <p
+            className={`font-semibold tracking-wide ${
+              isExternalRegistration ? 'text-white' : 'text-[#2D1F23]'
+            }`}
+          >
+            © 2026 Sheeba. All rights reserved. Addis Ababa, Ethiopia.
           </p>
 
-          {/* 3 Socials Icons (White and enlarged in size) */}
-          <div className="flex items-center gap-6 text-white">
-            <span className="cursor-pointer hover:text-white/80 transition-colors" title="Telegram">
-              <TelegramIcon className="w-6 h-6" />
-            </span>
-            <span className="cursor-pointer hover:text-white/80 transition-colors" title="X (Twitter)">
-              <XIcon className="w-5 h-5" />
-            </span>
-            <span className="cursor-pointer hover:text-white/80 transition-colors" title="YouTube">
-              <YouTubeIcon className="w-6 h-6" />
-            </span>
+          {/* Social media icons: LinkedIn, X, TikTok */}
+          <div className="flex items-center gap-5">
+            <a
+              href="https://linkedin.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                isExternalRegistration
+                  ? 'text-white hover:text-white/80 hover:bg-white/10'
+                  : 'text-[#2D1F23] hover:text-[#63474D] hover:bg-[#63474D]/10'
+              }`}
+              title="LinkedIn"
+              aria-label="LinkedIn"
+            >
+              <LinkedInIcon className="w-4 h-4" />
+            </a>
+
+            <a
+              href="https://x.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                isExternalRegistration
+                  ? 'text-white hover:text-white/80 hover:bg-white/10'
+                  : 'text-[#2D1F23] hover:text-[#63474D] hover:bg-[#63474D]/10'
+              }`}
+              title="X (Twitter)"
+              aria-label="X"
+            >
+              <XIcon className="w-4 h-4" />
+            </a>
+
+            <a
+              href="https://tiktok.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                isExternalRegistration
+                  ? 'text-white hover:text-white/80 hover:bg-white/10'
+                  : 'text-[#2D1F23] hover:text-[#63474D] hover:bg-[#63474D]/10'
+              }`}
+              title="TikTok"
+              aria-label="TikTok"
+            >
+              <TikTokIcon className="w-4 h-4" />
+            </a>
           </div>
         </div>
       </div>

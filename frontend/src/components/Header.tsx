@@ -85,8 +85,7 @@ export default function Header() {
     ? [
         { name: 'Features', href: '#features', isInternal: true },
         { name: 'How It Works', href: '#how-it-works', isInternal: true },
-        { name: 'Interactive Demo', href: '#demo', isInternal: true },
-        { name: 'Audiences', href: '#audiences', isInternal: true },
+        { name: 'Live Simulator', href: '#simulator', isInternal: true },
         { name: 'Explore Events', href: '/search', isInternal: false },
       ]
     : [
@@ -257,7 +256,7 @@ export default function Header() {
                       : 'text-gray-700 hover:text-[#63474D] hover:bg-gray-100'
                   }`}
                 >
-                  Sign In
+                  Log In
                 </Link>
                 <Link
                   to={isExternalRegistration ? `/register?redirect=${encodeURIComponent(location.pathname + location.search)}` : "/register"}
@@ -616,7 +615,7 @@ export default function Header() {
                     onClick={() => setIsOpen(false)}
                     className="flex items-center justify-center py-2.5 rounded-xl border border-gray-300 text-gray-800 font-semibold text-xs hover:bg-gray-50 transition-colors"
                   >
-                    Sign In
+                    Log In
                   </Link>
                   <Link
                     to={isExternalRegistration ? `/register?redirect=${encodeURIComponent(location.pathname + location.search)}` : "/register"}
