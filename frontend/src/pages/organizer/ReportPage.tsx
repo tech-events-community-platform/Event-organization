@@ -209,6 +209,13 @@ export const ReportPage: React.FC = () => {
 
   const reportContainerRef = useRef<HTMLDivElement>(null);
 
+  // Sync selectedEventId if route param id changes
+  useEffect(() => {
+    if (id && id !== selectedEventId) {
+      setSelectedEventId(id);
+    }
+  }, [id]);
+
   // 1. Fetch events list
   useEffect(() => {
     const fetchEvents = async () => {
@@ -223,6 +230,14 @@ export const ReportPage: React.FC = () => {
 
         // Prioritize user's own events; if they have none yet, show all community events so they can evaluate reports
         let availableEvents = userEvents.length > 0 ? userEvents : allEvents;
+
+        // If route specifies an event id, ensure it is available in the selection list
+        if (id && !availableEvents.some((e) => e.id === id)) {
+          const matchedEvent = allEvents.find((e) => e.id === id);
+          if (matchedEvent) {
+            availableEvents = [matchedEvent, ...availableEvents];
+          }
+        }
 
         // If no events exist in database or storage at all, include the flagship demo event
         if (availableEvents.length === 0) {
@@ -244,10 +259,10 @@ export const ReportPage: React.FC = () => {
 
         setEvents(sorted);
 
-        // Auto-select event: route id if valid, or first event in sorted list
+        // Auto-select event: route id if valid, or keep currently selected if valid, or first event in sorted list
         if (id && sorted.some((e) => e.id === id)) {
           setSelectedEventId(id);
-        } else if (sorted.length > 0) {
+        } else if (!id && sorted.length > 0 && !sorted.some((e) => e.id === selectedEventId)) {
           setSelectedEventId(sorted[0].id);
         }
       } catch (err) {
@@ -421,7 +436,7 @@ export const ReportPage: React.FC = () => {
                   </span>
                 </div>
                 <span className="text-[10px] font-mono text-gray-400 font-semibold">
-                  REPORT REF: SHEEBA-{report.eventId.slice(0, 8).toUpperCase()}
+                  REPORT REF: SHEEBA-{report?.eventId ? report.eventId.slice(0, 8).toUpperCase() : 'EVENT'}
                 </span>
               </div>
 
@@ -760,22 +775,35 @@ export const ReportPage: React.FC = () => {
 
             {/* Graphical Representation: Pre-Event Registration Demand & Acquisition Momentum */}
             {(() => {
-              const regData = (report.registrationsOverTime && report.registrationsOverTime.length > 0)
+              const isDemo = report.eventId === DEMO_EVENT.id;
+              const rawRegData = (report.registrationsOverTime && report.registrationsOverTime.length > 0)
                 ? report.registrationsOverTime
-                : [
-                    { date: 'Aug 25', count: Math.round(report.totalRegistered * 0.10) || 24 },
-                    { date: 'Aug 28', count: Math.round(report.totalRegistered * 0.21) || 52 },
-                    { date: 'Sep 01', count: Math.round(report.totalRegistered * 0.35) || 88 },
-                    { date: 'Sep 03', count: Math.round(report.totalRegistered * 0.22) || 56 },
-                    { date: 'Sep 05', count: Math.round(report.totalRegistered * 0.12) || 30 },
-                  ];
-              const maxBatch = Math.max(...regData.map((d) => d.count), 1);
+                : isDemo
+                ? [
+                    { date: 'Aug 25', count: 24 },
+                    { date: 'Aug 28', count: 52 },
+                    { date: 'Sep 01', count: 88 },
+                    { date: 'Sep 03', count: 56 },
+                    { date: 'Sep 05', count: 30 },
+                  ]
+                : (report.totalRegistered && report.totalRegistered > 0)
+                ? [{ date: report.eventDate || 'Launch', count: report.totalRegistered }]
+                : [];
+
+              const regData = rawRegData.map((d) => ({
+                date: d?.date || 'Date',
+                count: Number(d?.count) || 0,
+              }));
+
+              const maxBatch = regData.length > 0 ? Math.max(...regData.map((d) => d.count), 1) : 1;
               let runningTotal = 0;
               const cumulativeData = regData.map((d) => {
                 runningTotal += d.count;
                 return { ...d, cumulative: runningTotal };
               });
-              const peakBatch = regData.reduce((prev, curr) => (curr.count > prev.count ? curr : prev), regData[0]);
+              const peakBatch = regData.length > 0
+                ? regData.reduce((prev, curr) => (curr.count > prev.count ? curr : prev), regData[0])
+                : null;
 
               return (
                 <div className="p-6 rounded-2xl bg-[#FAF7F5] border border-[#E8DDD7] space-y-4">
@@ -790,53 +818,59 @@ export const ReportPage: React.FC = () => {
                       </p>
                     </div>
                     <span className="text-[10px] font-bold text-[#63474D] bg-white px-2.5 py-1 rounded-full border border-gray-200 self-start sm:self-auto">
-                      Peak Inflow Surge: {peakBatch.date} (+{peakBatch.count} signups)
+                      Peak Inflow Surge: {peakBatch ? `${peakBatch.date} (+${peakBatch.count} signups)` : 'No signups recorded'}
                     </span>
                   </div>
 
                   {/* Dual Trajectory Visual: Bar Surge + Cumulative Progress */}
-                  <div className="pt-4 pb-2">
-                    <div className="grid grid-cols-5 gap-2 sm:gap-4 items-end h-40 border-b border-gray-200 px-2 pb-2">
-                      {cumulativeData.map((item, idx) => {
-                        const barHeight = Math.max(Math.round((item.count / maxBatch) * 100), 15);
-                        const isPeak = item.date === peakBatch.date;
-                        return (
-                          <div key={idx} className="flex flex-col items-center h-full justify-end group">
-                            {/* Value badge */}
-                            <div className="flex flex-col items-center mb-1.5 transition-transform group-hover:scale-105">
-                              <span
-                                className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded shadow-2xs ${
-                                  isPeak
-                                    ? 'bg-[#63474D] text-white ring-2 ring-[#63474D]/20'
-                                    : 'bg-white text-gray-700 border border-gray-200'
-                                }`}
-                              >
-                                +{item.count}
-                              </span>
-                              <span className="text-[9px] font-mono text-gray-400 mt-0.5">
-                                ∑ {item.cumulative}
-                              </span>
-                            </div>
-                            {/* Bar */}
-                            <div className="w-full max-w-14 bg-white rounded-t-lg overflow-hidden p-0.5 h-full flex items-end border border-gray-200/60 shadow-inner">
-                              <div
-                                className={`w-full rounded-t-md transition-all duration-700 ${
-                                  isPeak
-                                    ? 'bg-gradient-to-t from-[#63474D] to-[#AA767C]'
-                                    : 'bg-gradient-to-t from-[#AA767C]/80 to-[#FFA686]/80'
-                                }`}
-                                style={{ height: `${barHeight}%` }}
-                              />
-                            </div>
-                            {/* Label */}
-                            <span className={`text-[10px] font-bold mt-2 text-center whitespace-nowrap ${isPeak ? 'text-[#63474D]' : 'text-gray-500'}`}>
-                              {item.date}
-                            </span>
-                          </div>
-                        );
-                      })}
+                  {cumulativeData.length === 0 ? (
+                    <div className="h-40 flex flex-col items-center justify-center text-gray-400 text-xs border-b border-gray-200">
+                      <p>No registration records recorded for this event yet.</p>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="pt-4 pb-2">
+                      <div className="flex items-end justify-around gap-2 sm:gap-4 h-40 border-b border-gray-200 px-2 pb-2">
+                        {cumulativeData.map((item, idx) => {
+                          const barHeight = Math.max(Math.round(((item.count || 0) / maxBatch) * 100), 15);
+                          const isPeak = peakBatch ? item.date === peakBatch.date : false;
+                          return (
+                            <div key={idx} className="flex flex-col items-center h-full justify-end group flex-1 max-w-24">
+                              {/* Value badge */}
+                              <div className="flex flex-col items-center mb-1.5 transition-transform group-hover:scale-105">
+                                <span
+                                  className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded shadow-2xs ${
+                                    isPeak
+                                      ? 'bg-[#63474D] text-white ring-2 ring-[#63474D]/20'
+                                      : 'bg-white text-gray-700 border border-gray-200'
+                                  }`}
+                                >
+                                  +{item.count}
+                                </span>
+                                <span className="text-[9px] font-mono text-gray-400 mt-0.5">
+                                  ∑ {item.cumulative}
+                                </span>
+                              </div>
+                              {/* Bar */}
+                              <div className="w-full max-w-14 bg-white rounded-t-lg overflow-hidden p-0.5 h-full flex items-end border border-gray-200/60 shadow-inner">
+                                <div
+                                  className={`w-full rounded-t-md transition-all duration-700 ${
+                                    isPeak
+                                      ? 'bg-gradient-to-t from-[#63474D] to-[#AA767C]'
+                                      : 'bg-gradient-to-t from-[#AA767C]/80 to-[#FFA686]/80'
+                                  }`}
+                                  style={{ height: `${barHeight}%` }}
+                                />
+                              </div>
+                              {/* Label */}
+                              <span className={`text-[10px] font-bold mt-2 text-center whitespace-nowrap ${isPeak ? 'text-[#63474D]' : 'text-gray-500'}`}>
+                                {item.date}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Summary Metric Pills */}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1 text-center text-xs">
@@ -847,7 +881,9 @@ export const ReportPage: React.FC = () => {
                     <div className="p-2.5 rounded-xl bg-white border border-gray-200">
                       <span className="text-[10px] font-bold text-gray-500 uppercase block">Late Surge Velocity</span>
                       <strong className="text-emerald-800 font-mono text-sm">
-                        {Math.round((regData.slice(-2).reduce((sum, d) => sum + d.count, 0) / (report.totalRegistered || 1)) * 100)}% final 72 hrs
+                        {regData.length > 0 && report.totalRegistered > 0
+                          ? `${Math.round((regData.slice(-2).reduce((sum, d) => sum + (d?.count || 0), 0) / report.totalRegistered) * 100)}% final 72 hrs`
+                          : '0% final 72 hrs'}
                       </strong>
                     </div>
                     <div className="p-2.5 rounded-xl bg-white border border-gray-200">
@@ -904,19 +940,29 @@ export const ReportPage: React.FC = () => {
 
             {/* Graphical Representation: Hourly Arrival Velocity & Gate Scan Distribution */}
             {(() => {
-              const hourlyData = (report.hourlyCheckIns && report.hourlyCheckIns.length > 0)
-                ? report.hourlyCheckIns.map((h) => ({
-                    label: h.hour || h.time || 'Time',
-                    count: Number(h.count) || 0,
-                  }))
-                : [
-                    { label: '08:00 AM', count: Math.round(report.totalAttended * 0.20) || 38 },
-                    { label: '09:00 AM', count: Math.round(report.totalAttended * 0.46) || 86 },
-                    { label: '10:00 AM', count: Math.round(report.totalAttended * 0.24) || 45 },
-                    { label: '11:00 AM', count: Math.round(report.totalAttended * 0.10) || 18 },
-                  ];
-              const maxCount = Math.max(...hourlyData.map((d) => d.count), 1);
-              const peakHour = hourlyData.reduce((prev, curr) => (curr.count > prev.count ? curr : prev), hourlyData[0]);
+              const isDemo = report.eventId === DEMO_EVENT.id;
+              const rawHourly = (report.hourlyCheckIns && report.hourlyCheckIns.length > 0)
+                ? report.hourlyCheckIns
+                : isDemo
+                ? [
+                    { label: '08:00 AM', count: 38 },
+                    { label: '09:00 AM', count: 86 },
+                    { label: '10:00 AM', count: 45 },
+                    { label: '11:00 AM', count: 18 },
+                  ]
+                : (report.totalAttended && report.totalAttended > 0)
+                ? [{ label: 'Gate Opening', count: report.totalAttended }]
+                : [];
+
+              const hourlyData = rawHourly.map((h: any) => ({
+                label: h?.hour || h?.time || h?.label || 'Time',
+                count: Number(h?.count) || 0,
+              }));
+
+              const maxCount = hourlyData.length > 0 ? Math.max(...hourlyData.map((d) => d.count), 1) : 1;
+              const peakHour = hourlyData.length > 0
+                ? hourlyData.reduce((prev, curr) => (curr.count > prev.count ? curr : prev), hourlyData[0])
+                : null;
 
               return (
                 <div className="p-6 rounded-2xl bg-[#FAF7F5] border border-[#E8DDD7] space-y-4">
@@ -931,61 +977,75 @@ export const ReportPage: React.FC = () => {
                       </p>
                     </div>
                     <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 self-start sm:self-auto">
-                      Peak Velocity Window: {peakHour.label} ({peakHour.count} Arrivals)
+                      Peak Velocity Window: {peakHour ? `${peakHour.label} (${peakHour.count} Arrivals)` : 'No check-ins recorded'}
                     </span>
                   </div>
 
                   {/* Histogram Chart */}
-                  <div className="pt-4 pb-2">
-                    <div className="grid grid-cols-4 gap-3 sm:gap-6 items-end h-44 border-b border-gray-200 px-2 pb-2">
-                      {hourlyData.map((item, idx) => {
-                        const heightPercent = Math.max(Math.round((item.count / maxCount) * 100), 12);
-                        const isPeak = item.label === peakHour.label;
-                        const pctOfAttended = report.totalAttended > 0 ? Math.round((item.count / report.totalAttended) * 100) : 25;
-                        return (
-                          <div key={idx} className="flex flex-col items-center h-full justify-end group">
-                            {/* Value tooltip pill above bar */}
-                            <div className="flex flex-col items-center mb-1.5 transition-transform group-hover:scale-105">
-                              <span
-                                className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-md shadow-2xs ${
-                                  isPeak
-                                    ? 'bg-[#63474D] text-white ring-2 ring-[#63474D]/20'
-                                    : 'bg-white text-gray-700 border border-gray-200'
-                                }`}
-                              >
-                                {item.count}
-                              </span>
-                              <span className="text-[9px] font-mono text-gray-400 mt-0.5">
-                                {pctOfAttended}%
-                              </span>
-                            </div>
-                            {/* Bar element */}
-                            <div className="w-full max-w-16 bg-white rounded-t-xl overflow-hidden p-0.5 h-full flex items-end border border-gray-200/60 shadow-inner">
-                              <div
-                                className={`w-full rounded-t-lg transition-all duration-700 ${
-                                  isPeak
-                                    ? 'bg-gradient-to-t from-[#63474D] to-[#AA767C] shadow-sm'
-                                    : 'bg-gradient-to-t from-[#8C626C] to-[#C9A9AF]'
-                                }`}
-                                style={{ height: `${heightPercent}%` }}
-                              />
-                            </div>
-                            {/* X-axis Label */}
-                            <span className={`text-[10px] font-bold mt-2 text-center whitespace-nowrap ${isPeak ? 'text-[#63474D]' : 'text-gray-500'}`}>
-                              {item.label}
-                            </span>
-                          </div>
-                        );
-                      })}
+                  {hourlyData.length === 0 ? (
+                    <div className="h-44 flex flex-col items-center justify-center text-gray-400 text-xs border-b border-gray-200">
+                      <p>No gate check-in scans recorded yet.</p>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="pt-4 pb-2">
+                      <div className="flex items-end justify-around gap-3 sm:gap-6 h-44 border-b border-gray-200 px-2 pb-2">
+                        {hourlyData.map((item, idx) => {
+                          const heightPercent = Math.max(Math.round(((item.count || 0) / maxCount) * 100), 12);
+                          const isPeak = peakHour ? item.label === peakHour.label : false;
+                          const pctOfAttended = report.totalAttended > 0
+                            ? Math.round(((item.count || 0) / report.totalAttended) * 100)
+                            : 0;
+                          return (
+                            <div key={idx} className="flex flex-col items-center h-full justify-end group flex-1 max-w-20">
+                              {/* Value tooltip pill above bar */}
+                              <div className="flex flex-col items-center mb-1.5 transition-transform group-hover:scale-105">
+                                <span
+                                  className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-md shadow-2xs ${
+                                    isPeak
+                                      ? 'bg-[#63474D] text-white ring-2 ring-[#63474D]/20'
+                                      : 'bg-white text-gray-700 border border-gray-200'
+                                  }`}
+                                >
+                                  {item.count}
+                                </span>
+                                <span className="text-[9px] font-mono text-gray-400 mt-0.5">
+                                  {pctOfAttended}%
+                                </span>
+                              </div>
+                              {/* Bar element */}
+                              <div className="w-full max-w-16 bg-white rounded-t-xl overflow-hidden p-0.5 h-full flex items-end border border-gray-200/60 shadow-inner">
+                                <div
+                                  className={`w-full rounded-t-lg transition-all duration-700 ${
+                                    isPeak
+                                      ? 'bg-gradient-to-t from-[#63474D] to-[#AA767C] shadow-sm'
+                                      : 'bg-gradient-to-t from-[#8C626C] to-[#C9A9AF]'
+                                  }`}
+                                  style={{ height: `${heightPercent}%` }}
+                                />
+                              </div>
+                              {/* X-axis Label */}
+                              <span className={`text-[10px] font-bold mt-2 text-center whitespace-nowrap ${isPeak ? 'text-[#63474D]' : 'text-gray-500'}`}>
+                                {item.label}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Velocity Metrics Legend */}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1 text-center text-xs">
                     <div className="p-2.5 rounded-xl bg-white border border-gray-200">
                       <span className="text-[10px] font-bold text-gray-500 uppercase block">Opening Rush Concentration</span>
                       <strong className="text-[#2D1F23]">
-                        {Math.round(((hourlyData[0].count + hourlyData[1].count) / (report.totalAttended || 1)) * 100)}% by {hourlyData[1]?.label || '09:00 AM'}
+                        {(() => {
+                          if (hourlyData.length === 0 || !report.totalAttended) return '0%';
+                          const earlyCount = (hourlyData[0]?.count || 0) + (hourlyData[1]?.count || 0);
+                          const pct = Math.min(100, Math.round((earlyCount / report.totalAttended) * 100));
+                          const label = hourlyData[1]?.label || hourlyData[0]?.label || '09:00 AM';
+                          return `${pct}% by ${label}`;
+                        })()}
                       </strong>
                     </div>
                     <div className="p-2.5 rounded-xl bg-white border border-gray-200">
@@ -1049,7 +1109,7 @@ export const ReportPage: React.FC = () => {
                   <div key={idx} className="space-y-1">
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-medium text-gray-800">{r.role}</span>
-                      <span className="font-bold text-[#2D1F23]">{r.percentage}% ({r.count} attendees)</span>
+                      <span className="font-bold text-[#2D1F23]">{r.percentage}% ({r.count ?? 0} attendees)</span>
                     </div>
                     <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
                       <div
@@ -1124,7 +1184,7 @@ export const ReportPage: React.FC = () => {
                       {org.name}
                     </span>
                     <span className="px-2 py-0.5 rounded-full bg-white border border-gray-200 font-bold text-[10px] text-[#63474D] shrink-0">
-                      {org.count} {org.count === 1 ? 'attendee' : 'attendees'}
+                      {org.count ?? 0} {(org.count ?? 0) === 1 ? 'attendee' : 'attendees'}
                     </span>
                   </div>
                 ))}
@@ -1189,7 +1249,7 @@ export const ReportPage: React.FC = () => {
                       </p>
                     </div>
                     <span className="text-[10px] font-bold text-[#63474D] bg-white px-2.5 py-1 rounded-full border border-gray-200 self-start sm:self-auto">
-                      #1 Core Demand: {interestData[0]?.name}
+                      #1 Core Demand: {interestData[0]?.name || 'Technology'}
                     </span>
                   </div>
 
@@ -1327,10 +1387,10 @@ export const ReportPage: React.FC = () => {
             {/* Credential Distribution Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
               {[
-                { label: 'Verified Attendees', count: report.badgeDistribution?.attended || report.totalAttended, icon: '✅', color: 'border-emerald-200 bg-emerald-50/60' },
-                { label: 'Active Participants', count: report.badgeDistribution?.participant || 0, icon: '🎖️', color: 'border-blue-200 bg-blue-50/60' },
-                { label: 'Keynote & Speakers', count: report.badgeDistribution?.speaker || 0, icon: '🎤', color: 'border-purple-200 bg-purple-50/60' },
-                { label: 'Winners & Finalists', count: report.badgeDistribution?.winner || 0, icon: '🏆', color: 'border-amber-200 bg-amber-50/60' },
+                { label: 'Verified Attendees', count: report.badgeDistribution?.attended ?? report.totalAttended ?? 0, icon: '✅', color: 'border-emerald-200 bg-emerald-50/60' },
+                { label: 'Active Participants', count: report.badgeDistribution?.participant ?? 0, icon: '🎖️', color: 'border-blue-200 bg-blue-50/60' },
+                { label: 'Keynote & Speakers', count: report.badgeDistribution?.speaker ?? 0, icon: '🎤', color: 'border-purple-200 bg-purple-50/60' },
+                { label: 'Winners & Finalists', count: report.badgeDistribution?.winner ?? 0, icon: '🏆', color: 'border-amber-200 bg-amber-50/60' },
               ].map((b, idx) => (
                 <div key={idx} className={`p-4 rounded-2xl border ${b.color} text-center space-y-1`}>
                   <span className="text-2xl block">{b.icon}</span>
@@ -1796,7 +1856,7 @@ export const ReportPage: React.FC = () => {
               <div className="text-right shrink-0">
                 <span className="text-[9px] font-mono text-emerald-700 block uppercase font-bold">Verification Stamp</span>
                 <span className="text-[10px] font-mono font-bold text-emerald-900">
-                  AUTH-{report.eventId.slice(0, 10).toUpperCase()}
+                  AUTH-{report?.eventId ? report.eventId.slice(0, 10).toUpperCase() : 'VERIFIED'}
                 </span>
               </div>
             </div>
