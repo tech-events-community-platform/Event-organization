@@ -6,14 +6,14 @@ import { authorizeRoles } from '../middlewares/role.middleware';
 const router = Router();
 
 router.get(
-  '/events/:id',
+  ['/events/:id', '/:id'],
   authenticate,
   authorizeRoles('organizer', 'admin'),
   ReportController.getEventReport
 );
 
 router.get(
-  '/events/:id/export',
+  ['/events/:id/export', '/:id/export'],
   authenticate,
   authorizeRoles('organizer', 'admin'),
   ReportController.exportEventReportCsv
