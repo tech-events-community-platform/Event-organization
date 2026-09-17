@@ -31,6 +31,7 @@ export interface User {
   companyName?: string;
   industryCategory?: string;
   companyWebsite?: string;
+  website?: string;
   companyPhone?: string;
   socials?: OrganizerSocials;
   approvalStatus?: ApprovalStatus;

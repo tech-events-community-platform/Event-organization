@@ -22,7 +22,6 @@ import { PublicSearchPage } from '../pages/public/PublicSearchPage';
 import { SponsorLayout } from '../layouts/SponsorLayout';
 import { SponsorAuthPage } from '../pages/sponsor/SponsorAuthPage';
 import { SponsorForgotPasswordPage } from '../pages/sponsor/SponsorForgotPasswordPage';
-import { SponsorDashboardPage } from '../pages/sponsor/SponsorDashboardPage';
 import { SponsorExplorePage } from '../pages/sponsor/SponsorExplorePage';
 import { SponsorDealsPage } from '../pages/sponsor/SponsorDealsPage';
 import { SponsorDeliverablesPage } from '../pages/sponsor/SponsorDeliverablesPage';

@@ -13,7 +13,6 @@ import {
   Clock,
   ArrowLeft,
   CheckCircle2,
-  HelpCircle,
 } from 'lucide-react';
 
 const INDUSTRY_OPTIONS = [

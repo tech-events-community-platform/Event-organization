@@ -7,11 +7,6 @@ import {
   Calendar,
   MapPin,
   Users,
-  DollarSign,
-  Clock,
-  Layers,
-  Building2,
-  ExternalLink,
   Edit3,
   Save,
 } from 'lucide-react';

@@ -1,16 +1,13 @@
 import React from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import {
   Building2,
   Users,
   Award,
-  BarChart3,
   Sparkles,
   CalendarCheck,
   ShieldCheck,
-  Globe,
   ArrowRight,
   TrendingUp,
 } from 'lucide-react';

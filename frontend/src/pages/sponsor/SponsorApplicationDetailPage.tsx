@@ -3,13 +3,10 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
   Clock,
-  MapPin,
-  Send,
   ExternalLink,
   CheckCircle2,
   XCircle,
   AlertCircle,
-  Globe,
 } from 'lucide-react';
 import {
   LinkedInIcon,
@@ -354,7 +351,9 @@ export const SponsorApplicationDetailPage: React.FC = () => {
             {/* Social Logos instead of text names */}
             {socialEntries.length > 0 && (
               <div className="pt-2.5 border-t border-stone-300/80 flex items-center gap-2">
-                {socialEntries.map(([platform, link]) => {
+                {socialEntries.map(([platform, rawLink]) => {
+                  const link = String(rawLink || '');
+                  if (!link) return null;
                   const cleanLink = link.startsWith('http') ? link : `https://${link}`;
                   return (
                     <a

@@ -7,14 +7,10 @@ import {
   Users,
   Building2,
   CheckCircle2,
-  Clock,
-  ShieldCheck,
   AlertCircle,
   RefreshCw,
   Sparkles,
-  Globe,
   ExternalLink,
-  XCircle,
 } from 'lucide-react';
 import { api } from '../../services/api';
 
