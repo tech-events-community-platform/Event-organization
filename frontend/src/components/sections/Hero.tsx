@@ -5,7 +5,7 @@ import FadeIn from '../FadeIn';
 export default function Hero() {
   return (
     <section className="relative pt-36 pb-20 lg:pt-44 lg:pb-32 overflow-hidden min-h-[82vh] flex items-center">
-      {/* Background Image Layer with Subtly Tapered Gradient Overlay */}
+      {/*Background Image Layer with Tapered Gradient Overlay */}
       <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
         <img
           src="/hero.jpg"
