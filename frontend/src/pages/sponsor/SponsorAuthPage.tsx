@@ -6,9 +6,7 @@ import { GoogleLogin } from '@react-oauth/google';
 import {
   Building2,
   Lock,
-  Mail,
   User as UserIcon,
-  Phone,
   Globe,
   Tag,
   AlertCircle,
@@ -16,7 +14,6 @@ import {
   ArrowLeft,
   CheckCircle2,
   HelpCircle,
-  Sparkles,
 } from 'lucide-react';
 
 const INDUSTRY_OPTIONS = [
@@ -122,13 +119,11 @@ export const SponsorAuthPage: React.FC = () => {
     <div className="min-h-[85vh] flex flex-col justify-center max-w-lg mx-auto pt-24 sm:pt-28 pb-20 px-4 space-y-6">
       {/* Header */}
       <div className="text-center space-y-2">
-        <div className="w-14 h-14 rounded-2xl bg-[#63474D] flex items-center justify-center text-[#FFA686] mx-auto shadow-md border border-[#FFA686]/30">
-          <Building2 className="w-7 h-7" />
-        </div>
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#63474D]/10 text-[#63474D] text-xs font-bold">
-          <Sparkles className="w-3.5 h-3.5 text-[#FFA686]" />
-          <span>Sheeba Corporate Sponsor Portal</span>
-        </div>
+        <img
+          src="/logo.jpg"
+          alt="Sheeba Logo"
+          className="h-14 sm:h-16 w-auto object-contain mx-auto"
+        />
         <h1 className="font-serif text-3xl font-extrabold text-[#2D1F23]">
           {authMode === 'login' ? 'Sponsor Sign In' : 'Partner with Tech Events'}
         </h1>
@@ -354,7 +349,7 @@ export const SponsorAuthPage: React.FC = () => {
                         Company Phone Number <span className="text-red-500">*</span>
                       </label>
                       <div className="relative">
-                        <Phone className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
+                        <img src="/phone-icon.jpg" alt="Phone" className="w-4 h-4 object-contain absolute left-3 top-3" />
                         <input
                           type="tel"
                           required
@@ -392,7 +387,7 @@ export const SponsorAuthPage: React.FC = () => {
                   Corporate Work Email <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
-                  <Mail className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
+                  <img src="/mail-icon.jpg" alt="Email" className="w-4 h-4 object-contain absolute left-3 top-3" />
                   <input
                     type="email"
                     required

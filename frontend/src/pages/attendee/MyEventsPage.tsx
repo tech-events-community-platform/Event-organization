@@ -248,10 +248,12 @@ export const MyEventsPage: React.FC = () => {
                   >
                     {/* Top Ticket Header Ribbon */}
                     <div className="bg-[#63474D] text-white px-6 py-3.5 flex flex-wrap items-center justify-between gap-3">
-                      <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded bg-[#FFA686] flex items-center justify-center text-[#2D1F23] font-bold text-xs">
-                          S
-                        </div>
+                      <div className="flex items-center gap-2.5">
+                        <img
+                          src="/logo.jpg"
+                          alt="Sheeba Logo"
+                          className="h-7 sm:h-8 w-auto object-contain shrink-0"
+                        />
                         <span className="font-serif font-bold text-sm tracking-wider text-white">
                           SHEEBA<span className="text-[#FFA686]">.</span> PASS
                         </span>

@@ -4,7 +4,6 @@ import { api } from '../../services/api';
 import { Button } from '../../components/ui/Button';
 import {
   KeyRound,
-  Mail,
   Lock,
   ArrowLeft,
   CheckCircle2,
@@ -231,7 +230,7 @@ export const SponsorForgotPasswordPage: React.FC = () => {
                 Corporate Work Email <span className="text-red-500">*</span>
               </label>
               <div className="relative">
-                <Mail className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
+                <img src="/mail-icon.jpg" alt="Email" className="w-4 h-4 object-contain absolute left-3 top-3" />
                 <input
                   type="email"
                   required

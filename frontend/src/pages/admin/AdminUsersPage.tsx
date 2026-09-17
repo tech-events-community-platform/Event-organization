@@ -13,8 +13,6 @@ import {
   RefreshCw,
   Sparkles,
   Globe,
-  Phone,
-  Mail,
   ExternalLink,
   XCircle,
 } from 'lucide-react';

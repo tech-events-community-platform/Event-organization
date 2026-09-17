@@ -1,25 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
-  Compass,
   Search,
-  Filter,
-  Calendar,
-  MapPin,
   Users,
-  DollarSign,
-  Phone,
-  Mail,
-  Send,
-  ExternalLink,
-  CheckCircle2,
-  XCircle,
-  Sparkles,
-  Layers,
-  ChevronRight,
   Building2,
-  AlertCircle,
-  X,
-  Share2,
+  ChevronRight,
+  Compass,
 } from 'lucide-react';
 import { api } from '../../services/api';
 import type { ISponsorshipApplication } from '../../types/sponsorship';
@@ -36,30 +22,24 @@ const CATEGORIES = [
 ];
 
 export const SponsorExplorePage: React.FC = () => {
-  const [applications, setApplications] = useState<ISponsorshipApplication[]>([]);
+  const navigate = useNavigate();
+
+  const [allApplications, setAllApplications] = useState<ISponsorshipApplication[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('All Categories');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedApp, setSelectedApp] = useState<ISponsorshipApplication | null>(null);
 
-  // Modal interaction state
-  const [actionLoading, setActionLoading] = useState(false);
-  const [selectedPackage, setSelectedPackage] = useState<string>('');
-  const [pledgedAmount, setPledgedAmount] = useState<number | undefined>(undefined);
-  const [sponsorNotes, setSponsorNotes] = useState('');
-  const [feedbackMessage, setFeedbackMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-
-  const loadApplications = async () => {
+  const loadApplications = async (query = searchQuery) => {
     try {
       setLoading(true);
       const params: any = {};
-      if (selectedCategory !== 'All Categories') params.category = selectedCategory;
-      if (searchQuery.trim()) params.search = searchQuery.trim();
+      if (query.trim()) params.search = query.trim();
 
       const data = await api.sponsorship.exploreApplications(params);
-      setApplications(data);
+      setAllApplications(data || []);
     } catch (err: any) {
       console.error('Failed to load marketplace applications', err);
+      setAllApplications([]);
     } finally {
       setLoading(false);
     }
@@ -67,70 +47,47 @@ export const SponsorExplorePage: React.FC = () => {
 
   useEffect(() => {
     loadApplications();
-  }, [selectedCategory]);
+  }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    loadApplications();
+    loadApplications(searchQuery);
   };
 
-  const openAppDetails = (app: ISponsorshipApplication) => {
-    setSelectedApp(app);
-    setSelectedPackage(app.packages?.[0]?.name || '');
-    setPledgedAmount(app.packages?.[0]?.amount || app.funding_goal);
-    setSponsorNotes('');
-    setFeedbackMessage(null);
-  };
+  // Compute how many applications match each category
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = {
+      'All Categories': allApplications.length,
+    };
+    CATEGORIES.forEach((cat) => {
+      if (cat !== 'All Categories') {
+        counts[cat] = allApplications.filter(
+          (app) => app.category?.trim().toLowerCase() === cat.trim().toLowerCase()
+        ).length;
+      }
+    });
+    return counts;
+  }, [allApplications]);
 
-  const handleExpressInterestOrDecline = async (status: 'INTERESTED' | 'DECLINED') => {
-    if (!selectedApp) return;
-    try {
-      setActionLoading(true);
-      setFeedbackMessage(null);
-
-      await api.sponsorship.expressInterestOrDecline({
-        applicationId: selectedApp.id,
-        status,
-        package_name: selectedPackage,
-        pledged_amount: pledgedAmount,
-        sponsor_notes: sponsorNotes,
-      });
-
-      setFeedbackMessage({
-        type: 'success',
-        text:
-          status === 'INTERESTED'
-            ? 'Added to your Deals & Pledges as Interested! Use the contact info below to coordinate directly with the organizer.'
-            : 'Marked as Declined. You can review this anytime in Deals & Pledges.',
-      });
-
-      // Reload applications to update interested count
-      loadApplications();
-    } catch (err: any) {
-      setFeedbackMessage({
-        type: 'error',
-        text: err.message || 'Failed to update deal status.',
-      });
-    } finally {
-      setActionLoading(false);
-    }
-  };
+  // Display applications based on selected category
+  const displayedApplications = useMemo(() => {
+    if (selectedCategory === 'All Categories') return allApplications;
+    return allApplications.filter(
+      (app) => app.category?.trim().toLowerCase() === selectedCategory.trim().toLowerCase()
+    );
+  }, [allApplications, selectedCategory]);
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12">
-      {/* Hero Banner */}
+    <div className="space-y-6 max-w-7xl mx-auto pb-16">
+      {/* Hero Banner (Tag removed per user request) */}
       <div className="bg-gradient-to-r from-[#2D1F23] via-[#4A3238] to-[#63474D] rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
         <div className="absolute -right-10 -bottom-10 w-60 h-60 bg-[#FFA686]/10 rounded-full blur-3xl pointer-events-none" />
         <div className="relative z-10 max-w-3xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 text-[#FFA686] text-xs font-semibold uppercase tracking-wider mb-3">
-            <Compass className="w-3.5 h-3.5" />
-            Sponsorship Marketplace
-          </div>
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-serif font-bold text-white tracking-tight">
             Discover Upcoming Events Seeking Backing
           </h1>
           <p className="text-white/80 text-sm sm:text-base mt-2 leading-relaxed">
-            Browse proposed and upcoming events from trusted organizers across Ethiopia. Support initiatives aligned with your brand, express interest, and reach out directly to coordinate.
+            Browse proposed and upcoming events from trusted organizers across Ethiopia. Support initiatives aligned with your brand, review comprehensive pitch concepts, and reach out directly to coordinate.
           </p>
 
           {/* Search bar */}
@@ -155,373 +112,164 @@ export const SponsorExplorePage: React.FC = () => {
         </div>
       </div>
 
-      {/* Category Pills */}
+      {/* Category Pills: Disabled when 0 applications match */}
       <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
-        {CATEGORIES.map((cat) => (
-          <button
-            key={cat}
-            onClick={() => setSelectedCategory(cat)}
-            className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
-              selectedCategory === cat
-                ? 'bg-[#63474D] text-white shadow-sm'
-                : 'bg-white text-gray-700 hover:bg-stone-100 border border-gray-200'
-            }`}
-          >
-            {cat}
-          </button>
-        ))}
+        {CATEGORIES.map((cat) => {
+          const count = categoryCounts[cat] || 0;
+          const isEnabled = cat === 'All Categories' || count > 0;
+          const isSelected = selectedCategory === cat;
+
+          if (isEnabled) {
+            return (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setSelectedCategory(cat)}
+                className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
+                  isSelected
+                    ? 'bg-[#63474D] text-white shadow-sm'
+                    : 'bg-white text-gray-700 hover:bg-stone-100 border border-gray-200'
+                }`}
+              >
+                <span>{cat}</span>
+                {count > 0 && (
+                  <span
+                    className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${
+                      isSelected ? 'bg-white/20 text-white' : 'bg-stone-100 text-stone-600'
+                    }`}
+                  >
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          }
+
+          return (
+            <button
+              key={cat}
+              type="button"
+              disabled={true}
+              title="No active event pitches currently match this category"
+              className="px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap bg-stone-100/70 text-stone-400 border border-stone-200/60 opacity-50 cursor-not-allowed flex items-center gap-1.5 select-none"
+            >
+              <span>{cat}</span>
+              <span className="text-[10px] opacity-60">0</span>
+            </button>
+          );
+        })}
       </div>
 
-      {/* Pitches Feed */}
+      {/* Applications List: Structured as Rows (Like Organizer Dashboard, Fatter & Longer Vertically) */}
       {loading ? (
         <div className="p-12 text-center text-gray-500 bg-white rounded-3xl border border-gray-100">
           <div className="animate-spin w-8 h-8 border-3 border-[#63474D] border-t-transparent rounded-full mx-auto mb-3" />
           <p className="text-sm font-medium">Loading sponsorship opportunities...</p>
         </div>
-      ) : applications.length === 0 ? (
-        <div className="p-12 text-center bg-white rounded-3xl border border-dashed border-gray-300">
-          <div className="w-14 h-14 rounded-2xl bg-stone-100 text-gray-400 flex items-center justify-center mx-auto mb-4">
+      ) : displayedApplications.length === 0 ? (
+        <div className="p-12 text-center bg-white rounded-3xl border border-dashed border-gray-300 space-y-3">
+          <div className="w-14 h-14 rounded-2xl bg-stone-100 text-gray-400 flex items-center justify-center mx-auto mb-2">
             <Compass className="w-7 h-7" />
           </div>
-          <h3 className="text-lg font-bold text-gray-900">No events found in this category</h3>
-          <p className="text-sm text-gray-500 mt-1">Try searching for a different keyword or selecting "All Categories".</p>
+          <h3 className="font-serif text-lg font-bold text-gray-900">No events found in this view</h3>
+          <p className="text-xs text-gray-500 max-w-sm mx-auto">
+            {selectedCategory !== 'All Categories'
+              ? `There are currently no proposals under "${selectedCategory}".`
+              : 'No event applications found matching your query.'}
+          </p>
+          {selectedCategory !== 'All Categories' && (
+            <button
+              type="button"
+              onClick={() => setSelectedCategory('All Categories')}
+              className="px-4 py-2 bg-[#63474D] text-white text-xs font-bold rounded-xl shadow-xs hover:bg-[#523a3f] cursor-pointer"
+            >
+              View All Categories
+            </button>
+          )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {applications.map((app) => (
+        <div className="space-y-3">
+          {displayedApplications.map((app) => (
             <div
               key={app.id}
-              onClick={() => openAppDetails(app)}
-              className="bg-white rounded-3xl p-6 border border-[#AA767C]/15 shadow-sm hover:shadow-md hover:border-[#63474D]/40 transition-all cursor-pointer flex flex-col justify-between group"
+              onClick={() => navigate(`/sponsor/applications/${app.id}`)}
+              className="bg-white rounded-2xl border border-gray-200 shadow-2xs hover:border-[#63474D] hover:shadow-xs transition-all overflow-hidden flex flex-row items-stretch cursor-pointer group h-32 sm:h-32"
             >
-              <div>
-                <div className="flex items-center justify-between gap-2 mb-3">
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#FFA686]/20 text-[#63474D] border border-[#FFA686]/30">
-                    {app.category}
-                  </span>
-                  <span className="text-[11px] font-semibold text-gray-500">
-                    {app.event_type}
-                  </span>
-                </div>
-
-                <h3 className="text-lg font-bold text-gray-900 group-hover:text-[#63474D] transition-colors line-clamp-2">
-                  {app.event_title}
-                </h3>
-
-                <p className="text-xs text-gray-500 mt-1 flex items-center gap-1.5">
-                  <Building2 className="w-3.5 h-3.5 text-gray-400" />
-                  <span>By {app.organizer_organization || app.organizer_name || 'Verified Organizer'}</span>
-                </p>
-
-                <p className="text-xs text-gray-600 mt-3 line-clamp-3 leading-relaxed">
-                  {app.description}
-                </p>
-
-                <div className="space-y-2 mt-4 pt-4 border-t border-gray-100 text-xs text-gray-600">
-                  <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-1.5 text-gray-500">
-                      <Calendar className="w-3.5 h-3.5 text-[#63474D]" />
-                      Date:
-                    </span>
-                    <span className="font-semibold text-gray-800">{app.expected_date}</span>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-1.5 text-gray-500">
-                      <MapPin className="w-3.5 h-3.5 text-[#63474D]" />
-                      Location:
-                    </span>
-                    <span className="font-semibold text-gray-800">{app.location}</span>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-1.5 text-gray-500">
-                      <Users className="w-3.5 h-3.5 text-[#63474D]" />
-                      Expected Turnout:
-                    </span>
-                    <span className="font-semibold text-gray-800">
-                      {app.expected_attendees.toLocaleString()} guests
-                    </span>
-                  </div>
-                </div>
+              {/* Left Cover Image Container with coming-soon.jpg (Flush Slot) */}
+              <div className="w-28 sm:w-36 h-full shrink-0 overflow-hidden bg-stone-100 border-r border-gray-200/80 relative">
+                <img
+                  src="/coming-soon.jpg"
+                  alt={app.event_title}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                />
               </div>
 
-              <div className="mt-5 pt-4 border-t border-gray-100 flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] uppercase font-bold text-gray-400">Funding Goal</p>
-                  <p className="text-base font-serif font-bold text-[#63474D]">
-                    {app.funding_goal.toLocaleString()} {app.currency}
+              {/* Rest of the Row (Sleek, a few px taller than organizer's h-28) */}
+              <div className="flex-1 px-3.5 sm:px-4 py-2 sm:py-2.5 flex flex-col justify-between min-w-0">
+                {/* Top Line: Title + Funding Goal & Arrow */}
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-serif font-bold text-sm sm:text-base text-[#2D1F23] group-hover:text-[#63474D] transition-colors truncate">
+                      {app.event_title}
+                    </h3>
+                    <p className="text-[11px] text-[#756366] flex items-center gap-1.5 truncate">
+                      <Building2 className="w-3 h-3 text-[#AA767C] shrink-0" />
+                      <span>
+                        By <strong className="text-gray-800 font-semibold">{app.organizer_organization || app.organizer_name}</strong>
+                      </span>
+                      <span className="text-gray-300">•</span>
+                      <span className="text-gray-500 font-mono text-[10px] uppercase">{app.event_type}</span>
+                    </p>
+                  </div>
+
+                  <div className="text-right shrink-0 flex items-center gap-2">
+                    <div>
+                      <span className="text-[9px] uppercase font-bold text-gray-400 block leading-none">Goal</span>
+                      <span className="font-serif font-bold text-sm sm:text-base text-[#63474D]">
+                        {app.funding_goal.toLocaleString()} {app.currency}
+                      </span>
+                    </div>
+                    <div className="hidden sm:flex items-center text-[#AA767C] group-hover:text-[#63474D] group-hover:translate-x-0.5 transition-all">
+                      <ChevronRight className="w-4 h-4" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Middle: Category Pill + Description */}
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-[#FFA686]/20 text-[#63474D] border border-[#FFA686]/30 shrink-0">
+                    {app.category}
+                  </span>
+                  <p className="text-xs text-[#523e43] truncate font-normal">
+                    {app.description}
                   </p>
                 </div>
 
-                <div className="inline-flex items-center gap-1 text-xs font-bold text-[#63474D] group-hover:translate-x-0.5 transition-transform">
-                  <span>View Details</span>
-                  <ChevronRight className="w-4 h-4" />
+                {/* Bottom Bar: Date, Location, Expected Attendees, and Action */}
+                <div className="flex items-center justify-between gap-x-3 text-[11px] text-[#756366] pt-1.5 border-t border-gray-100">
+                  <div className="flex items-center gap-x-3 gap-y-1 truncate">
+                    <span className="flex items-center gap-1 font-medium shrink-0">
+                      <img src="/calendar.png" alt="Calendar" className="w-3 h-3 object-contain shrink-0" />
+                      <span>{app.expected_date}</span>
+                    </span>
+                    <span className="flex items-center gap-1 font-medium truncate max-w-[160px] sm:max-w-[220px]">
+                      <img src="/location.png" alt="Location" className="w-3 h-3 object-contain shrink-0" />
+                      <span className="truncate">{app.location}</span>
+                    </span>
+                    <span className="hidden sm:flex items-center gap-1 font-medium shrink-0">
+                      <Users className="w-3 h-3 text-[#AA767C] shrink-0" />
+                      <span>{app.expected_attendees.toLocaleString()} guests</span>
+                    </span>
+                  </div>
+
+                  <div className="text-[#63474D] font-bold text-xs flex items-center gap-0.5 shrink-0 ml-auto group-hover:translate-x-0.5 transition-transform">
+                    <span>Details</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </div>
                 </div>
               </div>
             </div>
           ))}
-        </div>
-      )}
-
-      {/* Detailed Modal */}
-      {selectedApp && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-200">
-            {/* Modal Header */}
-            <div className="p-6 sm:p-8 bg-gradient-to-r from-[#2D1F23] to-[#402a30] text-white sticky top-0 z-20 flex items-start justify-between">
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#FFA686]/20 text-[#FFA686] border border-[#FFA686]/30">
-                    {selectedApp.category}
-                  </span>
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-white/10 text-white">
-                    {selectedApp.event_type}
-                  </span>
-                </div>
-                <h2 className="text-xl sm:text-2xl font-serif font-bold text-white">
-                  {selectedApp.event_title}
-                </h2>
-                <p className="text-xs text-white/70 mt-1">
-                  Organized by {selectedApp.organizer_organization || selectedApp.organizer_name}
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setSelectedApp(null)}
-                className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Modal Content */}
-            <div className="p-6 sm:p-8 space-y-6">
-              {/* Feedback alert */}
-              {feedbackMessage && (
-                <div
-                  className={`p-4 rounded-2xl text-sm font-medium flex items-start gap-3 ${
-                    feedbackMessage.type === 'success'
-                      ? 'bg-emerald-50 border border-emerald-200 text-emerald-800'
-                      : 'bg-red-50 border border-red-200 text-red-800'
-                  }`}
-                >
-                  {feedbackMessage.type === 'success' ? (
-                    <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-                  ) : (
-                    <AlertCircle className="w-5 h-5 text-red-600 shrink-0" />
-                  )}
-                  <div>{feedbackMessage.text}</div>
-                </div>
-              )}
-
-              {/* Event Quick Specs */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-stone-50 p-4 rounded-2xl border border-stone-200/80 text-xs">
-                <div>
-                  <span className="text-gray-400 block font-medium">Date</span>
-                  <span className="font-bold text-gray-900">{selectedApp.expected_date}</span>
-                </div>
-                <div>
-                  <span className="text-gray-400 block font-medium">Location</span>
-                  <span className="font-bold text-gray-900">{selectedApp.location}</span>
-                </div>
-                <div>
-                  <span className="text-gray-400 block font-medium">Audience</span>
-                  <span className="font-bold text-gray-900">{selectedApp.expected_attendees.toLocaleString()} pax</span>
-                </div>
-                <div>
-                  <span className="text-gray-400 block font-medium">Goal</span>
-                  <span className="font-bold text-[#63474D]">
-                    {selectedApp.funding_goal.toLocaleString()} {selectedApp.currency}
-                  </span>
-                </div>
-              </div>
-
-              {/* Description */}
-              <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">
-                  Event Concept & Value Proposition
-                </h4>
-                <p className="text-sm text-gray-700 whitespace-pre-line leading-relaxed">
-                  {selectedApp.description}
-                </p>
-              </div>
-
-              {/* Target Demographics */}
-              {selectedApp.target_audience && (
-                <div>
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">
-                    Target Demographic
-                  </h4>
-                  <div className="p-3 bg-gray-50 rounded-xl text-xs text-gray-800 font-medium">
-                    {selectedApp.target_audience}
-                  </div>
-                </div>
-              )}
-
-              {/* Available Packages */}
-              <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3 flex items-center gap-1.5">
-                  <Layers className="w-4 h-4 text-[#63474D]" />
-                  Available Sponsorship Packages
-                </h4>
-
-                <div className="space-y-3">
-                  {selectedApp.packages?.map((pkg, idx) => (
-                    <label
-                      key={idx}
-                      className={`block p-4 rounded-2xl border transition-all cursor-pointer ${
-                        selectedPackage === pkg.name
-                          ? 'border-[#63474D] bg-[#63474D]/5 ring-2 ring-[#63474D]/10'
-                          : 'border-gray-200 hover:border-gray-300 bg-white'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <input
-                            type="radio"
-                            name="tier"
-                            checked={selectedPackage === pkg.name}
-                            onChange={() => {
-                              setSelectedPackage(pkg.name);
-                              setPledgedAmount(pkg.amount);
-                            }}
-                            className="text-[#63474D] focus:ring-[#63474D]"
-                          />
-                          <div>
-                            <span className="text-sm font-bold text-gray-900">{pkg.name}</span>
-                            <p className="text-xs text-gray-600 mt-0.5">{pkg.perks}</p>
-                          </div>
-                        </div>
-
-                        <span className="font-serif font-bold text-sm text-[#63474D] whitespace-nowrap ml-3">
-                          {pkg.amount.toLocaleString()} {selectedApp.currency}
-                        </span>
-                      </div>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {/* Direct Organizer Contact Card */}
-              <div className="bg-[#FAF7F5] border-2 border-[#63474D]/20 rounded-3xl p-5 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-xl bg-[#63474D] text-[#FFA686] flex items-center justify-center font-bold text-xs">
-                      <Phone className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-bold text-gray-900">Direct Organizer Contact</h4>
-                      <p className="text-[11px] text-gray-500">Reach out directly to confirm terms & finalize sponsorship</p>
-                    </div>
-                  </div>
-
-                  <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">
-                    Verified Organizer
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-                  <a
-                    href={`tel:${selectedApp.contact_phone}`}
-                    className="flex items-center gap-2.5 p-3 rounded-xl bg-white border border-gray-200 hover:border-[#63474D] hover:text-[#63474D] transition-colors"
-                  >
-                    <Phone className="w-4 h-4 text-[#63474D]" />
-                    <div className="min-w-0">
-                      <span className="block text-[10px] text-gray-400 font-bold uppercase">Call Phone</span>
-                      <span className="text-xs font-semibold text-gray-900 truncate block">{selectedApp.contact_phone}</span>
-                    </div>
-                  </a>
-
-                  <a
-                    href={`mailto:${selectedApp.contact_email}?subject=Sponsorship%20Inquiry%20-%20${encodeURIComponent(selectedApp.event_title)}`}
-                    className="flex items-center gap-2.5 p-3 rounded-xl bg-white border border-gray-200 hover:border-[#63474D] hover:text-[#63474D] transition-colors"
-                  >
-                    <Mail className="w-4 h-4 text-[#63474D]" />
-                    <div className="min-w-0">
-                      <span className="block text-[10px] text-gray-400 font-bold uppercase">Email</span>
-                      <span className="text-xs font-semibold text-gray-900 truncate block">{selectedApp.contact_email}</span>
-                    </div>
-                  </a>
-
-                  {selectedApp.contact_telegram ? (
-                    <a
-                      href={
-                        selectedApp.contact_telegram.startsWith('http')
-                          ? selectedApp.contact_telegram
-                          : `https://t.me/${selectedApp.contact_telegram.replace('@', '')}`
-                      }
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2.5 p-3 rounded-xl bg-white border border-gray-200 hover:border-[#63474D] hover:text-[#63474D] transition-colors"
-                    >
-                      <Send className="w-4 h-4 text-[#63474D]" />
-                      <div className="min-w-0">
-                        <span className="block text-[10px] text-gray-400 font-bold uppercase">Telegram</span>
-                        <span className="text-xs font-semibold text-gray-900 truncate block">{selectedApp.contact_telegram}</span>
-                      </div>
-                    </a>
-                  ) : (
-                    <div className="flex items-center gap-2 p-3 rounded-xl bg-white/50 border border-dashed border-gray-200 text-gray-400 text-xs">
-                      <span>Representative: {selectedApp.contact_name}</span>
-                    </div>
-                  )}
-                </div>
-
-                {selectedApp.pitch_deck_url && (
-                  <div className="pt-2">
-                    <a
-                      href={selectedApp.pitch_deck_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 text-xs font-bold text-[#63474D] hover:underline"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      <span>Open Organizer Pitch Deck / Presentation PDF</span>
-                    </a>
-                  </div>
-                )}
-              </div>
-
-              {/* Sponsor Internal Notes */}
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-gray-600 mb-1.5">
-                  Internal Notes / Terms for Deals & Pledges (Optional)
-                </label>
-                <textarea
-                  rows={2}
-                  placeholder="e.g. Budget approved for Gold Tier, awaiting call with Sara on Thursday..."
-                  value={sponsorNotes}
-                  onChange={(e) => setSponsorNotes(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-xs focus:border-[#63474D] outline-none"
-                />
-              </div>
-
-              {/* Action Buttons: Strictly INTERESTED and DECLINED */}
-              <div className="pt-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-end gap-3">
-                <button
-                  type="button"
-                  disabled={actionLoading}
-                  onClick={() => handleExpressInterestOrDecline('DECLINED')}
-                  className="w-full sm:w-auto px-5 py-3 rounded-xl border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
-                >
-                  <XCircle className="w-4 h-4 text-gray-400" />
-                  <span>Decline</span>
-                </button>
-
-                <button
-                  type="button"
-                  disabled={actionLoading}
-                  onClick={() => handleExpressInterestOrDecline('INTERESTED')}
-                  className="w-full sm:w-auto px-7 py-3 rounded-xl bg-[#63474D] hover:bg-[#4E373C] text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                >
-                  <CheckCircle2 className="w-4 h-4 text-[#FFA686]" />
-                  <span>Mark as Interested</span>
-                </button>
-              </div>
-            </div>
-          </div>
         </div>
       )}
     </div>

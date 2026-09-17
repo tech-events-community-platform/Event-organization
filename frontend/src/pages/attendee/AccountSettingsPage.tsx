@@ -8,7 +8,6 @@ import {
   AlertTriangle,
   User,
   Building,
-  Mail,
   AlertCircle,
   LogOut,
   ChevronDown,
@@ -133,15 +132,60 @@ export const AccountSettingsPage: React.FC = () => {
 
   if (!user) return null;
 
+  const isSponsor = user?.role === 'SPONSOR';
+  const isAdmin = user?.role === 'ADMIN';
+
+  const roleTitle = isSponsor
+    ? 'Sponsor Workspace Settings'
+    : isAdmin
+    ? 'Administrator System Settings'
+    : 'Organizer Account Settings';
+
+  const roleSubtitle = isSponsor
+    ? 'Manage your corporate sponsor profile, company representative, and preferences.'
+    : isAdmin
+    ? 'Manage your administrative identity, supervisory profile, and platform controls.'
+    : 'Manage your organizer community profile, socials, and account.';
+
+  const profileSectionTitle = isSponsor
+    ? 'Corporate Sponsor Profile'
+    : isAdmin
+    ? 'Administrator Profile Information'
+    : 'Organizer Profile Information';
+
+  const profileSectionSubtitle = isSponsor
+    ? 'Your company name and official website appear to event organizers on sponsorship deals.'
+    : isAdmin
+    ? 'Your supervisory credentials and governance identity on the Sheeba platform.'
+    : 'Your name, community organization, and social channels appear on public event pages.';
+
+  const orgLabel = isSponsor
+    ? 'Company / Enterprise Name'
+    : isAdmin
+    ? 'Administrative Department / Unit'
+    : 'Organization / Community Name';
+
+  const orgPlaceholder = isSponsor
+    ? 'e.g. Telebirr, Safaricom, Chapa'
+    : isAdmin
+    ? 'e.g. Sheeba Executive Platform Administration'
+    : 'e.g. GDG Addis, ALX Tech Community';
+
+  const socialsSubtitle = isSponsor
+    ? 'Provide your brand official social channels (LinkedIn, X, Telegram) for event listings.'
+    : isAdmin
+    ? 'Official administrative and platform communication links.'
+    : 'Provide your community social links. These will appear beside your organizer name below event posters on public registration pages.';
+
   return (
     <div className="w-full max-w-5xl py-6 px-2 sm:px-4 space-y-8 pb-20">
       {/* Page Heading (Unboxed, expanded to left & right) */}
       <div className="space-y-1">
         <h1 className="font-serif text-2xl sm:text-3xl font-extrabold text-[#2D1F23]">
-          Organizer Account Settings
+          {roleTitle}
         </h1>
         <p className="text-xs text-[#756366]">
-          Manage your organizer community profile, socials, and account.
+          {roleSubtitle}
         </p>
       </div>
 
@@ -152,15 +196,15 @@ export const AccountSettingsPage: React.FC = () => {
         </div>
       )}
 
-      {/* 1. Organizer Profile Information (Unboxed, no rectangle box background) */}
+      {/* 1. Profile Information (Unboxed, no rectangle box background) */}
       <div className="space-y-6">
         <div>
           <h2 className="font-serif font-bold text-base text-[#2D1F23] flex items-center gap-2">
             <User className="w-4 h-4 text-[#63474D]" />
-            Organizer Profile Information
+            {profileSectionTitle}
           </h2>
           <p className="text-xs text-[#756366] mt-0.5">
-            Your name, community organization, and social channels appear on public event pages.
+            {profileSectionSubtitle}
           </p>
         </div>
 
@@ -182,13 +226,13 @@ export const AccountSettingsPage: React.FC = () => {
             <div>
               <label className="block text-xs font-bold text-[#2D1F23] mb-1 flex items-center gap-1.5">
                 <Building className="w-3.5 h-3.5 text-[#63474D]" />
-                Organization / Community Name
+                {orgLabel}
               </label>
               <input
                 type="text"
                 value={organization}
                 onChange={(e) => setOrganization(e.target.value)}
-                placeholder="e.g. GDG Addis, ALX Tech Community"
+                placeholder={orgPlaceholder}
                 className="w-full px-3.5 py-2.5 bg-[#FAF7F5] border border-[#E8DDD7] rounded-xl text-xs text-[#2D1F23] focus:outline-none focus:ring-2 focus:ring-[#63474D]"
               />
             </div>
@@ -197,7 +241,7 @@ export const AccountSettingsPage: React.FC = () => {
           {/* Email input brought halfway to the left */}
           <div className="max-w-xs sm:max-w-sm">
             <label className="block text-xs font-bold text-[#2D1F23] mb-1 flex items-center gap-1.5">
-              <Mail className="w-3.5 h-3.5 text-[#63474D]" />
+              <img src="/mail-icon.jpg" alt="Email" className="w-3.5 h-3.5 object-contain" />
               Contact Email
             </label>
             <input
@@ -209,12 +253,12 @@ export const AccountSettingsPage: React.FC = () => {
             <p className="text-[10px] text-gray-400 mt-1">Contact support to modify primary login email.</p>
           </div>
 
-          {/* Social Accounts: Telegram, X, TikTok (black icon), YouTube */}
+          {/* Social Accounts */}
           <div className="pt-4 border-t border-[#E8DDD7]/70 space-y-3">
             <div>
               <h3 className="text-xs font-bold text-[#2D1F23]">Social Accounts</h3>
               <p className="text-[11px] text-[#756366]">
-                Provide your community social links. These will appear beside your organizer name below event posters on public registration pages.
+                {socialsSubtitle}
               </p>
             </div>
 
@@ -293,7 +337,11 @@ export const AccountSettingsPage: React.FC = () => {
             Personal Attendee Account
           </h2>
           <p className="text-xs text-[#756366] mt-0.5">
-            Your single account includes both Organizer capabilities and a personal Attendee profile.
+            {isSponsor
+              ? 'Your single account includes corporate sponsor capabilities and a personal Attendee profile.'
+              : isAdmin
+              ? 'Your single account includes supervisory administration privileges and an Attendee profile.'
+              : 'Your single account includes both Organizer capabilities and a personal Attendee profile.'}
           </p>
         </div>
 
@@ -306,7 +354,11 @@ export const AccountSettingsPage: React.FC = () => {
               </span>
             </div>
             <p className="text-[11px] text-[#756366] leading-relaxed max-w-lg">
-              Want to attend community meetups, view your registered tickets, or earn verifiable attendance badges? Switch your active session to your Attendee Workspace.
+              {isSponsor
+                ? 'Want to browse events as a regular attendee, view your registered tickets, or earn attendance badges? Switch your active session to Attendee Workspace.'
+                : isAdmin
+                ? 'Audit ticket purchases, badge issuing, and live attendee check-in experience firsthand by switching to the Attendee Workspace.'
+                : 'Want to attend community meetups, view your registered tickets, or earn verifiable attendance badges? Switch your active session to your Attendee Workspace.'}
             </p>
           </div>
 
@@ -402,7 +454,11 @@ export const AccountSettingsPage: React.FC = () => {
                   Are you sure?
                 </h3>
                 <p className="text-xs text-gray-600 leading-relaxed">
-                  This action is permanent. This will permanently erase your organizer profile and data. Deletion is blocked if you have ongoing or upcoming events.
+                  {isSponsor
+                    ? 'This action is permanent. This will permanently erase your sponsor profile and preferences. Deletion is blocked if you have active sponsorship deals.'
+                    : isAdmin
+                    ? 'Administrative account deletion is restricted. Please contact super-admin for permission.'
+                    : 'This action is permanent. This will permanently erase your organizer profile and data. Deletion is blocked if you have ongoing or upcoming events.'}
                 </p>
               </div>
             </div>

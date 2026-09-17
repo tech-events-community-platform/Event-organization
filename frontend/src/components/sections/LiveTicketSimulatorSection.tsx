@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import FadeIn from '../FadeIn';
 import { QRCodeSVG } from 'qrcode.react';
 import {
-  Award,
   ShieldCheck,
   Zap,
   CheckCircle2,
@@ -169,10 +168,12 @@ export const LiveTicketSimulatorSection: React.FC = () => {
               {/* Top Header Brand (Plum #63474D) */}
               <div className="bg-[#63474D] text-white p-6 text-center relative overflow-hidden">
                 <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-[#FFA686] flex items-center justify-center text-[#2D1F23] shadow-xs">
-                      <Award className="w-5 h-5 font-bold" />
-                    </div>
+                  <div className="flex items-center gap-2.5">
+                    <img
+                      src="/logo.jpg"
+                      alt="Sheeba Logo"
+                      className="h-9 sm:h-10 w-auto object-contain shrink-0 drop-shadow-xs"
+                    />
                     <span className="font-serif font-bold text-lg tracking-wider text-white">
                       SHEEBA<span className="text-[#FFA686]">.</span>
                     </span>
