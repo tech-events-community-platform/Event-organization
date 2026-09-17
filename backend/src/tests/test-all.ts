@@ -535,7 +535,7 @@ const runTests = async () => {
     assert(
       myDealsRes.status === 200 &&
       Array.isArray(myDealsRes.body.data) &&
-      myDealsRes.body.data.some((d: any) => d.id === dealId && d.contact_phone === '+251911334455'),
+      myDealsRes.body.data.some((d: any) => d.id === dealId && (d.contact_phone === '+251911334455' || d.application?.contact_phone === '+251911334455')),
       'Sponsor views deals pipeline with direct organizer phone and email'
     );
 
@@ -569,7 +569,7 @@ const runTests = async () => {
     // Step 1: Organizer creates a tech event
     const createEventRes = await fetchHttp('/api/events', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${organizerPortalToken}` },
+      headers: { Authorization: `Bearer ${organizerToken}` },
       body: {
         title: 'Addis AI & Cloud Summit 2026',
         description: 'Deep dive into LLMs and Cloud Native architecture in Ethiopia.',

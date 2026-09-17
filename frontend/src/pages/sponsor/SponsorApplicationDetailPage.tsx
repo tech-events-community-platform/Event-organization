@@ -355,7 +355,8 @@ export const SponsorApplicationDetailPage: React.FC = () => {
             {socialEntries.length > 0 && (
               <div className="pt-2.5 border-t border-stone-300/80 flex items-center gap-2">
                 {socialEntries.map(([platform, link]) => {
-                  const cleanLink = link.startsWith('http') ? link : `https://${link}`;
+                  const strLink = String(link || '');
+                  const cleanLink = strLink.startsWith('http') ? strLink : `https://${strLink}`;
                   return (
                     <a
                       key={platform}

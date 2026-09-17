@@ -23,7 +23,7 @@ export const SponsorDeliverablesPage: React.FC = () => {
     }
     return {
       companyName: user?.companyName || user?.name || '',
-      website: user?.website || '',
+      website: (user as any)?.website || '',
       tagline: '',
       primaryColor: '#63474D',
       secondaryColor: '#FFA686',

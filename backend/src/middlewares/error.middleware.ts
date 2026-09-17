@@ -48,7 +48,6 @@ export const errorHandler = (
     return;
   }
 
-  sendError(res, message, statusCode, process.env.NODE_ENV === 'development' ? err.stack : undefined);
   res.status(statusCode).json({
     success: false,
     message,
@@ -56,6 +55,7 @@ export const errorHandler = (
     error: err.code || err.message,
     data: err.data || undefined,
     isPendingApproval: err.isPendingApproval,
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
   });
 };
 

@@ -2,21 +2,17 @@ import { Pool as PgPool, QueryResult, QueryResultRow } from 'pg';
 import { Pool as NeonPool } from '@neondatabase/serverless';
 import { ENV } from './env';
 
-const isNeon = ENV.DATABASE_URL.includes('neon.tech');
+// Standard PostgreSQL TCP connection with SSL enabled for cloud databases (Neon, Supabase, etc.)
+const isCloudDb = ENV.DATABASE_URL.includes('neon.tech') || ENV.NODE_ENV === 'production';
 
-// Use Neon serverless WebSocket/HTTP pool if on Neon (bypasses VPN/firewall TCP resets on port 5432)
-// Otherwise use standard pg pool for local Postgres
-const pool: any = isNeon
-  ? new NeonPool({
-      connectionString: ENV.DATABASE_URL,
-    })
-  : new PgPool({
-      connectionString: ENV.DATABASE_URL,
-      ssl: ENV.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
-      max: 10,
-      idleTimeoutMillis: 60000,
-      connectionTimeoutMillis: 30000,
-    });
+const pool: any = new PgPool({
+  connectionString: ENV.DATABASE_URL,
+  ssl: isCloudDb ? { rejectUnauthorized: false } : undefined,
+  max: 10,
+  idleTimeoutMillis: 60000,
+  connectionTimeoutMillis: 30000,
+});
+
 
 pool.on('error', (err: any) => {
   console.error('Unexpected error on idle PostgreSQL client', err);

@@ -358,7 +358,7 @@ export const AdminUsersPage: React.FC = () => {
                               ? 'success'
                               : s.approvalStatus === 'pending'
                               ? 'warning'
-                              : 'danger'
+                              : 'error'
                           }
                         >
                           {s.approvalStatus === 'pending' ? 'Pending Review' : s.approvalStatus}
@@ -435,7 +435,7 @@ export const AdminUsersPage: React.FC = () => {
                               ? 'success'
                               : o.approvalStatus === 'pending'
                               ? 'warning'
-                              : 'danger'
+                              : 'error'
                           }
                         >
                           {o.status}
